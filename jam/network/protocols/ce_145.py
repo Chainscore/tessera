@@ -7,14 +7,11 @@ from jam.types.protocol.core import ValidatorIndex, EpochIndex
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
-from jam.log_setup import network_logger
+from jam.log_setup import network_logger as logger
 from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, HeaderHash
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.utils.gather import gather_with_exceptions
-
-# Module-specific logger
-logger = network_logger
 
 
 @structure
@@ -65,7 +62,7 @@ class JudgmentPublication(NetworkProtocol):
         msg_a = data.judgment.encode()
 
         logger.info(
-            f"Transmitting Work-report judgement",
+            f"Transmitting Work-report judgement to {len(node.all_connected)} validators",
             judgment=data.judgment,
             len_a=data.len_a
         )
@@ -74,9 +71,9 @@ class JudgmentPublication(NetworkProtocol):
         transmitted_count = 0
 
         try:
-            logger.info(f"Transmitting Judgment to {len(node.all_connected)} validators")
-
             for client in node.all_connected:
+
+                logger.debug("Transmitting judgement to", peer=client)
 
                 # send protocol prefix
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
@@ -154,7 +151,7 @@ class JudgmentPublication(NetworkProtocol):
         buffer = client.stream_buffer[stream_id]
 
         if buffer == b"":
-            logger.info(
+            logger.debug(
                 "Judgment acknowledge received",
                 stream_id=stream_id,
                 buffer_size=len(buffer),

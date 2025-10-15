@@ -47,8 +47,8 @@ async def run_node(
     seed = os.environ.get("SEED", "0")
     host = os.environ.get("HOST", "0.0.0.0")
     if rpc_flag:
-        rpc_port = os.environ["RPC_PORT"]
-        rpc_host = os.environ["RPC_HOST"]
+        rpc_port = os.environ.get("RPC_PORT", 19800)
+        rpc_host = os.environ.get("RPC_HOST", "0.0.0.0")
 
     if not name or not port or not host or not seed:
         raise ValueError(f"Missing node info in {env}")
@@ -63,12 +63,10 @@ async def run_node(
 
     main_db = settings.main_db
 
-    logger.info(
-        "Starting Tessera Node!",
-        name=name,
-        port=port,
-        spec=chain_config.name,
-    )
+    if rpc_flag:
+        logger.info(f"Starting Tessera Node! name={name} port={port} spec={chain_config.name} rpc_port={rpc_port}")
+    else:
+        logger.info(f"Starting Tessera Node! name={name} port={port} spec={chain_config.name}")
 
     try:
         # -------------- SETUP STATE -------------
@@ -85,9 +83,6 @@ async def run_node(
         header_hash = block.save(main_db)
         Finality.set_head(header_hash, main_db)
         Finality.finalise(header_hash, main_db, True)
-
-        if rpc_flag:
-            logger.info("📡 Starting RPC/WebSocket server", host=rpc_host, port=rpc_port)
 
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:

@@ -6,7 +6,7 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
 from tsrkit_types import Bytes
 
-from jam.log_setup import logger
+from jam.log_setup import network_logger as logger
 
 from jam.network.base.protocol import PrefixType
 from jam.types.work.shard import SegmentsShard, SegmentShard
@@ -39,7 +39,7 @@ class SegmentShardRequest(SegmentShardRequestBase):
 
         try:
             request = self.parse_request(buffer)
-            logger.info("Handling CE139 shard request")
+            logger.debug("Handling CE139 shard request")
             d3l = settings.d3l
             ss_da = SegmentShardsDA(d3l)
 
@@ -99,11 +99,8 @@ class SegmentShardRequest(SegmentShardRequestBase):
                 offset += off
                 segments.append(segment)
                 cnt += 1
-                logger.debug(
-                    "Parsed segment", cnt=cnt, stream_id=stream_id, peer=client
-                )
 
-            logger.info("Segment Shards received via CE139", peer=client)
+            logger.debug("Segment Shards received via CE139", peer=client)
 
             return segments
 

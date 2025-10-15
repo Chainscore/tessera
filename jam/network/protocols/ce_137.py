@@ -3,7 +3,7 @@ from typing import cast, Tuple
 
 from tsrkit_types import structure, Uint, TypedVector, Bytes, U8
 
-from jam.log_setup import network_logger
+from jam.log_setup import network_logger as logger
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
@@ -15,10 +15,6 @@ from jam.types.work.shard import BundleShard, SegmentsShard, ShardIndex, ShardKe
 
 from jam.storage.da.audits import AuditShardsDA, JustificationsDA
 from jam.storage.da.segments import SegmentShardsDA
-
-
-# Module-specific logger
-logger = network_logger
 
 from jam.types.protocol.crypto import Hash
 from jam.utils.merkle import BMRFunctions
@@ -146,7 +142,7 @@ class ShardDistributionProtocol(NetworkProtocol):
             data = CE137Data.decode(buffer)
             data = cast(CE137Data, data)
 
-            logger.info(
+            logger.debug(
                 "Received shard request",
                 erasure_root=data.query.erasure_root.hex()[:16] + "...",
                 shard_index=data.query.shard_index,
@@ -242,7 +238,7 @@ class ShardDistributionProtocol(NetworkProtocol):
             if not data or not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            logger.info("Full Shard received", peer=client)
+            logger.debug("Full Shard received", peer=client)
 
             return data.bundle_shard, data.segments_shard, data.justification
 

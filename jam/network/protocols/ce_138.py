@@ -3,7 +3,7 @@ from typing import cast, Tuple
 
 from tsrkit_types import Uint, structure, TypedVector, Bytes, U8
 
-from jam.log_setup import network_logger
+from jam.log_setup import network_logger as logger
 
 from jam.network.connection import NodeConnection
 from jam.network.protocols.ce_137 import CE137Data
@@ -19,9 +19,6 @@ from jam.storage.da.segments import SegmentShardsDA
 
 from jam.utils.merkle import BMRFunctions
 from jam.utils.gather import gather_with_exceptions
-
-# Module-specific logger
-logger = network_logger
 
 class CE138Data(CE137Data):
     ...
@@ -120,7 +117,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
 
         buffer = server.stream_buffer[stream_id][1:]
 
-        logger.info("Received Shard index & erasure root")
+        logger.debug("Received Shard index & erasure root")
 
         try:
             data = CE138Data.decode(buffer)
@@ -191,7 +188,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
             if not data or not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            logger.info("Audit Shard received", peer=client)
+            logger.debug("Audit Shard received", peer=client)
 
             return data.bundle_shard, data.justification
 

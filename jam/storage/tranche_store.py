@@ -1,7 +1,7 @@
 import asyncio
 from typing import Dict
 
-from jam.log_setup import node_logger
+from jam.log_setup import node_logger as logger
 from jam.network.protocols.ce_144 import Announcement
 from jam.network.protocols.ce_145 import Judgment
 
@@ -10,9 +10,6 @@ from jam.types.audit.tranche import Tranche, TrancheState, AuditRecord, Optional
 from jam.types.protocol.core import ValidatorIndex
 from jam.types.protocol.crypto import HeaderHash
 from jam.types.work.report import WorkReport, WorkReportHash
-
-logger = node_logger
-
 
 class TrancheStore:
     """Persistent store for Tranches"""
@@ -46,14 +43,13 @@ class TrancheStore:
                 if tranche.header_hash == header_hash:
                     return tranche.tranche_index
                 else:
-                    logger.info("There is no header hash exist in tranche store")
+                    logger.debug("No header hash exist in tranche store")
 
 
     async def delete_tranche(self, tranche: Tranche):
         async with self._lock:
             if tranche in self._tranche_store:
                 del self._tranche_store[tranche]
-                logger.info("Deleted tranche", tranche=tranche)
             else:
                 logger.warning("Attempted to delete non-existent tranche", tranche=tranche)
 
@@ -62,9 +58,6 @@ class TrancheStore:
             for tranche in self._tranche_store:
                 if tranche.header_hash == header_hash:
                     del  self._tranche_store[tranche]
-                    logger.debug("Deleted Block's tranche history", tranche=tranche)
-
-            logger.debug("Deleted Block's entire tranche history")
 
     async def fetch_rep_tranche(self, judgment = Judgment):
         wr_hash = judgment.work_report_hash
@@ -106,7 +99,6 @@ class TrancheStore:
 
             state.unaudited_list = unaudited_reports
             self._tranche_store[tranche] = state
-            logger.info("Updated unaudited list.", tranche=tranche)
 
     async def get_unaudited_list(self, tranche: Tranche):
         async with self._lock:
@@ -114,7 +106,7 @@ class TrancheStore:
             if state:
                 return state.unaudited_list
             else:
-                logger.debug("State not found!")
+                logger.warning("State not found!")
 
     async def rm_from_unaudited(self, tranche: Tranche, wr_hash: WorkReportHash):
         async with self._lock:

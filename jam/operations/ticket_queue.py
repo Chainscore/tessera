@@ -7,7 +7,7 @@ class Queue:
 
     def pop(self):
         if self.is_empty():
-            return "Ticket queue is empty"
+            return None
         return self.items.pop(0)
 
     def is_empty(self):

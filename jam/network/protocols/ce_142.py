@@ -2,16 +2,13 @@ import asyncio
 from typing import cast
 from tsrkit_types import Uint, U8
 from tsrkit_types.struct import structure
-from jam.log_setup import network_logger
+from jam.log_setup import network_logger as logger
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.types.protocol.core import BlobLength, ServiceId
 from jam.types.protocol.crypto import OpaqueHash
 from .ce_143 import PreimageRequest, CE143Data
-
-# Module-specific logger
-logger = network_logger
 
 @structure
 class Announcement:
@@ -60,7 +57,7 @@ class PreImageAnnouncement(NetworkProtocol):
         msg_a = data.announcement.encode()
         len_a = data.len.encode()
 
-        logger.debug("Announcing new preimage to peers", preimage_hash=data.announcement.hash.hex()[:16] + "...")
+        logger.info("Announcing new preimage to peers", preimage_hash=data.announcement.hash.hex()[:16] + "...")
 
         announced_count = 0
         responses = []
@@ -87,7 +84,7 @@ class PreImageAnnouncement(NetworkProtocol):
                     "📣 Preimage announced to peer",
                     stream_id=stream_id,
                 )
-        logger.debug(
+        logger.info(
             "Preimage announcement completed",
             announced_to=announced_count
         )
@@ -95,7 +92,7 @@ class PreImageAnnouncement(NetworkProtocol):
 
     def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercepting & Process preimage hash from peers."""
-        logger.info("Received Preimage Announcement")
+        logger.debug("Received Preimage Announcement")
         buffer = server.stream_buffer[stream_id][1:]
         try:
             data = CE142Data.decode(buffer)
@@ -117,7 +114,7 @@ class PreImageAnnouncement(NetworkProtocol):
 
         buffer = client.stream_buffer[stream_id]
         if buffer == b"":
-            logger.info(
+            logger.debug(
                 "Preimage acknowledgement received",
                 stream_id=stream_id,
                 buffer_size=len(buffer),

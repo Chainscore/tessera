@@ -4,7 +4,6 @@ from tsrkit_types import U32, Bytes, Vector
 
 from jam.audit.error import AssemblerError, AssemblerErrorCode as Code
 from jam.network.utils.shards import get_si, get_vi
-from jam.log_setup import logger
 from jam.settings import Settings
 
 from jam.storage.da.audits import AuditShardsDA
@@ -143,10 +142,8 @@ class Assembler:
     @staticmethod
     def _lookup_root(r: OpaqueHash, sr_lookup: SegmentRootLookup) -> SegmentRoot:
         if sr_lookup is not None and r in sr_lookup.keys():
-            logger.debug("Lookup Hit", wp_hash=r.hex()[:16] + "...")
             return sr_lookup[r]
         else:
-            logger.debug("Lookup Miss", root=r.hex()[:16] + "...")
             return r
 
     def validate_bundle(self, wr: WorkReport, bundle: WorkPackageBundle):
@@ -230,13 +227,10 @@ class Assembler:
 
     async def assemble(self, wr: WorkReport):
         wr_hash = wr.hash()
-        logger.debug("🔨🪛 Assembler Initiated..", wr_hash=wr_hash.hex())
 
         try:
-            logger.debug("Assembling Bundle..")
             bundle = await self.assemble_bundle(wr)
 
-            logger.debug("Validating Bundle..")
             self.validate_bundle(wr, bundle)
 
             logger.info("🔨🪛 Assembled Bundle..", wr_hash=wr_hash.hex())

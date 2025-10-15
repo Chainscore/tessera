@@ -13,11 +13,10 @@ from jam.types.protocol.crypto import BandersnatchVrfSignature
 from jam.types.work.report import WorkReport, WorkReportHash
 from jam.block.block import Block
 
-from jam.log_setup import logger
+from jam.log_setup import node_logger as logger
 from jam.utils.constants import EPOCH_LENGTH
 from jam.network.protocols.ce_144 import NoShow, NoShows
 
-# Module-specifier logger
 
 
 class Auditor:
@@ -53,7 +52,6 @@ class Auditor:
             logger.debug("No Reports to audit", block=str(block), tranche=tranche, tranche_state=curr_state.to_json())
             return
 
-        logger.debug("ASSIGNED REPORTS", block=str(block), tranche=tranche, tranche_state=curr_state.to_json(), assigned_reps=assigned_wrs)
         await self.announce(block, tranche, assigned_wrs, no_shows)
         ...
 
@@ -83,7 +81,7 @@ class Auditor:
         await asyncio.sleep(1)
         # --------------------------------------------- CONDITION CHECK ------------------------------------------------
         if HeaderHash(block.header.hash()) != HeaderHash(tranche.header_hash):
-            logger.info("Block's header_has and tranche header_hash are different")
+            logger.info("Block's header_hash and tranche header_hash are different")
             return
 
         # ---------------------------------------------- DEFINES VALUE --------------------------------------------------
@@ -164,11 +162,9 @@ class Auditor:
 
         try:
             responses = await CE144.transmit(data=data)
-            logger.debug(f"Assign Work Reports announcement transmitted successfully", responses=responses)
 
             if responses:
                 await cls.judgment_process(assign_wrs=assigned_wrs, tranche=tranche)
-
 
         except Exception as e:
             logger.error(
@@ -191,8 +187,6 @@ class Auditor:
         # ------ JUDGMENT EPOCH INDEX ------
         slot = latest_block.header.slot
         epoch_idx = EpochIndex(math.floor(slot / EPOCH_LENGTH))
-
-        logger.info(f"Reports are available for judgment on this node is {len(assign_wrs)} ")
 
         try:
             for c, r in assign_wrs:
@@ -224,8 +218,6 @@ class Auditor:
 
                 response = await CE145.transmit(data=data)
 
-            logger.debug(f"Judgment transmitted successfully")
-
         except Exception as e:
             logger.error(
                 f"failed to transmitted judgment",
@@ -248,7 +240,6 @@ class Auditor:
         """
         from jam.storage.tranche_store import Tranche, tranche_store
 
-        logger.debug("Checking whether the block is audited or not.")
         header_hash = tranche.header_hash
         tranche_index = tranche.tranche_index
 

@@ -272,10 +272,8 @@ class Utils:
         processor = Processor()
 
         try:
-            logger.debug("Recompiling bundle...", wr_hash=wr_hash.hex())
             bundle = await assembler.assemble(wr)
 
-            logger.debug("Reprocessing bundle...", wr_hash=wr_hash.hex())
             new_wr, new_wr_hash = processor.process_bundle(
                 wr.core_index, bundle, wr.segment_root_lookup, False
             )

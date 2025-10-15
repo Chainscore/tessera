@@ -2,15 +2,12 @@ from typing import cast, List
 from tsrkit_types import U8, Bytes
 from tsrkit_types.integers import Uint
 from tsrkit_types.struct import structure
-from jam.log_setup import network_logger
+from jam.log_setup import network_logger as logger
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.connection import NodeConnection
 
 from jam.types.protocol.crypto import Hash, OpaqueHash
-
-# Module-specific logger
-logger = network_logger
 
 @structure
 class CE143Data:
@@ -88,7 +85,7 @@ class PreimageRequest(NetworkProtocol):
         """Intercept & Fetch requested preimage on Node"""
         buffer = server.stream_buffer[stream_id][1:]
 
-        logger.info("Received Preimage Request")
+        logger.debug("Received Preimage Request")
         try:
             data = CE143Data.decode(buffer)
             data = cast(CE143Data, data)
@@ -136,7 +133,7 @@ class PreimageRequest(NetworkProtocol):
 
             pi_hash = OpaqueHash(Hash.blake2b(data.pre_image.encode()))
 
-            logger.info(
+            logger.debug(
                 f"Requested Preimage received.", peer=client, stream_id=stream_id, hash=pi_hash[:8]
             )
 

@@ -9,7 +9,7 @@ from tsrkit_types.bytes import Bytes
 from jam.incore.error import BundlerError, BundlerErrorCode as Code
 from jam.incore.utils import Utils
 
-from jam.log_setup import pvm_logger as logger
+from jam.log_setup import node_logger as logger
 
 from jam.network.utils.shards import get_vi
 from jam.network.protocols.ce_139_base import SegmentIndexes, Query, Queries, CE139Data
@@ -98,11 +98,9 @@ class Bundler:
             r, if r is already a segment root, else Segment root from dictionary if r is a work package hash.
         """
         if isinstance(r, SegmentRoot):
-            logger.debug("Lookup Skip", sr_root=r.hex()[:16] + "...")
             return r
         else:
             if self.sr_lookup is not None and r in self.sr_lookup.keys():
-                logger.debug("Lookup Hit", wp_hash=r.hex()[:16] + "...")
                 return SegmentRoot(self.sr_lookup[r])
             else:
                 logger.error(
@@ -208,7 +206,7 @@ class Bundler:
             e_root = wr.package_spec.erasure_root
             seg_indices = metadata[0]
 
-            logger.info(
+            logger.debug(
                 f"Fetching segments..",
                 seg_root=s_root.hex(),
                 er_root=e_root.hex(),
@@ -255,7 +253,7 @@ class Bundler:
                             er_root=e_root.hex()[:16],
                             seg_ind=n,
                         )
-                        logger.info(
+                        logger.debug(
                             "Fetching segments from root", segment_root=s_root.hex()
                         )
                         segments, _ = seg_da.get(s_root)
@@ -509,7 +507,7 @@ class Bundler:
             e_root = wr.package_spec.erasure_root
             proof_indices = metadata[0]
 
-            logger.info(
+            logger.debug(
                 f"Fetching justifications..",
                 seg_root=s_root.hex(),
                 er_root=e_root.hex(),
@@ -560,7 +558,7 @@ class Bundler:
                             seg_ind=n,
                             proof_ind=(exports_count + p),
                         )
-                        logger.info(
+                        logger.debug(
                             "Fetching proof segments from root",
                             segment_root=s_root.hex(),
                         )

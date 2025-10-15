@@ -163,7 +163,7 @@ def verify_certificate(cert: x509.Certificate):
         if cert.signature_algorithm_oid != x509.SignatureAlgorithmOID.ED25519:
             raise ValueError("Expected Ed25519 signature algorithm.")
 
-        logger.info("Certificate verification successful!", issuer=cert.issuer)
+        logger.debug("Certificate verification successful!", issuer=cert.issuer)
 
         return True, None
 

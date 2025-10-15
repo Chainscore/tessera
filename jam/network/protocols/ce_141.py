@@ -1,6 +1,6 @@
 import asyncio
 from tsrkit_types import structure, U32, U8
-from jam.log_setup import network_logger
+from jam.log_setup import network_logger as logger
 from typing import cast
 from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -9,9 +9,6 @@ from jam.block.extrinsics.assurances import AvailAssurance, AvailBitField, asr_s
 from jam.types.protocol.crypto import Ed25519Signature, HeaderHash
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.utils.gather import gather_with_exceptions
-
-logger = network_logger
-
 
 @structure
 class Assurance:
@@ -117,8 +114,8 @@ class AssuranceDistribution(NetworkProtocol):
                 signature=assurance.ed25519_signature,
             )
 
-            logger.info(
-                "[EXTRINSICS]: RECEIVED ASSURANCE",
+            logger.debug(
+                "Received assurance",
                 peer=server,
                 assurance=assurance_extrinsic.to_json(),
             )
@@ -147,7 +144,7 @@ class AssuranceDistribution(NetworkProtocol):
     def res_intercept(self, stream_id: int, client: NodeConnection):
         buffer = client.stream_buffer[stream_id]
         if buffer == b"":
-            logger.info(
+            logger.debug(
                 "Assurance acknowledgement received",
                 stream_id=stream_id,
                 buffer_size=len(buffer),

@@ -18,7 +18,7 @@ from jam.block.extrinsics.guarantees import (
 from jam.network.connection import NodeConnection
 from jam.network.protocols.ce_134 import Credential
 
-from jam.log_setup import pvm_logger
+from jam.log_setup import node_logger as logger
 from jam.execution.invocations.is_authorized import PsiI
 from jam.execution.invocations.refine import PsiR
 
@@ -80,9 +80,6 @@ from jam.utils.constants import (
 )
 
 from tests.unit.incore.types import FullVector
-
-# Module-specific logger
-logger = pvm_logger
 
 vector: FullVector = FullVector()
 
@@ -472,7 +469,6 @@ class Processor:
             )
 
             if store:
-                logger.debug(f"Storing Segments & Shards")
 
                 # Access DA
                 d3l = settings.d3l
@@ -481,17 +477,14 @@ class Processor:
                 # Store Exported Segments
                 seg_da = SegmentsDA(d3l)
                 seg_da.put(e, proved_segments)
-                logger.debug("Stored segments")
 
                 # Store Bundle Shards
                 audits_da = AuditShardsDA(audits)
                 audits_da.put_batch(u, bs_dict)
-                logger.debug("Stored bundle shards")
 
                 # Store Segment Shards
                 s_shards_da = SegmentShardsDA(d3l)
                 s_shards_da.put_batch(u, ss_dict)
-                logger.debug("Stored segment shards")
 
             spec = WorkPackageSpec(
                 hash=package_hash,
@@ -546,9 +539,6 @@ class Processor:
                 # Store Report
                 reports_da = ReportsDA(d3l)
                 reports_da.put(wr_hash, report)
-                logger.debug(
-                    f"Stored work report", wp_hash=wp_hash.hex(), wr_hash=wr_hash.hex()
-                )
 
             return report, wr_hash
 

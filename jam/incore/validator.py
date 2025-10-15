@@ -1,4 +1,4 @@
-from jam.log_setup import logger
+from jam.log_setup import node_logger as logger
 
 from jam.utils.constants import (
     MAX_EXPORT_ITEM,
@@ -105,5 +105,5 @@ class Validator:
             return True
 
         except ValidatorError as err:
-            logger.info(f"WP Validation failed! Error {err.code}: {err.message}")
+            logger.error(f"WP Validation failed! Error {err.code}: {err.message}")
             return False

@@ -90,3 +90,6 @@ polkajam
 
 # Ignore fuzzer reports
 fuzzer_session.json
+
+# Ignore logs
+logs
