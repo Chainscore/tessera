@@ -1,13 +1,10 @@
 import asyncio
 import time
-from typing import cast
-
-from tsrkit_types import structure
 
 from jam.block.block_view import Heads
 from jam.log_setup import block_logger as logger
 from rockstore import RockStore
-from jam.types.protocol.crypto import Hash, HeaderHash
+from jam.types.protocol.crypto import Hash
 from jam.block import Block
 from jam.api.rpc.subscription_handlers import subscribe_finalized_block
 
@@ -69,7 +66,7 @@ class Finality:
 
         final_hh = kv.get(cls.FINAL_KEY)
         if not final_hh:
-            final_hh = HeaderHash(32)
+            return Block.genesis()
         return Block.load(final_hh, kv)
 
     @classmethod
