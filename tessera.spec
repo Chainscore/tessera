@@ -90,6 +90,11 @@ if srs_path.exists():
         (str(srs_path), 'py_ark_vrf')
     ])
 
+# Add dev-spec.json in project root to the bundle root (meipass)
+dev_spec = project_root / "dev-spec.json"
+if dev_spec.exists():
+    essential_files.append((str(dev_spec), "."))
+
 # ------------------------------------------------------------------ #
 hidden = (
     ['jam']
@@ -101,14 +106,14 @@ hidden = (
     + collect_submodules('bitarray')
 )
 
-# Extremely aggressive exclusions to minimize binary size  
+# Extremely aggressive exclusions to minimize binary size
 excluded_modules = [
     # Development and testing
     'pytest', 'test', 'tests', 'testing', '_pytest',
     'coverage', 'pytest_cov', 'pytest_asyncio',
     # Test suites
     'tessera-test-suites',
-    # Code formatting and linting  
+    # Code formatting and linting
     'black', 'flake8', 'isort', 'pre_commit', 'mypy', 'pylint',
     # Documentation
     'sphinx', 'docs', 'documentation', 'docutils'

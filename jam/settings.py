@@ -207,4 +207,9 @@ settings: Settings = Settings(data_path=None, seed=None)
 def setup_setting(*args, **kwargs) -> Settings:
     global settings
     settings = Settings(*args, **kwargs)
+
+    from jam.block.block_view import viewer
+    viewer.initialize(settings.main_db)
+
     return settings
+

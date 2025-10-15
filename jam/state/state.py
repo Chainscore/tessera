@@ -1,9 +1,7 @@
 import json
 import asyncio
-from typing import Type
-import multiprocessing
-import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from copy import copy, deepcopy
+
 from jam.error import JamError, JamErrorCode
 from jam.state.partial import PartialState
 from jam.utils.merkle import BMRFunctions
@@ -12,7 +10,6 @@ from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
 from jam.utils.trie.merkle import StateTrie
 from jam.state.storage import StateStorage
-from jam.state.transitions.safrole.executor import setup_executor
 from jam.state.utils import make_state_prop
 from tsrkit_types import Bytes, Dictionary, TypedVector
 from jam.types import (
@@ -32,7 +29,7 @@ from jam.types import (
     Beta,
     Phi,
     Gamma,
-    HeaderHash,
+    HeaderHash, OpaqueHash,
 )
 from jam.block.block import Block
 from jam.log_setup import block_logger as logger
@@ -58,7 +55,6 @@ class State:
 
     # STF Lock, we can only process only Block at a time
     _lock = False
-
     # DB + Trie + Cache
     store: StateStorage
 
@@ -116,57 +112,72 @@ class State:
         2. Apply these to Trie + DB
         3. Clear cache
         """
-        self.store._updates = self.store._load_updates(header_hash)
-        self.store.save_n_clear_cache()
+        self.store._updates = self.store.load_cache(header_hash)
+        self.store.settle_cache()
 
     @classmethod
     def load(cls, header_hash=HeaderHash(Hash.blake2b(b"empty"))) -> "State":
         """
-        Load a readable instance of state. Made for serving API data.
+        Load a snapshot of state at a particular block's slot.
         Create a cloned state (RO DB + Trie Clone w applied updates[do we really need trie?])
 
         Args;
             - `header_hash`: Loads state at point in time when this header was imported.
             If this is not provided, we assume the request is just to have a readable instance of latest state
         """
-        # Empty trie -I dont think we need past trie data anywhere
-        trie = StateTrie()
-        # Create a Read-Only instance
-        db = state.store._DB # RockStore(state.store._DB.path.decode(), options={"read_only": True})
-        # Load past updates
-        cache = state.store._load_updates(header_hash)
+        # Create a clone of finalized state
+        trie_snapshot = deepcopy(state.store._TRIE)
+        store_snapshot = StateStorage(trie_snapshot, state.store._DB)
 
-        return State(StateStorage(trie, db, cache))
+        state_snapshot = State(store_snapshot)
 
-    def settle(self, header_hash: HeaderHash):
-        """Settles a set of state changes cached in store. Marks off the settlement with an unique header hash"""
+        # Load Past Updates
+        # Note: If Header Hash is not passed, cache remains empty
+        cache = state_snapshot.store.load_cache(header_hash)
+        state_snapshot.store._updates = cache
+        logger.debug("Loaded state instance.", header_hash=header_hash.hex(), state_root=state_snapshot.root.hex())
+
+        return state_snapshot
+
+    def stash(self, header_hash: HeaderHash):
+        """Records all the cache updates in database."""
         from jam.settings import settings
 
-        self.store.save_n_clear_cache(header_hash, settings.main_db)
+        self.store.record_cache(header_hash, settings.main_db)
+        logger.debug("State cache stashed.", header_hash=header_hash.hex(), state_root=self.root.hex())
 
-    def _force_transition(self, block: Block):
-        # 1. Push auth hash of every WR to self.alpha[0:1]
 
-        # TODO: We should remove this
-        # Comment these lines to turn off force transition
-        logger.warning("Force State Transition: ON")
-        alpha = self.alpha
+    def settle(self, header_hash: HeaderHash):
+        """Settles a set of state changes and clears cache. Marks off the settlement with an unique header hash"""
+        self.store.settle_cache()
 
-        for guarantee in block.extrinsic.guarantees:
-            report = guarantee.report
-            alpha[report.core_index][0] = report.authorizer_hash
+        # TEST: We are doing shallow copy here. Reference might stay same here.
+        state.store._TRIE = self.store._TRIE
+        logger.debug("State settled.", header_hash=header_hash.hex(), state_root=self.root.hex())
 
-        self.alpha = alpha
 
-        return self.transition(block)
+    @staticmethod
+    def _force_transition(block: Block, instant_finality: bool = True):
+        """Force parent state transition wrapper"""
 
-    def transition(self, block: Block) -> bool:
+        parent_state = state.load(block.header.parent)
+        parent_state.store.enable_cache()
+        parent_state.store.enable_writes()
+
+        success = parent_state.transition(block, instant_finality)
+        # del parent_state
+
+        return success
+
+    def transition(self, block: Block, instant_finality: bool = True) -> bool:
         """
         Main state transition function. Takes in the current state and the incoming block, returns the transitioned state
 
         Args:
             block: Incoming block
+            instant_finality: Finality flag
         """
+
         if self._lock:
             logger.error("Lock detected, skipping transition")
             return False
@@ -195,6 +206,7 @@ class State:
             # Epoch markers - make sure eta0_1 are the same as current etas
             # Tickets mark - make sure ticket.py are valid, present in gamma_a and outside in sequenced
             # Offenders mark - make sure offenders are present in psi.offenders
+
             if block.header.slot == 0:
                 logger.debug("Found genesis block, skipping", hh=header_hash.hex())
                 self._lock = False
@@ -205,7 +217,8 @@ class State:
                 self._lock = False
                 return False
 
-            pre_state = self.load()
+            # Load pre state
+            pre_state = self.load(block.header.parent)
 
             # Handle Parent's Block Posterior State Root (β† h)
             beta: Beta = self.beta
@@ -255,14 +268,14 @@ class State:
             # Statistics
             Statistics.transition(pre_state, self, block, newly_avail_wrs)
 
-            if block.validate():
-                state.settle(header_hash)
-                # Publishes updates of the statistics stored in chain state
-                asyncio.create_task(subscribe_statistics(state.pi))
-
+            if block.validate(self, pre_state):
                 # Set local chain head to produced block
+                # Save block in db, update ll create ghost block.
                 block.save(_set.main_db)
-                Finality.set_head(header_hash, _set.main_db)
+                self.stash(header_hash)
+
+                Finality.set_head(block, _set.main_db)
+
                 logger.info(
                     "Block imported!",
                     new_wrs=len(newly_avail_wrs),
@@ -282,9 +295,19 @@ class State:
                 # audit_engine = AuditEngine()
                 # asyncio.create_task(audit_engine.run(block, newly_avail_wrs))
 
+                # TODO: Mark block as audited once audit process is done.
+                # from jam.block.block_view import viewer
+                # viewer.mark_as_audited(block, _set.main_db)
+
                 # TODO: Remove Direct Finality
                 # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
-                Finality.finalise(header_hash, _set.main_db, True)
+                if instant_finality:
+                    # finalize the block and update viewer and whole chain
+                    Finality.finalise(block, _set.main_db, True)
+                    self.settle(header_hash)
+
+                # Publishes updates of the statistics stored in chain state
+                asyncio.create_task(subscribe_statistics(state.pi))
 
                 block.extrinsic.clear_from_stores()
 
@@ -307,8 +330,8 @@ class State:
     def to_partial(self) -> "PartialState":
         return PartialState(
             StateStorage(
-                StateTrie(), 
-                self.store._DB, 
+                StateTrie(),
+                self.store._DB,
                 self.store._updates.copy(),
                 cache_mode=True,
             )
@@ -354,6 +377,11 @@ def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spe
     state = new_state
 
     # Init Executor
-    pubkeys = [bytes(k.bandersnatch) for k in state.gamma.p]
-    setup_executor(pubkeys)
+    from jam.state.transitions.safrole.executor import setup_executor
+    try:
+        pubkeys = [bytes(k.bandersnatch) for k in state.gamma.p]
+        setup_executor(pubkeys)
+    except Exception as e:
+        logger.debug("Executor setup failed", err=str(e))
+
     return state

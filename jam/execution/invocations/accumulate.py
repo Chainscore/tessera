@@ -32,7 +32,7 @@ class PsiA(InvocationProtocol):
         self.gas = g
         self.operandTuples = o
         self.entropy = entropy
-        self.context = AccumulationContext(x=self.initializer_fn(s, u.clone(), t), y=self.initializer_fn(s, u.clone(), t))
+        self.context = AccumulationContext(x=self.initializer_fn(s, u.clone(), t, entropy), y=self.initializer_fn(s, u.clone(), t, entropy))
         self.table = self.build_table(s, self.context.x.partial_state.service_accounts)
 
     def build_table(self, 
@@ -133,22 +133,22 @@ class PsiA(InvocationProtocol):
             return self.collapse(status, gas, context)
 
     @staticmethod
-    def initializer_fn(s: ServiceId, state_context: GhostPartial, timeslot: TimeSlot) -> AccuContextX:
+    def initializer_fn(s: ServiceId, state_context: GhostPartial, timeslot: TimeSlot, entropy: OpaqueHash) -> AccuContextX:
         """
         Take Service id and Account to yield a "mutator context" - this is to make sure no changes to actual state are made if we exit
         Args:
             s: Service ID
             state_context: Partial State
+            timeslot: Posterior State's Timeslot
+            entropy: Posterior State's Eta[0]
 
         Returns:
             Mutator context
         """
-        from jam.state.state import state
-
         value = (
             U32.decode(
                 Hash.blake2b(
-                    Uint(s).encode() + state.eta[0].encode() + Uint(state.tau).encode()
+                    Uint(s).encode() + entropy.encode() + Uint(timeslot).encode()
                 )
             ) % (2**32 - 2**9)
         ) + 2**8

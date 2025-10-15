@@ -14,3 +14,11 @@ class JamError(Exception):
         self.message = message
         # Pass a formatted message to the base Exception.
         super().__init__(f"[{code.value}] {message}", *args)
+
+    def __reduce__(self):
+        """
+        Ensure that when the exception is unpickled, the constructor receives
+        (code, message) so `code` is not replaced by the Exception.args string.
+        """
+        # Return (callable, args_tuple [, state]) — simple and reliable.
+        return (self.__class__, (self.code, self.message))

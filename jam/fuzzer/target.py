@@ -6,17 +6,14 @@ for conformance testing. It handles handshakes and processes various message
 types including block imports, state operations, and root queries.
 """
 import json
-import random
 import socket
 import time
 import os
-import struct
 import sys
 import shutil
-from typing import Optional, Tuple
+from typing import Optional
 
 from jam.block.block import Block
-from jam.block.header import Header
 from tsrkit_types import Bytes, Bytes32, U8, U32, TypedVector, String, structure
 
 from .constants import (
@@ -33,6 +30,7 @@ from .constants import (
 from .types import PeerInfo, Version, Initialize, State, KeyValue, ErrorMessage
 
 from .handlers import read_message, send_message, handle_handshake
+from ..block.extrinsics.extrinsic import Extrinsic
 
 
 def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optional[str] = None):
@@ -85,21 +83,22 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                         print(f"📝 Session data recorded to {record_path}")
                     print("🔌 Fuzzer closed connection.")
                     break
-                
+
                 if tag == TAG_IMPORT_BLOCK:
                     block_count += 1
                     print(f"📦 Received Block #{block_count} ({len(payload)} bytes)")
-                    
+
                     start_time = time.time()
                     try:
                         block = Block.decode(payload)
                         if record_enabled and json_data:
                             json_data["blocks"].append(block.to_json())
-                        valid_block = state.transition(block)
+                        valid_block = state._force_transition(block, False)
                         if valid_block:
                             duration = time.time() - start_time
-                            print(f"⚡ Block transition completed in {duration:.4f}s")
-                            send_message(conn, TAG_STATE_ROOT, state.root)
+                            post_state = state.load(block.header.hash())
+
+                            send_message(conn, TAG_STATE_ROOT, post_state.root)
                         else:
                             send_message(conn, TAG_ERROR, String("Invalid block. Error message unavailable").encode())
                     except Exception as e:
@@ -120,6 +119,14 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                         state_dict = {kv.key: kv.value for kv in init_data.keyvals.keyvals}
                         state = setup_state(settings.state_db, state_dict)
                         print(f"✅ State initialized. Root: {state.root.hex()}")
+
+                        # Finalize initial block
+                        from jam.finality.finality import Finality
+                        block = Block(init_data.header, Extrinsic.empty())
+                        hh = block.save(settings.main_db)
+                        Finality.finalise(block, settings.main_db)
+                        Finality.set_head(block, settings.main_db)
+
                         send_message(conn, TAG_STATE_ROOT, state.root)
                     except Exception as e:
                         print(f"❌ Initialize failed: {e}", file=sys.stderr)
@@ -151,6 +158,7 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                     print(f"❓ Received unexpected message with tag {tag}. Closing connection.", file=sys.stderr)
                     break
 
+                print("\n---------\n")
 
 async def run_fuzzer_target(
     db_path: str,
