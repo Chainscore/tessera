@@ -1,289 +1,365 @@
-from pathlib import Path
-import statistics
+import os
 import pytest
 import asyncio
 import json
 
 from tsrkit_types import U32, Bytes
-from jam.network.node import Node
-from jam.settings import setup_setting
-from jam.state import accounts
-from jam.state.accounts import Account
-from jam.state.state import State, set_state, setup_state
-from jam.state.utils import construct_state_key
+
 from jam.block.block import Block
-from jam.finality.finality import Finality
-from jam.api.rpc.app import rpc
-from jam.api.rpc.broker import broker
-from jam.types.protocol.core import ServiceId, TimeSlot
-from jam.types.protocol.crypto import HeaderHash, Hash
-from jam.types.state import delta
-from jam.types.state.delta import AccountData, AccountMetadata, Delta, LookupTable, Timestamps
-from jam.utils.dummy.dummy_block import create_dummy_block
-from jam.utils.dummy.utils import create_dummy_bytes
-from json import JSONDecodeError
-from jam.types.protocol.core import Gas, Balance, BlobLength, ServiceId
+from jam.api.rpc.app import rpc as quart
+from jam.types.protocol.core import TimeSlot, ServiceId
 from jam.types.protocol.crypto import Hash
 
-from jam.types.state.delta import Ai, Ao, Timestamps, LookupTable
+from tests.unit.api.utils import produce_chain, init_chain, tweak_service, tweak_storage, tweak_lookup
+
 
 # Refred this : https://quart.palletsprojects.com/en/latest/how_to_guides/websockets/
 
-
-def get_gen_state(db):
-    # Load genesis state
-    setting = setup_setting(db, None)
-    genesis_state_json = json.load(open(Path(__file__).parents[3] / "dev-spec.json"))[
-        "genesis_state"
-    ]
-    state = State.from_keyvals(genesis_state_json, setting.state_db)
-    state.store.enable_cache()
-    state.store.enable_writes()
-    return state, setting
+def request(method: str, params: list = []):
+    return {
+        "jsonrpc": "2.0",
+        "id": 101,
+        "method": method,
+        "params": params
+    }
 
 
-def produce_chain(state, db, length, starting_parent=None):
-    """
-    Execute length dummy blocks onto db, each with consecutive
-    TimeSlot(0), TimeSlot(1), …
-    Returns the HeaderHash of the last block.
-    """
-    parent = starting_parent or HeaderHash([0] * 32)
-    last_hh = None
-    for i in range(length):
-        blk = Block.genesis()
-        blk.header.parent = parent
-        blk.header.slot = TimeSlot(i)
-        hh = HeaderHash(blk.header.hash())
-        state.transition(blk)
-        parent = hh
-        last_hh = hh
-    return last_hh
-
+target_code = bytes([0, 0, 22, 124, 121, 81, 25, 1, 7, 40, 2, 0, 149, 17, 255, 70, 1, 1, 100, 23, 51, 8, 1, 50, 0, 69, 147, 18])
+target_code_hash = Hash.blake2b(target_code)
+target_service = ServiceId(69)
+target_key = Bytes(b"created")
+target_val = Bytes(b"custom service created for test by batman")
 
 @pytest.mark.asyncio
-async def test_ws_finalized_block(db_path):
+@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
+async def test_ws_finalized_block(db_path, rpc):
+    if not rpc:
+        raise ConnectionError("RPC Connections Closed")
+
+    method = "subscribeFinalizedBlock"
+
     # ——— set up on‐chain state just like the Node ———
-    settings = setup_setting(db_path, 0, "alice", 0)
-    state = setup_state(settings.state_db)
+    state, settings, b0 = init_chain(db_path, rpc)
 
-    block = Block.genesis()
-    hh = block.save(settings.main_db)
-    Finality.finalise(hh, settings.main_db)
-    Finality.set_head(hh, settings.main_db)
-
-    finalized_block = Finality.load_final(settings.main_db)
-    expected = [list(finalized_block.header.hash()), int(finalized_block.header.slot)]
-
-    async with rpc.test_client() as client:
+    async with quart.test_client() as client:
         async with client.websocket("/") as ws:
-            await ws.send(
-                json.dumps({"method": "subscribeFinalizedBlock"})
-            )  # won't work without this sleep
-            await asyncio.sleep(0.01)
+            await ws.send(json.dumps(request(method)))
+            await asyncio.sleep(0.1)
 
-            # make call to the finality function to test ws implementation
-            Finality.finalise(hh, settings.main_db)
+            #  Subscription Acknowledgement
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
-            assert data["params"]["result"]["header_hash"] == expected[0]
-            assert data["params"]["result"]["slot"] == expected[1]
+            assert data["id"] == 101
+            assert data["result"] is not None
+
+            state, settings = produce_chain(db_path, False, rpc)
+            i = 1
+            while True:
+                raw = await asyncio.wait_for(ws.receive(), timeout=5)
+                data = json.loads(raw)
+
+                block = Block.load_w_ts(TimeSlot(i), settings.main_db)
+                expected = [list(block.header.hash()), int(block.header.slot)]
+                assert data["method"] == method
+                assert data["params"]["result"] is not None
+                assert data["params"]["result"]["header_hash"] == expected[0]
+                assert data["params"]["result"]["slot"] == expected[1]
+
+                i += 1
+                if i == 6:
+                    return
 
 
 @pytest.mark.asyncio
-async def test_ws_best_block(db_path):
+@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
+async def test_ws_best_block(db_path, rpc):
+    if not rpc:
+        raise ConnectionError("RPC Connections Closed")
+
+    method = "subscribeBestBlock"
+
     # ——— mirror the HTTP setup for bestBlock ———
-    settings = setup_setting(db_path, 0, "alice", 0)
-    state = setup_state(settings.state_db)
-
-    block = Block.genesis()
-    hh = block.save(settings.main_db)
-    Finality.finalise(hh, settings.main_db)
-    Finality.set_head(hh, settings.main_db)
-
-    expected = [list(block.header.hash()), int(block.header.slot)]
+    # state, settings, b0 = init_chain(db_path, rpc)
 
     #  open a WS & subscribe to the function
-    async with rpc.test_client() as client:
+    async with quart.test_client() as client:
         async with client.websocket("/") as ws:
-            await ws.send(json.dumps({"method": "subscribeBestBlock"}))
-
+            await ws.send(json.dumps(request(method)))
             await asyncio.sleep(0.01)
 
-            # make call to the finality set head function to test ws implementation
-            Finality.set_head(hh, settings.main_db)
+            #  Subscription Acknowledgement
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
+            assert data["id"] == 101
+            assert data["result"] is not None
 
-            assert data["params"]["result"]["header_hash"] == expected[0]
-            assert data["params"]["result"]["slot"] == expected[1]
+            state, settings = produce_chain(db_path, True, rpc)
+
+            i = 0
+            while True:
+                raw = await asyncio.wait_for(ws.receive(), timeout=5)
+                data = json.loads(raw)
+
+                block = Block.load_w_ts(TimeSlot(i), settings.main_db)
+                expected = [list(block.header.hash()), int(block.header.slot)]
+
+                # Assertions
+                assert data["method"] == method
+                assert data["params"]["result"] is not None
+                assert data["params"]["result"]["header_hash"] == expected[0]
+                assert data["params"]["result"]["slot"] == expected[1]
+
+                i += 1
+                if i == 6:
+                    return
 
 
 @pytest.mark.asyncio
-async def test_ws_statistics(db_path):
-    # 3) open WS, subscribe, then read until slot‐2’s update arrives
-    async with rpc.test_client() as client:
+@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
+async def test_ws_statistics(db_path, rpc):
+    if not rpc:
+        raise ConnectionError("RPC Connections Closed")
+
+    method = "subscribeStatistics"
+    params = [ False ]
+
+    state, settings, b0 = init_chain(db_path, rpc)
+
+    # open WS, subscribe, then read until ith slot’s update arrives
+    async with quart.test_client() as client:
         async with client.websocket("/") as ws:
-            await ws.send(json.dumps({"method": "subscribeStatistics"}))
-            await asyncio.sleep(0.01)
-            settings = setup_setting(db_path, None)
-            state = setup_state(settings.state_db)
-            block = Block.genesis()
-            hh = block.save(settings.main_db)  # Save to test-specific DB
-            Finality.finalise(hh, settings.main_db)
-            Finality.set_head(hh, settings.main_db)
+            await ws.send(json.dumps(request(method, params)))
+            await asyncio.sleep(1)
 
-            # 2) churn 5 blocks (slots 1–5)
-            produce_chain(state, settings.main_db, length=5)
-
-            # compute the expected Pi vector at slot 2
-            hh2 = settings.main_db.get(Block.get_storage_key_slot(TimeSlot(2)))
-            expected_pi = list(State.load(hh2).pi.encode())
+            #  Subscription Acknowledgement
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
-            evt = json.loads(raw)
-            stats = evt["params"]["result"]["value"]
+            data = json.loads(raw)
+            assert data["id"] == 101
+            assert data["result"] is not None
 
-            assert stats == expected_pi
+            target_slot = TimeSlot(1)
 
-
-@pytest.mark.asyncio
-async def test_ws_service_data(db_path):
-    async with rpc.test_client() as client:
-        async with client.websocket("/") as ws:
-            await ws.send(
-                json.dumps({"method": "subscribeServiceData"})
-            )  # won't work without this sleep
-
-            await asyncio.sleep(0.01)
-
-            # await broker.publish("subscribeServiceData", expected)
-            settings = setup_setting(db_path, None)
-            state = setup_state(settings.state_db)
-            block = Block.genesis()
-            hh = block.save(settings.main_db)  # Save to test-specific DB
-            Finality.finalise(hh, settings.main_db)
-            Finality.set_head(hh, settings.main_db)
-
-            # 2) churn 5 blocks (slots 1–5)
-            produce_chain(state, settings.main_db, length=5)
-
-            await asyncio.wait_for(ws.receive(), timeout=5)
-            state_delta_store = state.delta[ServiceId(42)].service.store
-            expected = state_delta_store.get(bytes(construct_state_key((255, ServiceId(42)))))
-            meta_expected = AccountMetadata.decode(expected)
+            # Simulate Chain
+            b1 = b0.produce(target_slot, state)
+            state.transition(b1)
 
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
-            assert data["params"]["result"]["value"] == list(meta_expected.encode())
+
+            block_hash = b1.header.hash()
+
+            # compute the expected Pi vector at slot i
+            expected_pi = list(state.pi.encode())
+
+            # Assertions
+            assert data["method"] == method
+            assert data["params"]["result"] is not None
+            assert data["params"]["result"]["slot"] == target_slot
+            assert data["params"]["result"]["header_hash"] == list(block_hash)
+            assert data["params"]["result"]["value"] == expected_pi
 
 
 @pytest.mark.asyncio
-async def test_ws_service_value(db_path):
-    async with rpc.test_client() as client:
+@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
+async def test_ws_service_data(db_path, rpc):
+    if not rpc:
+        raise ConnectionError("RPC Connections Closed")
+
+    method = "subscribeServiceData"
+    params = [ target_service, True ]
+
+    state, settings, b0 = init_chain(db_path, rpc)
+
+    async with quart.test_client() as client:
         async with client.websocket("/") as ws:
-            await ws.send(json.dumps({"method": "subscribeServiceValue"}))
+            await ws.send(json.dumps(request(method, params)))
+            await asyncio.sleep(1)
 
-            await asyncio.sleep(0.01)
+            #  Subscription Acknowledgement
+            raw = await asyncio.wait_for(ws.receive(), timeout=5)
+            data = json.loads(raw)
+            assert data["id"] == 101
+            assert data["result"] is not None
 
-            settings = setup_setting(db_path, None)
-            state = setup_state(settings.state_db)
-            db = settings.main_db
-            block = Block.genesis()
-            hh = block.save(settings.main_db)  # Save to test-specific DB
-            Finality.finalise(hh, settings.main_db)
-            Finality.set_head(hh, settings.main_db)
-
-            # 2) churn 5 blocks (slots 1–5)
-            produce_chain(state, settings.main_db, length=5)
-
-            data = create_dummy_bytes(100)
-            sid = ServiceId(100)
-            state.delta[sid] = AccountData()
-            key = Bytes[32].fromhex(
-                "a3dc3bed1b0727caf428961bed11c9998ae2476d8a97fad203171b628363d9a2"
-            )
-            value = Bytes[32]([0xB] * 32)
-            state.delta[sid].storage[key] = value
-            hh = db.get(Block.get_storage_key_slot(TimeSlot(2)))
-
-            state_delta_store = state.delta[ServiceId(1)].service.store
-            # expected = [state.delta[sid].storage[key].hex()]
-            expected = [list(value.hex())]
+            # Simulate Chain
+            b1 = b0.produce(TimeSlot(1), state)
+            state.transition(b1)
 
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
-            assert data["params"]["result"]["value"] == expected[0]
+
+            # Assertions
+            # Handle Case when service is not set
+            assert data["method"] == method
+            assert data["params"]["result"] is not None
+            assert data["params"]["result"]["value"] is None
+
+            service_data = tweak_service(target_service, target_code_hash, target_code)
+            i = 0
+
+            # Catch All Service Data Changes, when any account field or account data changes
+            while True:
+                raw = await asyncio.wait_for(ws.receive(), timeout=5)
+                data = json.loads(raw)
+
+                expected_data = service_data
+                expected_data.num_i += 2 * i
+
+                # Assertions
+                assert data["method"] == method
+                assert data["params"]["result"] is not None
+                assert data["params"]["result"]["value"] == list(expected_data.encode())
+
+                i += 1
+                if i == 2:
+                    return
+
 
 
 @pytest.mark.asyncio
-async def test_ws_service_preimage(db_path):
-    async with rpc.test_client() as client:
+@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
+async def test_ws_service_value(db_path, rpc):
+    if not rpc:
+        raise ConnectionError("RPC Connections Closed")
+
+    method = "subscribeServiceValue"
+    params = [target_service, list(target_key), False]
+
+    state, settings, b0 = init_chain(db_path, rpc)
+
+    async with quart.test_client() as client:
         async with client.websocket("/") as ws:
-            await ws.send(json.dumps({"method": "subscribeServicePreimage"}))
+            await ws.send(json.dumps(request(method, params)))
+            await asyncio.sleep(1)
 
-            await asyncio.sleep(0.01)
-
-            settings = setup_setting(db_path, None)
-
-            state = setup_state(settings.state_db)
-
-            db = settings.main_db
-            block = Block.genesis()
-            hh = block.save(settings.main_db)  # Save to test-specific DB
-            Finality.finalise(hh, settings.main_db)
-            Finality.set_head(hh, settings.main_db)
-
-            # 2) churn 5 blocks (slots 1–5)
-            produce_chain(state, settings.main_db, length=5)
-
-            state_at_hh = State.load(hh)
-            data = create_dummy_bytes(100)
-            state.delta[ServiceId(1)].preimages[Hash.blake2b(data)] = Bytes(data)
-
-            state.settle(header_hash=Bytes([1] * 32))
-
-            assert state.delta[ServiceId(1)].preimages[Hash.blake2b(data)] == Bytes(data)
-
-            expected = list(state.delta[ServiceId(1)].preimages[Hash.blake2b(data)])
-            # await broker.publish("subscribeServicePreimage", expected)
-
+            #  Subscription Acknowledgement
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
-            assert data["params"]["result"]["value"] == expected
+            assert data["id"] == 101
+            assert data["result"] is not None
+
+            # Simulate Chain
+            b1 = b0.produce(TimeSlot(1), state)
+            state.transition(b1)
+
+            # Catch Initial Call for subscription
+            raw = await asyncio.wait_for(ws.receive(), timeout=5)
+            data = json.loads(raw)
+
+            # Assertions
+            # Handle Case when service is not set
+            assert data["method"] == method
+            assert data["params"]["result"] is not None
+            assert data["params"]["result"]["value"] is None
+
+            tweak_storage(target_service, target_code_hash, target_key, target_val)
+
+            # Catch Service Value changes
+            raw = await asyncio.wait_for(ws.receive(), timeout=5)
+            data = json.loads(raw)
+
+            # Assertions
+            assert data["method"] == method
+            assert data["params"]["result"] is not None
+            assert data["params"]["result"]["value"] == list(target_val)
 
 
 @pytest.mark.asyncio
-async def test_ws_service_request(db_path):
-    async with rpc.test_client() as client:
+@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
+async def test_ws_service_preimage(db_path, rpc):
+    if not rpc:
+        raise ConnectionError("RPC Connections Closed")
+
+    method = "subscribeServicePreimage"
+    params = [target_service, list(target_code_hash), False]
+
+    state, settings, b0 = init_chain(db_path, rpc)
+
+    async with quart.test_client() as client:
         async with client.websocket("/") as ws:
-            await ws.send(json.dumps({"method": "subscribeServiceRequest"}))
+            await ws.send(json.dumps(request(method, params)))
+            await asyncio.sleep(1)
 
-            await asyncio.sleep(0.01)
-            # await broker.publish("subscribeServiceRequest", expected)
-            settings = setup_setting(db_path, None)
-
-            state = setup_state(settings.state_db)
-
-            db = settings.main_db
-            block = Block.genesis()
-            hh = block.save(settings.main_db)  # Save to test-specific DB
-            Finality.finalise(hh, settings.main_db)
-            Finality.set_head(hh, settings.main_db)
-
-            # 2) churn 5 blocks (slots 1–5)
-            produce_chain(state, settings.main_db, length=5)
-
-            data = create_dummy_bytes(100)
-            state.delta[ServiceId(1)] = AccountData()
-            state.delta[ServiceId(1)].lookup[
-                LookupTable(hash=Hash.blake2b(data), length=100)
-            ] = Timestamps([U32(1752078176), U32(1752078177)])
-
-            state.settle(header_hash=Bytes([1] * 32))
-            expected = state.delta[ServiceId(1)].lookup[
-                LookupTable(hash=Hash.blake2b(data), length=100)
-            ]
-
+            #  Subscription Acknowledgement
             raw = await asyncio.wait_for(ws.receive(), timeout=5)
             data = json.loads(raw)
-            assert data["params"]["result"]["value"] == expected
+            assert data["id"] == 101
+            assert data["result"] is not None
+
+            # Simulate Chain
+            b1 = b0.produce(TimeSlot(1), state)
+            state.transition(b1)
+
+            # Catch Initial Call for subscription
+            raw = await asyncio.wait_for(ws.receive(), timeout=5)
+            data = json.loads(raw)
+
+            # Assertions
+            # Handle Case when service is not set
+            assert data["method"] == method
+            assert data["params"]["result"] is not None
+            assert data["params"]["result"]["value"] is None
+
+            tweak_service(target_service, target_code_hash, target_code)
+
+            # Catch Service Value changes
+            raw = await asyncio.wait_for(ws.receive(), timeout=5)
+            data = json.loads(raw)
+
+            # Assertions
+            assert data["method"] == method
+            assert data["params"]["result"] is not None
+            assert data["params"]["result"]["value"] == list(target_code)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
+async def test_ws_service_request(db_path, rpc):
+    if not rpc:
+        raise ConnectionError("RPC Connections Closed")
+
+    method = "subscribeServiceRequest"
+    params = [target_service, list(target_code_hash), len(target_code), False]
+
+    state, settings = produce_chain(db_path, True, rpc)
+
+    async with quart.test_client() as client:
+        async with client.websocket("/") as ws:
+            await ws.send(json.dumps(request(method, params)))
+            await asyncio.sleep(1)
+
+            #  Subscription Acknowledgement
+            raw = await asyncio.wait_for(ws.receive(), timeout=5)
+            data = json.loads(raw)
+            assert data["id"] == 101
+            assert data["result"] is not None
+
+            # Catch Initial Call for subscription
+            raw = await asyncio.wait_for(ws.receive(), timeout=5)
+            data = json.loads(raw)
+
+            # Assertions
+            # Handle Case when service is not set
+            assert data["method"] == method
+            assert data["params"]["result"] is not None
+            assert data["params"]["result"]["value"] is None
+
+            tweak_lookup(target_service, target_code_hash, target_code)
+
+            expected_lookup = []
+
+            # Catch Service Value changes
+            i = 0
+            while i < 4:
+                if i > 0:
+                    expected_lookup.append(2*i - 1)
+
+                raw = await asyncio.wait_for(ws.receive(), timeout=5)
+                data = json.loads(raw)
+
+                # Assertions
+                assert data["method"] == method
+                assert data["params"]["result"] is not None
+                assert data["params"]["result"]["value"] == expected_lookup
+
+                i +=1

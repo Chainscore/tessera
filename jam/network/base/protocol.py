@@ -4,7 +4,7 @@ from typing import Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from jam.network.connection import NodeConnection
 
-from tsrkit_types.enum import Uint
+from tsrkit_types import Uint
 
 U8 = Uint[8]
 

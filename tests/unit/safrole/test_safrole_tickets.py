@@ -1,4 +1,6 @@
 from inspect import signature
+
+from jam.state.transitions.safrole.executor import setup_executor
 from py_ark_vrf import vrf_output
 import pytest
 from tsrkit_types.bytes import Bytes
@@ -20,7 +22,7 @@ from tests.unit.safrole.data import create_block, create_state, create_validator
 from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END
 
 
-def test_ticket_accumulation():
+def test_ticket_accumulation(db_path):
     """Test that Safrole correctly accumulates ticket.py during the submission period"""
     # Create initial state with a ticket already in gamma_a
     initial_state = create_state(
@@ -42,7 +44,10 @@ def test_ticket_accumulation():
         offenders=PsiO([]),
     )
 
-    setup_setting(None, 1)
+    pubkeys = [val.bandersnatch for val in initial_state.kappa]
+    setup_executor(pubkeys)
+
+    setup_setting(db_path, 1)
 
     # Create a ticket envelope for a block
     ticket_envelope1 = Conductor.generate_ticket(initial_state, 0)
@@ -75,7 +80,7 @@ def test_ticket_accumulation():
     assert tickets[0].id == ticket2.id
 
 
-def test_ticket_submission_outside_period():
+def test_ticket_submission_outside_period(db_path):
     """Test that Safrole rejects ticket.py outside the submission period"""
     # Create initial state
     initial_state = create_state(
@@ -96,8 +101,10 @@ def test_ticket_submission_outside_period():
         ),
         offenders=PsiO([]),
     )
+    pubkeys = [val.bandersnatch for val in initial_state.kappa]
+    setup_executor(pubkeys)
 
-    setup_setting(None, 1)
+    setup_setting(db_path, 1)
 
     # Calculate a slot after submission period
     slot_after_submission = U32(5 - (5 % EPOCH_LENGTH) + TICKET_SUBMISSION_END + 1)
@@ -117,7 +124,7 @@ def test_ticket_submission_outside_period():
     assert excinfo.value.code == SafroleErrorCode.UNEXPECTED_TICKET
 
 
-def test_ticket_duplicate_rejection():
+def test_ticket_duplicate_rejection(db_path):
     """Test that Safrole correctly rejects duplicate ticket.py"""
     # Create initial state
     initial_state = create_state(
@@ -139,7 +146,10 @@ def test_ticket_duplicate_rejection():
         offenders=PsiO([]),
     )
 
-    setup_setting(None, 1)
+    pubkeys = [val.bandersnatch for val in initial_state.kappa]
+    setup_executor(pubkeys)
+
+    setup_setting(db_path, 1)
 
     # Create a ticket envelope
     ticket_envelope = Conductor.generate_ticket(initial_state, 0)
@@ -160,7 +170,7 @@ def test_ticket_duplicate_rejection():
     assert "Duplicate tickets are not allowed" in str(excinfo.value)
 
 
-def test_ticket_sorting():
+def test_ticket_sorting(db_path):
     """Test that Safrole correctly sorts ticket.py by ID"""
     # Create initial state
     initial_state = create_state(
@@ -182,11 +192,17 @@ def test_ticket_sorting():
         offenders=PsiO([]),
     )
 
-    setup_setting(None, 1)
+    pubkeys = [val.bandersnatch for val in initial_state.kappa]
+    setup_executor(pubkeys)
+
+    settings = setup_setting(db_path, 1)
 
     # Create multiple ticket envelopes (3 distinct tickets)
     envelopes = [Conductor.generate_ticket(initial_state, i) for i in range(2)]
-    setup_setting(None, 2)
+
+    settings.clear()
+
+    setup_setting(db_path, 2)
     envelopes.append(Conductor.generate_ticket(initial_state, 0))
 
     envelopes = sorted(envelopes, key=lambda v: vrf_output(v.signature))

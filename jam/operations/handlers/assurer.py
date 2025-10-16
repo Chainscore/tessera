@@ -31,7 +31,7 @@ class Assurer:
 
     async def run(self, time_slot: int):
         from jam.settings import settings
-
+        settings.update()
         pref = Bytes("jam_available", "utf-8")
 
         from jam.network.protocols.ce_141 import CE141Data, AssuranceDistribution
@@ -50,7 +50,7 @@ class Assurer:
             # TODO: Fix Assurances Check Per Block
             pending_reps = state.rho.pending_reps()
             if len(pending_reps) == 0:
-                logger.info("No Pending Reports. Skipping assurances.", slot=state.tau)
+                logger.debug("No Pending Reports. Skipping assurances.", slot=state.tau)
                 self.clear()
                 return
 
@@ -77,7 +77,7 @@ class Assurer:
             )
 
             logger.info(
-                "[EXTRINSICS]: STORING SELF ASSURANCE",
+                "Storing self assurance",
                 validator=settings.validator_index,
                 assurance=assr_ext.to_json(),
             )

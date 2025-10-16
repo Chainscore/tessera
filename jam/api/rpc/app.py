@@ -1,12 +1,14 @@
+import asyncio
 import json
 from jam.api.rpc.broker import broker
 from jam.api.rpc.api_handlers import dispatch_api_call
 from jam.api.rpc.utils import RpcRequest
 from jam.log_setup import node_logger as logger
 from quart import Quart, websocket, jsonify, request
-import jam.finality.finality as Finality
 import itertools
 from tsrkit_types import U32
+from .ws_handlers import dispatch_ws_call
+from .subscription_handlers import initial_subscription
 
 
 def _json_default(val):
@@ -22,7 +24,7 @@ def _json_default(val):
 
 
 
-rpc = Quart(__name__)
+rpc: Quart = Quart(__name__)
 
 # subscription ID's setup
 # increment sub id at every connection
@@ -51,54 +53,115 @@ async def rpc_handler():
             }
         )
 
+_sub_id_counter = itertools.count(1)
+
+SUBSCRIPTIONS = {
+    "subscribeSyncStatus":  lambda params: "subscribeSyncStatus",
+    "subscribeFinalizedBlock": lambda params: "subscribeFinalizedBlock",
+    "subscribeBestBlock": lambda params: "subscribeBestBlock",
+    "subscribeStatistics": lambda params:(
+        f"subscribeStatistics:{params[0]}"
+    ),
+    "subscribeServiceData": lambda params:(
+        f"subscribeServiceData:{params[0]}:{params[1]}"
+    ),
+    "subscribeServiceValue": lambda params:(
+        f"subscribeServiceValue:{params[0]}:{params[1]}:{params[2]}"
+    ),
+    "subscribeServicePreimage": lambda params:(
+        f"subscribeServicePreimage:{params[0]}:{params[1]}:{params[2]}"
+    ),
+    "subscribeServiceRequest": lambda params:(
+        f"subscribeServiceRequest:{params[0]}:{params[1]}:{params[2]}:{params[3]}"
+    ),
+}
+
+REMOVE_SUBSCRIPTIONS = ["unsubscribeSyncStatus", "unsubscribeFinalizedBlock", "subscribeBestBlock", "unsubscribeStatistics", "unsubscribeServiceData", "unsubscribeServiceValue", "unsubscribeServicePreimage", "unsubscribeServiceRequest"]
 
 @rpc.websocket("/")
 async def ws():
-    raw = await websocket.receive()
-    # increment sub id at every connection
-    sub_id = next(_sub_id_counter)
+    # active subscriptions for this connection: sub_id -> task
+    subs: dict[int, asyncio.Task] = {}
+    topics: dict[int, str] = {}
 
-    req = json.loads(raw)
+    async def start_subscription(method: str, params, req_id):
+        topic = SUBSCRIPTIONS[method](params)
 
-    method = req.get("method")
-    params = req.get("params", [])
-    req_id = req.get("id")
+        sub_id = next(_sub_id_counter)
 
-    async for msg in broker.subscribe(method):
-        # wrap & JSON-serialize
+        await websocket.send(json.dumps({
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "result": sub_id
+        }))
 
-        from jam.settings import settings
-
-        final = Finality.load_final(settings.main_db)
-        # await websocket.send(json.dumps({"id":1, "jsonrpc": "2.0", "result":sub_id}))
-
-        # special handling for subscribeBestBlock and subscribeFinalizedBlock
-        if method == "subscribeBestBlock" or method == "subscribeFinalizedBlock":
-            await websocket.send(
-                json.dumps(
-                    {
+        async def pump(t=topic, sid=sub_id, notify_method=method):
+            try:
+                async for msg in broker.subscribe(t):
+                    await websocket.send(json.dumps({
                         "jsonrpc": "2.0",
-                        "method": method,
-                        "params": {"subscription": sub_id, "result": msg},
-                    },
-                    default=_json_default,
-                )
-            )
-        else:
-            await websocket.send(
-                json.dumps(
-                    {
-                        "jsonrpc": "2.0",
-                        "method": method,
+                        "method": notify_method,
                         "params": {
-                            "subscription": sub_id,
-                            "result": {
-                                "header_hash": final.header.hash(),
-                                "slot": int(final.header.slot),
-                                "value": msg,
-                            },
-                        },
-                    },
-                    default=_json_default,
-                )
-            )
+                            "subscription": sid,
+                            "result": msg
+                        }
+                    }))
+            except Exception:
+                pass
+
+        subs[sub_id] = asyncio.create_task(pump())
+        topics[sub_id] = topic
+        initial_subscription(method, params)
+
+    try:
+        while True:
+            raw = await websocket.receive()
+            if raw is None:
+                break
+
+            req = json.loads(raw)
+            method = req.get("method")
+            params = req.get("params", [])
+            req_id = req.get("id")
+
+            if method in SUBSCRIPTIONS:
+                await start_subscription(method, params, req_id)
+                continue
+
+            # unsubscribe just this stream using id
+            if method in REMOVE_SUBSCRIPTIONS:
+                ok = False
+                if params:  # expect [sub_id]
+                    sid = params[0]
+                    task = subs.pop(sid, None)
+                    topic = topics.pop(sid, None)
+                    broker.topics.pop(topic, None)
+                    if task:
+                        task.cancel()
+                        ok = True
+                await websocket.send(json.dumps({
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": ok
+                }))
+                continue
+
+            # normal request/response
+            result = dispatch_ws_call(method, params)
+
+            if result is not None:
+                await websocket.send(json.dumps({
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": result
+                }))
+            else:
+                await websocket.send(json.dumps({
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": None
+                }))
+    finally:
+        # remove all subscription tasks on disconnect
+        for t in subs.values():
+            t.cancel()

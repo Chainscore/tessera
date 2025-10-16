@@ -28,9 +28,11 @@ from jam.utils.constants import (
     MAX_IMPORT_ITEM,  # W_M
     MAX_AUTH_CODE_SIZE,  # W_A
     MAX_EXPORT_ITEM,  # W_X
+    CORE_COUNT, # C
+    SLOT_PERIOD, # P
 )
 
-params = {
+parameters = {
     # Canonical JAM parameters
     "deposit_per_account": BASIC_MINIMUM_BALANCE,  # B_S
     "deposit_per_item": ADDITIONAL_BALANCE_PER_ITEM,  # B_I
@@ -54,12 +56,16 @@ params = {
     "availability_timeout": UNAVAILABLE_WORK_EXPIRY,  # U
     "val_count": VALIDATOR_COUNT,  # V
     "max_input": MAX_ENCODED_WORK_PACKAGE_SIZE,  # W_B
-    "max_refine_code_size": MAX_SERVICE_CODE_SIZE,  # W_C
     "basic_piece_len": BASIC_ERASURE_SIZE,  # W_E
     "max_imports": MAX_IMPORT_ITEM,  # W_M
-    # Additional parameters
-    "max_is_authorized_code_size": MAX_AUTH_CODE_SIZE,  # W_A
     "max_exports": MAX_EXPORT_ITEM,  # W_X
-    "max_refine_memory": None,  # Not defined in constants.py
-    "max_is_authorized_memory": None,  # Not defined in constants.py
+    "core_count": CORE_COUNT, #C
+    "slot_period_sec": SLOT_PERIOD, #P
+    "max_authorizer_code_size": MAX_AUTH_CODE_SIZE, # W_A
+    "max_service_code_size": MAX_SERVICE_CODE_SIZE, # W_C
+    # Additional parameters
+    "segment_piece_count": 1026,
+    "max_report_elective_data": 49152,
+    "transfer_memo_size": 128,
+    "epoch_tail_start": 10
 }

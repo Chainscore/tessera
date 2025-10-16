@@ -83,7 +83,7 @@ class BlockProducer(NodeDispatcher):
             logger.debug("⏭ Skipping BP: Not our fallback", expected=entry.hex(), our_key=settings.bandersnatch_public.hex())
             return
 
-        block = latest.produce(TimeSlot(time_slot), ticket)
+        block = latest.produce(TimeSlot(time_slot), state, ticket)
 
         is_valid = state._force_transition(block)
 

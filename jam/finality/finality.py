@@ -1,7 +1,15 @@
+import asyncio
+import time
+
+from jam.block.block_view import Heads
 from jam.log_setup import block_logger as logger
 from rockstore import RockStore
-from jam.types.protocol.crypto import Hash, HeaderHash
+from jam.types.protocol.crypto import Hash
 from jam.block import Block
+from jam.api.rpc.subscription_handlers import subscribe_finalized_block
+
+
+
 
 class Finality:
     """
@@ -13,47 +21,82 @@ class Finality:
 
     FINAL_KEY = bytes(Hash.blake2b(b"FINAL_BLOCK"))
     LATEST_KEY = bytes(Hash.blake2b(b"LATEST_BLOCK"))
+    HEADS_KEY = bytes(Hash.blake2b(b"LATEST_HEADS"))
+    META_KEY = bytes(Hash.blake2b(b"BLOCK_META"))
 
     @classmethod
-    async def schedule_run(cls, header_hash: HeaderHash, kv: RockStore, sch_ts: int, initial: bool ) -> None:
+    def finalise(cls, block: Block, kv: RockStore, initial: bool = True, sch_ts: int = 18):
+        """Finalizes block and updates Block View."""
+
+        header_hash = block.header.hash()
+
         if initial:
             logger.info(f"Finalized {header_hash.encode().hex()[0:16]}...")
             kv.put(cls.FINAL_KEY, header_hash.encode())
         else:
-            # await asyncio.sleep(sch_ts)
+            time.sleep(sch_ts)
             logger.info(f"Finalized {header_hash.encode().hex()[0:16]}...")
             kv.put(cls.FINAL_KEY, header_hash.encode())
 
-    @classmethod
-    def finalise(cls, header_hash: HeaderHash, kv: RockStore, initial: bool): 
-        # asyncio.create_task(ws_broker.publish("final", {"" : header_hash}))
-        # logger.debug("Finalised block", header_hash=header_hash.hex())
-        # asyncio.create_task(cls.schedule_run(header_hash, kv, 18, initial))
-        kv.put(cls.FINAL_KEY, header_hash.encode())
-        # block = Block.load(header_hash, kv)
+        # publish updates of the latest finalized block
+        asyncio.create_task(subscribe_finalized_block(header_hash))
 
-        #Subscribe's to updates of the latest finalized block, as returned by finalizedBlock.
-        # asyncio.create_task(broker.publish("subscribeFinalizedBlock", {"header_hash":list(header_hash), "slot":int(block.header.slot)}))
-
-    @classmethod
-    def set_head(cls, header_hash: HeaderHash, kv: RockStore):
-        # logger.debug("Setting header...", header_hash=header_hash.hex())
-        # block = Block.load(header_hash, kv)
-        #Subscribe's to updates of the head of the "best" chain, as returned by bestBlock.
-        # if block: asyncio.create_task(broker.publish("subscribeBestBlock", {"header_hash":list(header_hash), "slot":int(block.header.slot)}))
-        # else: logger.warning("Head published, but not found in store", header_hash=header_hash.hex())
-        kv.put(cls.LATEST_KEY, header_hash.encode())
+        # Timeslot -> HeaderHash
+        # on finalization of block, store ts - block mapping
+        ts_key = block.get_storage_key_slot(block.header.slot)
+        kv.put(ts_key, header_hash)
+        from jam.block.block_view import viewer
+        viewer.finalize(block, kv)
 
     @classmethod
-    def load_final(cls, kv: RockStore) -> "Block":
+    def set_head(cls, block: Block, kv: RockStore):
+        """Records new blocks and update heads of chains."""
+
+        kv.put(cls.LATEST_KEY, block.header.hash().encode())
+
+        from jam.block.block_view import viewer
+        viewer.record_block(block, kv)
+        kv.put(cls.HEADS_KEY, viewer.heads.encode())
+
+        # viewer.visualize()
+
+    @classmethod
+    def load_final(cls, kv: RockStore) -> Block:
+        """Load latest finalized block."""
+
         final_hh = kv.get(cls.FINAL_KEY)
         if not final_hh:
-            final_hh = bytes(32)
+            return Block.genesis()
         return Block.load(final_hh, kv)
 
     @classmethod
-    def load_latest(cls, kv: RockStore):
+    def load_latest(cls, kv: RockStore) -> Block:
+        """Load last intercepted block."""
+
         latest_hh = kv.get(cls.LATEST_KEY)
         if not latest_hh:
             latest_hh = bytes(32)
         return Block.load(latest_hh, kv)
+
+    @classmethod
+    def load_heads(cls, kv: RockStore) -> Heads | Block:
+        """Load all the heads available."""
+
+        data = kv.get(cls.HEADS_KEY)
+
+        if data:
+            heads = Heads.decode(data)
+            return heads
+
+        else:
+            block = cls.load_final(kv)
+            return block
+
+    @classmethod
+    def load_best(cls, kv: RockStore) -> Block:
+        """Loads best block."""
+
+        from jam.block.block_view import viewer
+        best = viewer.best
+
+        return Block.load(best.header, kv)

@@ -5,7 +5,7 @@ from tsrkit_types import Uint, U32
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
-from jam.log_setup import network_logger
+from jam.log_setup import network_logger as logger
 
 from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -16,10 +16,7 @@ from jam.block import Block, Header
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import HeaderHash
 from jam.types.protocol.validators import ValidatorData
-
-# Module-specific logger
-logger = network_logger
-
+from jam.api.rpc.subscription_handlers import subscribe_sync_status
 
 @structure
 class Leaf:
@@ -147,7 +144,7 @@ class BlockAnnouncement(NetworkProtocol):
 
         message = announcement.encode()
         if announcement.header.hash() not in self._processed_headers: 
-            logger.debug("Announcing new block to peers",
+            logger.info("Announcing new block to peers",
                 bs=int(announcement.header.slot),
                 parent_hash=announcement.header.parent.hex()[:16] + "...", message_size=len(message), 
             )
@@ -202,7 +199,7 @@ class BlockAnnouncement(NetworkProtocol):
             h = Handshake.decode(data[4:])
 
             # TODO: Process Handshake
-            logger.info("Received UP0 handshake", h=h.to_json())
+            logger.debug("Received UP0 handshake", h=h.to_json())
 
             conn.handshake_completed = True
 
@@ -247,6 +244,7 @@ class BlockAnnouncement(NetworkProtocol):
         header = anc.header
 
         logger.debug("Fetching block to import", slot=header.slot)
+        asyncio.create_task(subscribe_sync_status("InProgress"))
         blocks = await BlockRequest().transmit(
             CE128Data(
                 header=HeaderHash(header.hash()),
@@ -263,15 +261,18 @@ class BlockAnnouncement(NetworkProtocol):
 
         _valid = state._force_transition(blocks[0][0])
         if _valid:
-            await self.transmit(anc)
+            asyncio.create_task(self.transmit(anc))
+            asyncio.create_task(subscribe_sync_status("Completed"))
 
     @classmethod
     async def synchronise(cls, h: Handshake):
         from jam.state.state import state
+        asyncio.create_task(subscribe_sync_status( "InProgress"))
 
         # To know how many blocks to fetch
         # (h.final.slot - state.tau)
         if h.final.time_slot <= state.tau:
+            asyncio.create_task(subscribe_sync_status("Completed"))
             return
 
         data_req = CE128Data(
@@ -288,4 +289,5 @@ class BlockAnnouncement(NetworkProtocol):
             state._force_transition(block)
 
         logger.info("Sync complete!", state_root=state.root)
+        asyncio.create_task(subscribe_sync_status("Completed"))
         return

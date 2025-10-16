@@ -5,7 +5,7 @@ from tsrkit_types import Null
 from jam.audit.auditor import Auditor
 from jam.block.block import Block
 from jam.finality.finality import Finality
-from jam.log_setup import logger
+from jam.log_setup import node_logger as logger
 from jam.network.protocols.ce_144 import NoShows
 
 from jam.types.audit.tranche import (
@@ -18,8 +18,6 @@ from jam.types.audit.tranche import (
 from jam.types.state.rho import WorkReportState
 from jam.types.work.report import WorkReports
 from jam.utils.constants import AUDIT_PERIOD, CURRENT_TIME, SLOT_PERIOD
-
-# Logger for Auditing module
 
 
 class AuditEngine:
@@ -61,7 +59,6 @@ class AuditEngine:
             return
 
         # -------------- Fetch Pending Reports --------------
-        logger.debug("Fetching prior state", ph=block.header.parent.hex())
         prior_state = State.load(block.header.parent)
         auditable_reports = OptionalReports([])
         for r in prior_state.rho:
@@ -70,8 +67,6 @@ class AuditEngine:
                 auditable_reports.append(OptionalReport(report_state.report))
             else:
                 auditable_reports.append(OptionalReport(Null))
-
-        logger.debug("Fetched prior state", rho=prior_state.rho.to_json(), reps=auditable_reports.to_json())
 
         curr_ts = SLOT_PERIOD * int(block.header.slot)
 
@@ -129,3 +124,9 @@ class AuditEngine:
             # Sleep for remainder time period
             await asyncio.sleep(next_ts - CURRENT_TIME())
             curr_ts += AUDIT_PERIOD
+
+    def get_audit_status(self):
+        """
+        Return current audit status without re-running the process.
+        """
+        return self.is_audited

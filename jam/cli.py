@@ -82,7 +82,8 @@ def build_parser():
                    help="Disable session recording (only used with --fuzzer)")
     p.add_argument("--import", dest="import_path", type=str,
                    help="Import test vector(s) from file or directory. JSON files are sorted by name.")
-    
+    p.add_argument("--no-rpc", action="store_false", default=True, help="Flag for turning rpc off")
+
     return p
 
 def show_info():
@@ -191,6 +192,7 @@ def main():
                 args.theme,
                 False,
                 True,
+                args.no_rpc
             )
         )
     except KeyboardInterrupt:

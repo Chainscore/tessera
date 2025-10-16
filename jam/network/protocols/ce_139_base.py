@@ -3,7 +3,7 @@ from typing import cast
 
 from tsrkit_types import structure, TypedVector, Uint, U8
 
-from jam.log_setup import logger
+from jam.log_setup import network_logger as logger
 from jam.network.connection import NodeConnection
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
@@ -92,7 +92,7 @@ class SegmentShardRequestBase(NetworkProtocol):
         msg_a = data.queries.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Sending segment shard request with")
+        logger.info(f"Transmitting segment shard request")
 
         tasks = []
         try:

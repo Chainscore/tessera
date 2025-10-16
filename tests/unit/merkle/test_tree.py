@@ -211,32 +211,27 @@ def test_tree():
 
     pages = utils.paged_proof(segments)
     processed_leaves = merklizer._preprocessor_fn(segments)
-    print("processed leaves", end="  ")
-    print_trace(processed_leaves)
+    # print("processed leaves", end="  ")
+    # print_trace(processed_leaves)
 
-    print("-----^------")
+    # print("-----^------")
     test_root, tree = node(processed_leaves)
     visualizer = MerkleVisualizer()
-    visualizer.print_tree(tree)
-    print("------<>------")
+    # visualizer.print_tree(tree)
 
     subtree_depth = 6
     page_size = 2**subtree_depth
     page_count = len(pages)
 
     for i in indices:
-        print("CURRENT INDEX", i + 1, " / ", len_segments)
+        # print("CURRENT INDEX", i + 1, " / ", len_segments)
         page_index = int(i // page_size)
         sub_page_index = i % page_size
 
         page = pages[page_index]
-        print("CURRENT PAGE", page_index + 1, " / ", page_count)
-        print("GENERATED PAGE", len(page), page.hex()[:100])
+        # print("CURRENT PAGE", page_index + 1, " / ", page_count)
         trace, leaves = utils.decode_proof(page)
-        # for val in leaves:
         #     print("dsdd",val)
-        print("trace check", len(trace), trace.encode().hex()[:100])
-        # print("leaves check", leaves.encode().hex()[:100])
 
         # index_pass = page_size * page_index
         up_leaves = leaves
@@ -245,40 +240,25 @@ def test_tree():
 
         for k in range(padded_length - length):
             up_leaves.append(_ZERO_HASH)
-        print("New length", len(up_leaves))
+
         sub_trace = merklizer.trace_fn(up_leaves, sub_page_index).unwrap32()
         sub_leaf = leaves[sub_page_index]
 
-        # sub_leaf = merklizer.subtree_leaves(leaves, 0, sub_page_index)
-        print("SEG CHECK", len(sub_leaf), sub_leaf.hex())
-        print("LEN TEST", len(trace), trace.encode().hex()[:100])
         trace.extend(sub_trace)
-        print("LEN TEST EXTENDED", len(trace), trace.encode().hex()[:100])
 
         path = merklizer.subtree_path(segments, 0, i).unwrap32()
         og_leaves = merklizer.subtree_leaves(segments, 0, i)
 
-        print("PATH TEST", len(path), len(trace), path == trace)
-        print("P1 PATH", end=" ")
-        print_trace(path)
-        print("")
-        print("P2 PATH", end=" ")
-        print_trace(trace)
-        print("")
-
-        print(
-            "LEAF TEST", len(og_leaves), og_leaves[0] == sub_leaf, og_leaves, sub_leaf
-        )
-        # print("PATH TEST", len(path), path == trace, path.encode().hex()[:100])
+        assert path == trace
+        assert og_leaves[0] == sub_leaf
 
         new_root = merklizer.reconstruct_root(i, trace, sub_leaf, len_segments)
 
-        print("GENERATED ROOT", new_root.hex(), new_root == root)
         new_root = verify_proof(trace, sub_leaf, i)
 
-        print("TEST ROOT 2", new_root.hex(), new_root == root)
-
-        print("\n")
+        assert new_root == root
+        # print("TEST ROOT 2", new_root.hex(), new_root == root)
+        # print("\n")
 
 
 def print_trace(values: OpaqueHashes):
@@ -309,5 +289,4 @@ def verify_proof(
             root = self._node_fn(TypedVector([sibling, root])).unwrap()
         leaf_index = leaf_index // 2
 
-    print("NEW ROOOT", root.hex())
     return OpaqueHash(root)

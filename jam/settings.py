@@ -29,6 +29,9 @@ class Settings:
     ENV_PREFIX = "JAM_"
     ENV_FILE = "40000.env"
 
+    # RPC flag
+    rpc_flag: bool
+
     # Database settings - can be null if data_path is not set up
     _main_db: RockStore | None
     _state_db: RockStore | None
@@ -58,10 +61,13 @@ class Settings:
         seed: Optional[int] = None,
         name: str = "god_mode",
         port: int = 3000,
+        rpc_flag: bool = True
     ):
         self.NODE_NAME = name
         random.seed(port)
         self.NODE_ID = random.randint(0, 2**16 - 1)
+
+        self.rpc_flag = rpc_flag
 
         self._main_db = None
         self._audit_db = None
@@ -201,4 +207,9 @@ settings: Settings = Settings(data_path=None, seed=None)
 def setup_setting(*args, **kwargs) -> Settings:
     global settings
     settings = Settings(*args, **kwargs)
+
+    from jam.block.block_view import viewer
+    viewer.initialize(settings.main_db)
+
     return settings
+

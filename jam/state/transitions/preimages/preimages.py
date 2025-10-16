@@ -2,7 +2,7 @@ from jam.types.state.pi import ServiceStat
 from copy import deepcopy
 from tsrkit_types import Bytes
 from jam.state.transitions.preimages.errors import PreimageError, PreimageErrorEnum
-from jam.types.state.delta import LookupTable
+from jam.types.state.delta import LookupTable, Timestamps
 from jam.types.state.sigma import Sigma
 from jam.block import Block
 from jam.block.extrinsics.preimages import Preimage, PreimagesExtrinsic
@@ -57,6 +57,7 @@ class Preimages:
             curr_service_stat.provided_size += len(preimage.blob)
         state.pi = pi
 
+
         return state
 
     @staticmethod
@@ -78,8 +79,7 @@ class Preimages:
                 preimage.blob,
             )
 
-        sorted_preimages = deepcopy(preimages)
-        sorted_preimages.sort(key=sort_fn)
+        sorted_preimages = sorted( preimages, key=sort_fn)
 
         # Check for duplicates in adjacent entries
         for i in range(1, len(sorted_preimages)):

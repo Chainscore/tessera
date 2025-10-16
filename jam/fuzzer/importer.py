@@ -63,7 +63,7 @@ def process_test_vector(test_vector: Dict[str, Any], state, settings) -> Tuple[A
     if block_data:
         block = Block.from_json(block_data)
         start_time = time.time()
-        state.transition(block)
+        state._force_transition(block)
         transition_time = time.time() - start_time
     
     return state, transition_time
@@ -101,7 +101,6 @@ async def run_import(db_path: str, import_path: str) -> None:
             if state is None:
                 pre_state = test_vector.get("pre_state", {})
                 keyvals = pre_state.get("keyvals", [])
-                import multiprocessing as mp
                 state = setup_state_from_keyvals(settings.state_db, keyvals)
 
             # Process vector

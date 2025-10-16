@@ -4,7 +4,7 @@ from tsrkit_types import TypedVector, Uint, structure, Choice
 
 from jam.utils.gather import gather_with_exceptions
 
-from jam.log_setup import network_logger
+from jam.log_setup import network_logger as logger
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
 from jam.types.protocol.core import CoreIndex, ValidatorIndex
@@ -17,10 +17,6 @@ from jam.types.protocol.crypto import (
 )
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
-
-
-# Module-specific logger
-logger = network_logger
 
 TrancheIndex = U8
 
@@ -114,14 +110,6 @@ class AuditAnnouncement(NetworkProtocol):
         len_b = data.len_b.encode()
         msg_b = data.evidence.encode()
 
-        logger.info(
-            f"Transmitting Announcement to other Auditors",
-            announcement=data.tranche_announcement,
-            evidence=data.evidence,
-            stream_a_size=data.len_a,
-            stream_b_size=data.len_b,
-        )
-
         tranche = Tranche(
             tranche_index=data.tranche_announcement.tranche,
             header_hash=data.tranche_announcement.header_hash
@@ -134,7 +122,11 @@ class AuditAnnouncement(NetworkProtocol):
         transmitted_count = 0
 
         logger.info(
-            "Transmitting Audit announcement",
+            f"Transmitting Announcement to other Auditors",
+            announcement=data.tranche_announcement,
+            evidence=data.evidence,
+            stream_a_size=data.len_a,
+            stream_b_size=data.len_b,
             count=len(node.all_connected)
         )
 
@@ -232,7 +224,7 @@ class AuditAnnouncement(NetworkProtocol):
         """Intercept Announcement Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
         if buffer == b"":
-            logger.info(
+            logger.debug(
                 "Announcement acknowledge received",
                 stream_id=stream_id,
                 buffer_size=len(buffer),

@@ -1,3 +1,4 @@
+import asyncio
 import enum
 from math import e
 from typing import List
@@ -15,6 +16,7 @@ from tsrkit_types.struct import structure
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.types.protocol.core import TimeSlot
 from jam.utils.constants import GENESIS_HASH
+from jam.utils.gather import gather_with_exceptions
 
 
 class Direction(Enum):
@@ -58,7 +60,7 @@ class BlockRequest(NetworkProtocol):
 
         header_hash = data.header.hex()[:16] + "..."
         transmitted_count = 0
-        responses = []
+        tasks = []
 
         if not peers:
             # If no specific peers are provided, use all connected nodes
@@ -69,10 +71,11 @@ class BlockRequest(NetworkProtocol):
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
                 client.stream_prefix[stream_id] = self._prefix
                 client.stream_buffer[stream_id] = b""
-                data = await client.close_and_wait(message=stream_data, stream_id=stream_id)
+                res = client.close_and_wait(message=stream_data, stream_id=stream_id)
+                task = asyncio.create_task(res)
+                tasks.append(task)
 
                 transmitted_count += 1
-                responses.append(data)
 
                 logger.debug(
                     "Block request transmitted",
@@ -80,9 +83,9 @@ class BlockRequest(NetworkProtocol):
                     header_hash=header_hash,
                 )
             except Exception as e:
-                responses.append(None)
                 logger.error("Failed to transmit state request", error=e)
 
+        responses = await gather_with_exceptions(tasks)
         logger.debug(
             "Block request transmission completed",
             transmitted_to=transmitted_count,
@@ -111,7 +114,7 @@ class BlockRequest(NetworkProtocol):
         # Get the start block
         start_block = Block.load(data.header, settings.main_db)
         if not start_block:
-            logger.info("Block not found", hh=data.header.hex()[:16]+"...")
+            logger.debug("Block not found", hh=data.header.hex()[:16]+"...")
             server.stream_and_close(b"", stream_id)
             return
 
@@ -153,7 +156,7 @@ class BlockRequest(NetworkProtocol):
         msg = TypedArray[Block, len(all_blocks)](all_blocks).encode()
         data = U32(len(msg)).encode() + msg
         
-        CHUNK_SIZE = 1200 
+        CHUNK_SIZE = 1200
         offset = 0
         # Manually chunk it up, aioquic twrow invalid payload error 
         while offset < len(data):

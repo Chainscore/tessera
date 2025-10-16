@@ -456,7 +456,7 @@ class Reporting:
             if curr_rotation == report_rotation:
                 guarantors_assigned = mappings[0]
             else:
-                guarantors_assigned = mappings[1]
+                guarantors_assigned = mappings[2]
 
             core_assignment = guarantors_assigned[x.report.core_index]
             val_assignment: Set[ValidatorIndex] = set()

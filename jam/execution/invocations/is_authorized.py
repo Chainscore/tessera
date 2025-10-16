@@ -12,8 +12,9 @@ class PsiI(InvocationProtocol):
     def __init__(self, p: WorkPackage, c: CoreIndex):
         self.work_package = p
         self.core = c
+        self.table = self.build_table()
 
-    def table(self):
+    def build_table(self):
         return {
             0: (GeneralFunctions, {}),
             1: (
@@ -29,7 +30,9 @@ class PsiI(InvocationProtocol):
                     "t": None,
                 },
             ),
-            100: (GeneralFunctions, {}),  # log
+            100: (GeneralFunctions,
+                  {"core_index": self.core, "service_id": self.work_package.auth_code_host}
+                ),  # log
         }
 
     def execute(self):
@@ -44,7 +47,7 @@ class PsiI(InvocationProtocol):
         
         u, r, _ = PsiM.execute(
             blob=pc,
-            pc=ProgramCounter(0),
+            pc=0,
             gas=IS_AUTHORIZED_GAS,
             arguments=self.core.encode(),
             dispatch_fn=self.dispatch,

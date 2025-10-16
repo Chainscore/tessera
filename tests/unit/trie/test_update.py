@@ -29,7 +29,7 @@ def test_trie_update():
         ): Bytes.fromhex("6a208734106f38b73880684b"),
     }
     # Create a modified vector where one key's value changes
-    updated_vector = deepcopy(vector)
+    updated_vector = dict(vector)
     key_to_update = Bytes[32].fromhex(
         "b05ff8a05bb23c0d7b177d47ce466ee58fd55c6a0351a3040cf3cbf5225aab19"
     )

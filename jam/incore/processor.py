@@ -18,7 +18,7 @@ from jam.block.extrinsics.guarantees import (
 from jam.network.connection import NodeConnection
 from jam.network.protocols.ce_134 import Credential
 
-from jam.log_setup import pvm_logger
+from jam.log_setup import node_logger as logger
 from jam.execution.invocations.is_authorized import PsiI
 from jam.execution.invocations.refine import PsiR
 
@@ -76,13 +76,10 @@ from jam.utils.constants import (
     SEGMENT_SIZE,
     MAX_WORK_REPORT_SIZE,
     SLOT_PERIOD,
-    X,
+    X, VALIDATOR_COUNT
 )
 
 from tests.unit.incore.types import FullVector
-
-# Module-specific logger
-logger = pvm_logger
 
 vector: FullVector = FullVector()
 
@@ -273,6 +270,7 @@ class Processor:
                 # ------------------------------------------ REFINE INVOCATION ----------------------------------------
                 logger.debug(f"Refining Work Item {j}..", payload=p.items[j].payload.hex())
                 r, e, u = PsiR(j, p, o, b.import_segments, l).execute()
+                logger.debug(f"REFINE RESULT: {r}", item=j, payload=list(p.items[j].payload))
                 # ------------------------------------------ ----------------- ----------------------------------------
 
                 segment = Segment([U8(0)] * SEGMENT_SIZE)
@@ -325,7 +323,7 @@ class Processor:
                 authorizer_hash=p.a,
                 auth_output=Bytes(o),
                 segment_root_lookup=sr_lookup,
-                results=r_list,
+                digests=r_list,
                 auth_gas_used=Uint(g),
             )
 
@@ -417,14 +415,22 @@ class Processor:
                 logger.debug("Segments Shard formed", count=len(seg_chunks), segment=i)
                 i += 1
 
-            segments_shards = SegmentsShards(
-                [
-                    SegmentsShard(
-                        [SegmentShard(all_chunks[j][i]) for j in range(len(all_chunks))]
-                    )
-                    for i in range(len(all_chunks[0]))
-                ]
-            )
+            if len(all_chunks) != 0:
+                segments_shards = SegmentsShards(
+                    [
+                        SegmentsShard(
+                            [SegmentShard(all_chunks[j][i]) for j in range(len(all_chunks))]
+                        )
+                        for i in range(len(all_chunks[0]))
+                    ]
+                )
+            else:
+                segments_shards = SegmentsShards(
+                    [
+                        SegmentsShard([])
+                        for _ in range(VALIDATOR_COUNT)
+                    ]
+                )
 
             ss_roots = SegmentsShardRoots([])
             ss_dict = SegShardsDict({})
@@ -463,7 +469,6 @@ class Processor:
             )
 
             if store:
-                logger.debug(f"Storing Segments & Shards")
 
                 # Access DA
                 d3l = settings.d3l
@@ -472,17 +477,14 @@ class Processor:
                 # Store Exported Segments
                 seg_da = SegmentsDA(d3l)
                 seg_da.put(e, proved_segments)
-                logger.debug("Stored segments")
 
                 # Store Bundle Shards
                 audits_da = AuditShardsDA(audits)
                 audits_da.put_batch(u, bs_dict)
-                logger.debug("Stored bundle shards")
 
                 # Store Segment Shards
                 s_shards_da = SegmentShardsDA(d3l)
                 s_shards_da.put_batch(u, ss_dict)
-                logger.debug("Stored segment shards")
 
             spec = WorkPackageSpec(
                 hash=package_hash,
@@ -537,9 +539,6 @@ class Processor:
                 # Store Report
                 reports_da = ReportsDA(d3l)
                 reports_da.put(wr_hash, report)
-                logger.debug(
-                    f"Stored work report", wp_hash=wp_hash.hex(), wr_hash=wr_hash.hex()
-                )
 
             return report, wr_hash
 

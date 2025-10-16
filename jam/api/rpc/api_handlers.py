@@ -2,13 +2,12 @@ from typing import Callable
 from tsrkit_types import U32, U8, Bytes, TypedArray
 from jam.api.rpc.utils import parse_data
 from jam.finality.finality import Finality
-from jam.state.accounts import Account, AccountDataView, StorageView
 from jam.state.utils import construct_state_key
 from jam.block import Block
 from jam.types.protocol.crypto import HeaderHash, OpaqueHash
-from jam.state.state import State, state
-from jam.types.protocol.core import ServiceId, TimeSlot
-from jam.types.state.delta import AccountMetadata, LookupTable
+from jam.state.state import State
+from jam.types.protocol.core import ServiceId
+from jam.types.state.delta import LookupTable
 
 Hash = TypedArray[U8]
 
@@ -42,7 +41,7 @@ def parent_block_handler(params: list):
 
 def state_root_handler(params: list):
     (hh,) = parse_data([HeaderHash], params)
-    state_at_hh = state.load(hh)
+    state_at_hh = State.load(hh)
     return {"header_hash": list(bytes(state_at_hh.root).hex())}
 
 

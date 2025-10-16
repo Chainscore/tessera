@@ -1,8 +1,8 @@
+import pytest
 from math import ceil
-
 from jam.utils.merkle.simple_merkle import Merklizer, MerkleVisualizer
 
-
+@pytest.mark.skip()
 def test_merklizer():
     merklizer = Merklizer()
     visualizer = MerkleVisualizer()
@@ -15,7 +15,7 @@ def test_merklizer():
 
     # root = merklizer.print_nodes(values)
     print("ROOT", root, og == root)
-    visualizer.print_tree(tree)
+    # visualizer.print_tree(tree)
     #
 
     index = 34

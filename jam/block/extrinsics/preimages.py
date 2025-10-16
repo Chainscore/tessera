@@ -1,4 +1,4 @@
-from jam.block.extrinsics.store import ExtrinsicStore
+from jam.block.extrinsics.preimage_store import PreimageStore
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
@@ -16,4 +16,4 @@ class Preimage:
 
 PreimagesExtrinsic = TypedVector[Preimage]
 
-preimg_store = ExtrinsicStore[Preimage]()
+preimg_store = PreimageStore()

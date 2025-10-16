@@ -1,6 +1,5 @@
 from typing import Any, Callable, Dict, Protocol, Tuple
 
-from jam.log_setup import pvm_logger as logger
 from jam.execution.invocations.functions.protocol import InvocationFunctions
 from tsrkit_pvm import (
     ExecutionStatus,

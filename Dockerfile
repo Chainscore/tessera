@@ -10,11 +10,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     iputils-ping \
     procps \
     net-tools \
+    rustc \
+    cargo \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry
-RUN curl -sSL https://install.python-poetry.org | python3 -
-# Ensure Poetry is on PATH
+# Install uv via shell installer
+RUN curl -sSL https://astral.sh/uv/install.sh | sh -s --  \
+  && echo "uv installed to:" && which uv || true
+
 ENV PATH="/root/.local/bin:$PATH"
 
 # Set working directory
@@ -23,34 +26,22 @@ WORKDIR /app
 # Copy the entire application
 COPY . .
 
-# Initialize git submodules (assuming private token is available via build args)
-ARG GITHUB_TOKEN
-RUN if [ -n "$GITHUB_TOKEN" ]; then \
-        git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/" && \
-        git submodule update --init deps/py-ark-vrf deps/tsrkit-pvm deps/tsrkit-asm; \
+# Build PVM cython
+RUN if [ -d deps/tsrkit-pvm ]; then \
+        cd deps/tsrkit-pvm && \
+        echo "[INFO] Building tsrkit-pvm with Cython optimizations..." && \
+        # careful with -march=native (non-portable); remove if portability needed
+        PVM_BUILD_MODE=cython /root/.local/bin/uv run python setup.py build_ext --inplace --force; \
+        cd /app; \
     else \
-        echo "Warning: GITHUB_TOKEN not provided, skipping submodule init"; \
+        echo "[WARN] deps/tsrkit-pvm not found, skipping tsrkit-pvm build"; \
     fi
 
-# Configure Poetry to NOT use virtualenvs
-RUN poetry config virtualenvs.create false
-
-# Install all dependencies and the project itself
-RUN poetry install --only=main --no-interaction --no-ansi
+RUN uv sync
 
 # Run the application
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-ENTRYPOINT ["docker-entrypoint.sh"]
-#ENTRYPOINT ["poetry", "run", "jam"]
-
-# Create data directory with permissions
-#RUN mkdir -p data/db && chmod -R 777 data
-
-# Expose application port
-#EXPOSE 8000
-
-# Run the FastAPI application
-#CMD ["poetry", "run" ,"fastapi", "run", "jam/api/api-service.py", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

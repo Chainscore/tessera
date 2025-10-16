@@ -14,7 +14,6 @@ class Forwarding:
     async def run(cls, slot: U32, time_slot: TimeSlot):
         try:
             from jam.operations.ticket_queue import ticket_queue
-            print("Ticket queue length", ticket_queue.length())
             if not ticket_queue.is_empty():
                 ts = time_slot
                 ticket_submission_end = TICKET_SUBMISSION_END // 2
@@ -25,16 +24,17 @@ class Forwarding:
 
                     for i in range(tickets_per_slot):
                         ticket = ticket_queue.pop()
-                        CE132 = SafroleTicketDistribution()
-                        data = CE132Data(epoch_ticket_len=ticket.epoch_ticket_len, epoch_ticket=ticket.epoch_ticket)
-                        responses = await CE132.transmit(data)
-                        ts += 1
-                        curr_time = time()
-                        next_time_slot_time = ts * 6 + GENESIS_TS
-                        if curr_time < next_time_slot_time:
-                            await sleep(next_time_slot_time - curr_time)
+                        if ticket:
+                            CE132 = SafroleTicketDistribution()
+                            data = CE132Data(epoch_ticket_len=ticket.epoch_ticket_len, epoch_ticket=ticket.epoch_ticket)
+                            responses = await CE132.transmit(data)
+                            ts += 1
+                            curr_time = time()
+                            next_time_slot_time = ts * 6 + GENESIS_TS
+                            if curr_time < next_time_slot_time:
+                                await sleep(next_time_slot_time - curr_time)
 
         except Exception as e:
-            logger.error("Failed to forward safrole ticket", error=e, time_slot=time_slot)
+            logger.error("Failed to forward ticket", error=e, time_slot=time_slot)
 
 
