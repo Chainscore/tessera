@@ -292,8 +292,10 @@ class State:
 
                 # TODO: Test Auditing & Refining with PJ
                 # # Start Auditing for new block received
-                # audit_engine = AuditEngine()
-                # asyncio.create_task(audit_engine.run(block, newly_avail_wrs))
+                from jam.audit.audit_engine import AuditEngine
+                audit_engine = AuditEngine()
+                if len(newly_avail_wrs) > 0:
+                    asyncio.create_task(audit_engine.run(block=block, newly_avail_wrs=newly_avail_wrs))
 
                 # TODO: Mark block as audited once audit process is done.
                 # from jam.block.block_view import viewer

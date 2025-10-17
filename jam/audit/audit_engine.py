@@ -7,7 +7,6 @@ from jam.block.block import Block
 from jam.finality.finality import Finality
 from jam.log_setup import logger
 from jam.network.protocols.ce_144 import SubsequentTrancheEvidence
-from jam.types import Hash
 from jam.types.audit.audit_tranche import (
     TrancheIndex,
     Tranche,
@@ -22,8 +21,6 @@ class AuditEngine:
     """
     Audit engine initiates auditing and manages tranches for newly available reports
     """
-
-    is_audited: bool
 
     def __init__(self):
         self.is_audited = False
@@ -89,7 +86,6 @@ class AuditEngine:
 
             else:
                 # ------- Tranche > 0 handling ---------
-                utils.print_banner(text="New Tranche Trigger | ", tranche_index=curr_tranche.tranche_index)
                 logger.info(
                     "New tranche started", header_hash=header_hash, tranche=audit.tranche_index(header=block.header)
                 )
@@ -116,7 +112,9 @@ class AuditEngine:
                     is_block_audit = await utils.block_audited(tranche=curr_tranche, block=block, newly_avail_wrs=newly_avail_wrs)
 
                     if is_block_audit:
-                        self.is_audited = True
+                        from jam.block.block_view import BlockView
+                        view = BlockView()
+                        view.mark_as_audited(block=block, kv=settings.main_db)
 
                     else:
                         print("Not audited block")

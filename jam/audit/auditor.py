@@ -219,8 +219,8 @@ class Auditor:
                 wr = c_r.work_report
                 wr_hash = c_r.work_report.hash()
 
-                validity = Utils.process_refine(tranche=tranche, wr_hash=wr_hash)
-                ed25519_signature = Audit.judgment_signature(wr=wr, validity=validity)
+                validity = await audit.refine(wr=wr)
+                ed25519_signature = Audit.judgment_signature(wr_hash=wr_hash, validity=validity)
 
                 # ---------------------------------- BUILDING PROTOCOL DATA ----------------------
                 from jam.network.protocols.ce_145 import JudgmentPublication, CE145Data, Judgment
@@ -255,4 +255,3 @@ class Auditor:
                 error=str(e),
                 error_type=type(e).__name__,
             )
-
