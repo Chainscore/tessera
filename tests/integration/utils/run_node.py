@@ -81,8 +81,8 @@ async def run_node(
         # ------------ SET GENESIS BLOCK ------------
         block = Block.decode(bytes.fromhex(dev_spec["genesis_header"]))
         header_hash = block.save(main_db)
-        Finality.set_head(header_hash, main_db)
-        Finality.finalise(header_hash, main_db, True)
+        Finality.set_head(block, main_db)
+        Finality.finalise(block, main_db, True)
 
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:

@@ -124,8 +124,8 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                         from jam.finality.finality import Finality
                         block = Block(init_data.header, Extrinsic.empty())
                         hh = block.save(settings.main_db)
-                        Finality.finalise(block, settings.main_db)
                         Finality.set_head(block, settings.main_db)
+                        Finality.finalise(block, settings.main_db)
 
                         send_message(conn, TAG_STATE_ROOT, state.root)
                     except Exception as e:
