@@ -85,8 +85,8 @@ async def run_node(
 
         block = Block.genesis()
         header_hash = block.save(main_db)
-        Finality.set_head(header_hash, main_db)
-        Finality.finalise(header_hash, main_db, True)
+        Finality.set_head(block, main_db)
+        Finality.finalise(block, main_db, True)
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(start_node(str(host), int(port)))
