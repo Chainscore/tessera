@@ -120,6 +120,7 @@ class PsiA(InvocationProtocol):
         if meta_n_code is None or len(meta_n_code[1]) > MAX_SERVICE_CODE_SIZE:
             return self.partial_state, DeferredTransfers([]), None, Gas(0), set()
         else:
+            # print("PSI M ID", Uint(self.service_id))
             gas, status, context = PsiM.execute(
                 meta_n_code[1],
                 5,

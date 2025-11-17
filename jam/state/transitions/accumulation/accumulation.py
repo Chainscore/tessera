@@ -341,6 +341,7 @@ class Accumulation:
                         )
                     )
 
+        # print("ACCUMULATING", service_id)
         return PsiA(u=initial_state, t=timeslot, s=service_id, entropy=entropy, g=g, o=i).execute()
 
     @staticmethod
@@ -518,6 +519,7 @@ class Accumulation:
         # Update Chi, Iota, Phi, Theta
         theta = Theta([])
         for service_id, op in commitment_map:
+            # print("SERVICE ID", service_id, op)
             commitment = Commitment(service_id, op)
             theta.append(commitment)
 

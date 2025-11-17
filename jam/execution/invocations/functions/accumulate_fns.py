@@ -21,10 +21,10 @@ from tsrkit_pvm import (
     PvmError,
     ExecutionStatus,
 )
-from jam.types import Timestamps
+from jam.types import Timestamps, ChiZ
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.protocol.merkle import OptionHash
-from jam.types.state.chi import Chi
+from jam.types.state.chi import Chi, ChiM, ChiV, ChiA
 from jam.types.state.delta import (
     AccountData,
     AccountLookup,
@@ -67,7 +67,7 @@ class AccumulateFunctions(INVF):
             logger.warning("Memory access violation in bless function: inaccessible chi_a memory region")
             raise PvmError(PANIC)
 
-        chi_a = U32.decode(memory.read(a, 4 * CORE_COUNT))
+        chi_a = ChiA.decode(memory.read(a, 4 * CORE_COUNT))
 
         if not memory.is_accessible(o, 12 * n):
             logger.warning("Memory access violation in bless function: inaccessible chi_z memory region")
@@ -77,11 +77,11 @@ class AccumulateFunctions(INVF):
         buf: bytes = memory.read(o, 12 * n)
 
         # build a dict mapping each 4-byte U32 → its 8-byte U64
-        z_dict = {}
+        z_dict = ChiZ({})
         for i in range(n):
             chunk = buf[12 * i : 12 * i + 12]
-            s = U32.decode_from(chunk[:4])  # first  4 bytes
-            g = U64.decode_from(chunk[4:12], offset=0)  # next   8 bytes
+            s = U32.decode(chunk[:4])  # first  4 bytes
+            g = U64.decode(chunk[4:12], offset=0)  # next   8 bytes
             z_dict[s] = g
 
         if context.x.s_index != context.x.partial_state.privileges.chi_m:
@@ -94,7 +94,7 @@ class AccumulateFunctions(INVF):
             return CONTINUE, gas, registers, memory, context
 
         registers[7] = HostStatus.OK.value
-        context.x.partial_state.privileges = Chi(chi_m=m, chi_a=chi_a, chi_v=v, chi_z=z_dict)
+        context.x.partial_state.privileges = Chi(chi_m=ChiM(m), chi_a=chi_a, chi_v=ChiV(v), chi_z=z_dict)
         return CONTINUE, gas, registers, memory, context
 
     @staticmethod

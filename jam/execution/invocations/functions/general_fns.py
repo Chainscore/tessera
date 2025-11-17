@@ -454,7 +454,7 @@ class GeneralFunctions(INVF):
         l = min(registers[10], len(v) - f)
 
         if not memory.is_accessible(output_offset, l, Accessibility.WRITE):
-            logger.error("Host call info: memory not accessible", output_offset=output_offset, required_size=len(m))
+            logger.error("Host call info: memory not accessible", output_offset=output_offset, required_size=l)
             raise PvmError(PANIC)
         
         registers[7] = len(v)
