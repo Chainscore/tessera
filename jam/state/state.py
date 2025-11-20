@@ -33,7 +33,7 @@ from jam.types import (
 )
 from jam.block.block import Block
 from jam.log_setup import block_logger as logger
-from jam.types.state.theta import Theta
+from jam.types.state.theta import Theta, Commitment
 from jam.state.transitions import (
     Accumulation,
     Reporting,
@@ -254,10 +254,17 @@ class State:
 
             # Recent History
             bmr_merklizer = BMRFunctions()
+            def sort_fn(comm: Commitment):
+                return (
+                    int(comm.service_id),
+                    comm.output,
+                )
+            sorted_theta = sorted(self.theta, key=sort_fn)
+            # self.theta = Theta(sorted_theta)
 
             # Calculate Merkle root of Accumulation Outputs
             accumulate_root = bmr_merklizer.wb_merklize(
-                TypedVector[Bytes](sorted([Bytes(comm.service_id.encode() + comm.output.encode()) for comm in self.theta])),
+                TypedVector[Bytes]([Bytes(comm.service_id.encode() + comm.output.encode()) for comm in sorted_theta]),
                 Hash.keccak256
             )
             RecentHistory.transition(pre_state, self, block, accumulate_root, header_hash)
