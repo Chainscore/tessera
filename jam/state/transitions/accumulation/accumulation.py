@@ -192,7 +192,7 @@ class Accumulation:
         if index == 0:
             return 0, DeferredTransfers([]), set(), []
 
-        work_reports_start = work_reports[: index + 1]
+        work_reports_start = work_reports[: index]
 
         transfers, outputs, gas_consumed = Accumulation.parallel_accumulation(
             work_reports_start, state
@@ -499,7 +499,11 @@ class Accumulation:
 
         accumulation_stats = {}
         for ga in gas_accumulations:
-            accumulation_stats[ga[0]] = [ga[1], 0]
+            if accumulation_stats.get(ga[0]):
+                prev_gas = accumulation_stats.get(ga[0])[0]
+                accumulation_stats[ga[0]] = [prev_gas + ga[1], 0]
+            else:
+                accumulation_stats[ga[0]] = [ga[1], 0]
         for i in range(num_accumulated):
             for d in star_work_reports[i].digests:
                 accumulation_stats[d.service_id][1] += 1

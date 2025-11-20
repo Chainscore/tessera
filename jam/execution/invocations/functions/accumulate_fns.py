@@ -263,7 +263,7 @@ class AccumulateFunctions(INVF):
             registers[7] = HostStatus.LOW.value
             return CONTINUE, gas, registers, memory, context
 
-        if new_balance_sender < delta[context.x.s_index].service.t:
+        if Balance(a) < delta[context.x.s_index].service.t:
             registers[7] = HostStatus.CASH.value
             return CONTINUE, gas, registers, memory, context
         else:

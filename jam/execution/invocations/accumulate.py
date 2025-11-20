@@ -1,5 +1,6 @@
 from typing import Any, Dict, Tuple
 from tsrkit_types import U32
+from jam.state.accounts import DeltaView
 from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
     DeferredTransfers,
@@ -37,7 +38,7 @@ class PsiA(InvocationProtocol):
 
     def build_table(self, 
         xs: int,
-        delta: Dict[int, Any]
+        delta: DeltaView
     ) -> Dict[int, InvocationInfo]:
         return {
             # fetch
