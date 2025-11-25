@@ -341,7 +341,7 @@ class Accumulation:
                         )
                     )
 
-        # print("ACCUMULATING", service_id)
+        print("ACCUMULATING", service_id)
         return PsiA(u=initial_state, t=timeslot, s=service_id, entropy=entropy, g=g, o=i).execute()
 
     @staticmethod
@@ -527,8 +527,13 @@ class Accumulation:
             commitment = Commitment(service_id, op)
             theta.append(commitment)
 
-        state.theta = theta
-        
+        def sort_fn(comm: Commitment):
+            return (
+                int(comm.service_id),
+                comm.output,
+            )
+
+        state.theta = Theta(sorted(theta, key=sort_fn))
 
         # ----------------------
         # Section 12.3 Deferred Transfers & State Integration (Step 4)
