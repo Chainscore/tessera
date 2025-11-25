@@ -431,7 +431,11 @@ class GeneralFunctions(INVF):
 
         if target_service == 2**64 - 1:
             target_service = service_index
-            
+
+        if target_service > 2**32-1:
+            registers[7] = HostStatus.NONE.value
+            return CONTINUE, gas, registers, memory, context
+
         if target_service not in accounts:
             registers[7] = HostStatus.NONE.value
             return CONTINUE, gas, registers, memory, context

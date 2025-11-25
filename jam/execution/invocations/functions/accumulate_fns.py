@@ -240,6 +240,11 @@ class AccumulateFunctions(INVF):
 
         delta: DeltaView = context.x.partial_state.service_accounts
 
+        if d > (2**32-1):
+            print("d", d, 2**32)
+            registers[7] = HostStatus.NONE.value
+            return CONTINUE, gas, registers, memory, context
+
         if not memory.is_accessible(o, TRANSFER_MEMO_SIZE):
             raise PvmError(PANIC)
 
@@ -333,7 +338,7 @@ class AccumulateFunctions(INVF):
         lookup_value = context.x.partial_state.service_accounts[context.x.s_index].lookup[
             lookup_key
         ] # a' s value
-        if lookup_value == None:
+        if lookup_value is None:
             registers[7] = HostStatus.NONE.value
             registers[8] = 0
         elif len(lookup_value) == 0:
@@ -357,7 +362,7 @@ class AccumulateFunctions(INVF):
             )
             raise PvmError(PANIC)
 
-        return ExecutionStatus.CONTINUE, gas, registers, memory, context
+        return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(23, gas_cost=10)
@@ -427,6 +432,10 @@ class AccumulateFunctions(INVF):
         lookup_key = LookupTable(hash=preimage_hash, length=BlobLength(preimage_len))
         a = context.x.partial_state.service_accounts[context.x.s_index]
         lookup_value = a.lookup[lookup_key]
+
+        if lookup_value is None:
+            registers[7] = HostStatus.HUH.value
+            return CONTINUE, gas, registers, memory, context
         if len(a.lookup[lookup_key]) == 1:
             lookup_value.append(block_timeslot)
             a.lookup[lookup_key] = lookup_value
@@ -443,12 +452,12 @@ class AccumulateFunctions(INVF):
             lookup_value[0] = lookup_value[2]
             lookup_value[1] = block_timeslot
             lookup_value = lookup_value.pop()
-            a.lookup[lookup_key] = lookup_value
+            a.lookup[lookup_key] = Timestamps([lookup_value])
         else:
             registers[7] = HostStatus.HUH.value
-            return ExecutionStatus.CONTINUE, gas, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
         registers[7] = HostStatus.OK.value
-        return ExecutionStatus.CONTINUE, gas, registers, memory, context
+        return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(25, gas_cost=10)
