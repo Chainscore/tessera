@@ -341,7 +341,7 @@ class Accumulation:
                         )
                     )
 
-        print("ACCUMULATING", service_id)
+        # print("ACCUMULATING", service_id)
         return PsiA(u=initial_state, t=timeslot, s=service_id, entropy=entropy, g=g, o=i).execute()
 
     @staticmethod

@@ -137,11 +137,11 @@ class AccumulateFunctions(INVF):
     @INVF.register(16, gas_cost=10)
     def designate(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         o = registers[7]
+        if not memory.is_accessible(o, VALIDATOR_COUNT * 336):
+            raise PvmError(PANIC)
         if context.x.s_index != context.x.partial_state.privileges.chi_v:
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
-        if not memory.is_accessible(o, VALIDATOR_COUNT * 336):
-            raise PvmError(PANIC)
 
         buf: bytes = memory.read(o, 336 * VALIDATOR_COUNT)
 
