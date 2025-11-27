@@ -241,7 +241,6 @@ class AccumulateFunctions(INVF):
         delta: DeltaView = context.x.partial_state.service_accounts
 
         if d > (2**32-1):
-            print("d", d, 2**32)
             registers[7] = HostStatus.NONE.value
             return CONTINUE, gas, registers, memory, context
 
