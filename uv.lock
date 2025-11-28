@@ -1883,7 +1883,6 @@ dependencies = [
     { name = "bitarray" },
     { name = "cython" },
     { name = "mypy" },
-    { name = "mypyc" },
     { name = "setuptools" },
     { name = "tsrkit-types" },
 ]
@@ -1891,7 +1890,6 @@ dependencies = [
 [package.optional-dependencies]
 dev = [
     { name = "mypy" },
-    { name = "mypyc" },
     { name = "pytest" },
     { name = "pytest-cov" },
 ]
@@ -1902,8 +1900,6 @@ requires-dist = [
     { name = "cython", specifier = ">=3.1.4" },
     { name = "mypy", specifier = ">=1.18.1" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
-    { name = "mypyc", specifier = ">=0.0.1" },
-    { name = "mypyc", marker = "extra == 'dev'", specifier = ">=0.0.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
     { name = "setuptools", specifier = ">=80.9.0" },

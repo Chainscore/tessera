@@ -21,7 +21,7 @@ from jam.types.audit.audit_tranche import (
     TrancheIndex,
     OptionalReport,
     CoreOptionalReport,
-    CoreReport
+    CoreReport,
 )
 from jam.types.work.report import WorkReport
 from jam.utils.constants import VALIDATOR_COUNT, AUDIT_BIAS_FACTOR, AUDIT_REPORT_ASSIGNED
@@ -29,20 +29,20 @@ from jam.log_setup import logger
 
 
 class Audit:
-
     @staticmethod
     def auditable_reports(
-        prior_state: TypedVector[OptionalWorkReportState],
-        newly_rep: TypedVector[WorkReport]
+        prior_state: TypedVector[OptionalWorkReportState], newly_rep: TypedVector[WorkReport]
     ) -> OptionalReports:
         """
-        Equation: 17.3, 17.4
+        Equation: 17.1, 17.2
         Define the sequence of work-reports which we may be required to audit as q = [ |R ?]c,
         a sequence of length equal to the number of core.
 
         Args:
             prior_state: p (rho) block prior state
             newly_rep: Work Report pending which has just become available.
+
+        Source :https://graypaper.fluffylabs.dev/#/ab2cdbd/1e60001ea900?v=0.7.2
         """
 
         auditable_reports = OptionalReports([])
@@ -68,16 +68,15 @@ class Audit:
         This function create a random quantity to get entropy for shuffling.
 
         Args:
-            entropy_source: Header's entropy-yielding vrf signature H_v
-            bandersnatch_key: Validator(Node) bandersnatch key
             tranche: Current tranche
+            bandersnatch_key: Validator(Node) bandersnatch key
+            entropy_source: Header's entropy-yielding vrf signature H_v
             w_r: Work Report
 
         Return:
             Valid Bandersnatch Signature
 
-
-        Source: https://graypaper.fluffylabs.dev/#/1c979cb/1eb2001ed800?v=0.7.1
+        Source: https://graypaper.fluffylabs.dev/#/ab2cdbd/1eb5001ef400?v=0.7.2
         """
 
         tranche_index = tranche.tranche_index
@@ -96,14 +95,15 @@ class Audit:
     @classmethod
     def verifiable_random_selection(
         cls,
-        entropy_source: BandersnatchVrfSignature,
+        tranche: Tranche,
         bandersnatch_key: Bytes[32],
         unaudited_report: OptionalReports,
-        tranche: Tranche,
+        entropy_source: BandersnatchVrfSignature,
     ) -> TypedVector[CoreReport]:
         """
         Equation: 17.5, 17.6
-        Here in this function we just take q(report_to_be_audit function above) , shuffled it and get initial 10 Work Reports assign to validator.
+        Implements the shuffling procedure defined in Gray Paper eq. 17.5–17.6 to randomly order the auditor’s work-report
+        queue using the seed S₀, and then selects the first 10 work reports for that validator.
 
         Args:
             entropy_source: Header's entropy-yielding vrf signature H_v
@@ -112,16 +112,16 @@ class Audit:
             tranche: Current tranche index
 
         Return:
-            Random initial 10 not Null Work Reports
+           A list containing the first 10 work reports extracted from the permuted sequence — these are the assigned work reports the validator must audit.
 
-        Source: https://graypaper.fluffylabs.dev/#/1c979cb/1efb001e4701?v=0.7.1
+        Source: https://graypaper.fluffylabs.dev/#/ab2cdbd/1efe001e4a01?v=0.7.2
         """
 
         entropy = vrf_output(
             cls.vrf_signature_bandersnatch(
-                entropy_source=entropy_source,
-                bandersnatch_key=bandersnatch_key,
                 tranche=tranche,
+                bandersnatch_key=bandersnatch_key,
+                entropy_source=entropy_source,
                 w_r=None,
             )
         )
@@ -129,7 +129,6 @@ class Audit:
         # ---------------------------- mapping q's reports as tuple[CoreIndex, Option[WorkReport]] ---------------------
         core_report = TypedVector[CoreOptionalReport]([])
         for c, wr in enumerate(unaudited_report):
-            work_report = wr.unwrap
             value = CoreOptionalReport(core_index=CoreIndex(c), work_report=wr)
             core_report.append(value)
 
@@ -149,10 +148,7 @@ class Audit:
         # Eq. 17.5 : ao = {(c, w) | (c, w) E p... + 10, w != Phi }
         shuffle_not_null = TypedVector[CoreReport](
             [
-                CoreReport(
-                    core_index=c_r.core_index,
-                    work_report=c_r.work_report.unwrap()
-                )
+                CoreReport(core_index=c_r.core_index, work_report=c_r.work_report.unwrap())
                 for c_r in updated_array
                 if c_r.work_report.unwrap() is not Null
             ][:AUDIT_REPORT_ASSIGNED]
@@ -164,15 +160,15 @@ class Audit:
     def tranche_index(header: Header) -> TrancheIndex:
         """
         Equation: 17.7
-        This function calculated the tranches based on the timeslot, Current time
+        This function calculated the tranches based on the timeslot, Current time.
 
         Args:
             Block's Timeslot
 
         Return:
-            Current Tranches index
+            Current Tranche index
 
-        Source: https://graypaper.fluffylabs.dev/#/1c979cb/1e51011e6501?v=0.7.1
+        Source: https://graypaper.fluffylabs.dev/#/ab2cdbd/1e5c011e5c01?v=0.7.2
         """
 
         tranche_index = TrancheIndex(
@@ -182,13 +178,12 @@ class Audit:
 
     @staticmethod
     def validator_announcement_statement(
-        tranche: Tranche,
-        header_hash: HeaderHash,
-        assign_report: TypedVector[CoreReport]
+        tranche: Tranche, header_hash: HeaderHash, assign_report: TypedVector[CoreReport]
     ) -> Ed25519Signature:
         """
-        Equations: 17.9, 17.10, 17.11
-        This function create Announcement Statement (Valid Ed25519 Signature) is published and distributed to all other Validators Signature.
+        Equations: 17.8, 17.9, 17.10
+        For tranche n, the function encodes all announcement pairs (r, c) into xₙ, adds the validator ID v,
+        evidence sₙ, and the `$jam_announce` tag, signs the bundle, and broadcasts the announcement to all validators.
 
         Args:
             tranche: Current tranche
@@ -198,7 +193,7 @@ class Audit:
         Returns:
             valid Ed25519 Signature
 
-        Source: https://graypaper.fluffylabs.dev/#/1c979cb/1e7a011ec901?v=0.7.1
+        Source: https://graypaper.fluffylabs.dev/#/ab2cdbd/1e8b011ee501?v=0.7.2
         """
         from jam.settings import settings
 
@@ -212,10 +207,10 @@ class Audit:
             report_encode = Bytes(c_r.core_index.encode() + c_r.work_report.hash())
             set_value.add(report_encode)
 
-        set_encode = Bytes()
+        set_encode = Bytes(b"")
 
         for item in set_value:
-            set_encode = item.encode() + set_encode
+            set_encode = item + set_encode
 
         message = signing_context + Bytes(tranche_index) + set_encode + header_hash
 
@@ -234,7 +229,7 @@ class Audit:
     ) -> TypedVector[CoreReport]:
         """
         Equation: 17.14, 17.15
-        This function define a_n beyond the initial tranche through a new vrf which acts upon the set of no-show validators (for n (tranche) > 0).
+        aₙ is the set of validators required to audit tranche n, recomputed each round using a VRF over the no-show validators.
 
         Args:
             header_hash: Current Tranche Header hash
@@ -256,11 +251,9 @@ class Audit:
         assigned_wrs = TypedVector[CoreReport]([])
 
         for wr in unaudited_wrs:
-
             rep = wr.unwrap()
 
-            if rep != Null:
-
+            if rep is not Null:
                 random_quantity = cls.vrf_signature_bandersnatch(
                     bandersnatch_key=settings.bandersnatch_private,
                     entropy_source=entropy,
@@ -268,7 +261,7 @@ class Audit:
                     w_r=rep,
                 )
 
-                # HERE WE CHECK VRF CONDITION
+                # CHECK VRF CONDITION
                 vrf_check = (VALIDATOR_COUNT / (256 * AUDIT_BIAS_FACTOR)) * vrf_output(
                     random_quantity
                 )[0]
@@ -288,7 +281,9 @@ class Audit:
                 m_n = len(records.announces) - len(records.true_votes)
 
                 if vrf_check < m_n:
-                    assigned_report = CoreReport(core_index=CoreIndex(rep.core_index), work_report=rep)
+                    assigned_report = CoreReport(
+                        core_index=CoreIndex(rep.core_index), work_report=rep
+                    )
 
                     assigned_wrs.append(assigned_report)
 
@@ -297,7 +292,7 @@ class Audit:
     @staticmethod
     async def refine(wr: WorkReport) -> Uint:
         """
-        Equation: 17.17
+        Equation: 17.16
         Rebuild bundle for given work report, refine it and compare reports
 
         Args:

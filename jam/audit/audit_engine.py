@@ -15,63 +15,65 @@ from jam.types.audit.audit_tranche import (
 )
 from jam.types.work.report import WorkReports
 from jam.utils.constants import AUDIT_PERIOD, CURRENT_TIME, SLOT_PERIOD
+from jam.storage.tranche_audit_store import tranche_store
+from jam.state.state import State
+from jam.block.block_view import BlockView
+from jam.settings import settings
 
 
 class AuditEngine:
     """
-    Audit engine initiates auditing and manages tranches for newly available reports
+    Audit engine initiates auditing and manages tranches for newly available reports.
     """
 
     def __init__(self):
         self.is_audited = False
 
     async def run(self, block: Block, newly_avail_wrs: WorkReports):
-
-        logger.info(f"Auditing started header_hash {block.header.hash()}")
-
-        from jam.settings import settings
         header_hash = block.header.hash()
-
-        from jam.storage.tranche_audit_store import tranche_store
-        from jam.state.state import State
 
         auditor = Auditor()
         audit = Audit()
         utils = Utils
+        view = BlockView()
+
+        logger.info(f"Auditing started header_hash {block.header.hash()}")
 
         # -------------- Fetch Last Finalized Block --------------
-        last_finalized_block = Finality.load_final(settings.main_db)
+        last_finalized_block = Finality.load_final(kv=settings.main_db)
 
         if block.header.slot < last_finalized_block.header.slot:
-            logger.info("Block must be finalized or invalid.")
+            logger.info(
+                "Skipping audit because block slot is older than last finalized block",
+                block_slot=int(block.header.slot),
+                finalized_slot=int(last_finalized_block.header.slot),
+            )
             return
 
         # -------------- Fetch Pending Reports --------------
-
         logger.debug("Fetching prior state", ph=block.header.parent.hex())
-        prior_state = State.load(block.header.parent)
+        prior_state = State.load(header_hash=block.header.parent)
 
         # define q : TypedVector[Option[WorkReport]] = [ |R ?]
-        auditable_reports : OptionalReports = audit.auditable_reports(prior_state=prior_state.rho, newly_rep=newly_avail_wrs)
+        auditable_reports: OptionalReports = audit.auditable_reports(
+            prior_state=prior_state.rho, newly_rep=newly_avail_wrs
+        )
 
-        logger.debug("Fetched prior state", rho=prior_state.rho, reps=auditable_reports)
-
+        logger.debug(
+            "Fetched prior state and auditable reports", rho=prior_state.rho, reps=auditable_reports
+        )
 
         curr_ts = SLOT_PERIOD * int(block.header.slot)
 
         while not self.is_audited:
-
             next_ts = curr_ts + AUDIT_PERIOD
 
             tranche_index = audit.tranche_index(header=block.header)
 
-            curr_tranche = Tranche(
-                header_hash=header_hash,
-                tranche_index = tranche_index
-            )
+            curr_tranche = Tranche(header_hash=header_hash, tranche_index=tranche_index)
 
             if tranche_index == TrancheIndex(0):
-                # ---------- BECAUSE BLOCK PRODUCED BLOCKED TRIGGER FIRST -----------------
+                # ---------- BECAUSE BLOCK PRODUCED BLOCKED TRIGGER FIRST ----------
                 if block.header.author_index == settings.validator_index:
                     tranche_state = TrancheState.empty()
                     tranche_state.unaudited_list = auditable_reports
@@ -85,14 +87,15 @@ class AuditEngine:
                 subsequent_evidence = None
 
             else:
-                # ------- Tranche > 0 handling ---------
+                # ------- Tranche > 0 ---------
                 logger.info(
-                    "New tranche started", header_hash=header_hash, tranche=audit.tranche_index(header=block.header)
+                    "New tranche started",
+                    header_hash=header_hash,
+                    tranche=audit.tranche_index(header=block.header),
                 )
 
                 prev_tranche = Tranche(TrancheIndex(tranche_index - TrancheIndex(1)), header_hash)
                 prev_state = await tranche_store.get_state(tranche=prev_tranche)
-
 
                 tranche_state = await tranche_store.get_state(tranche=curr_tranche)
 
@@ -101,25 +104,30 @@ class AuditEngine:
                     await tranche_store.save_state(tranche=curr_tranche, state=tranche_state)
 
                 # ------------------- Condition which check trigger next tranche ---------------
-                subsequent_evidence : TypedVector[SubsequentTrancheEvidence] = await utils.is_tranche(block=block, curr_tranche=curr_tranche, prev_tranche_state=prev_state)
+                subsequent_evidence: TypedVector[
+                    SubsequentTrancheEvidence
+                ] = await utils.is_tranche(
+                    block=block, curr_tranche=curr_tranche, prev_tranche_state=prev_state
+                )
 
-                # if in this tranche subsequence is zero, means no report to audit for this tranche,
-                # no announcements no judgments no further negative judgments
-                if len(subsequent_evidence) == 0: # This say about new tranche follow or not due to no show
-
+                if len(subsequent_evidence) == 0:
                     dispute_extrinsic = await utils.dispute_ext(block=block, tranche=curr_tranche)
+                    logger.debug("Dispute extrinsic built", dispute_extrinsic=dispute_extrinsic)
 
-                    is_block_audit = await utils.block_audited(tranche=curr_tranche, block=block, newly_avail_wrs=newly_avail_wrs)
+                    is_block_audit = await utils.block_audited(
+                        tranche=curr_tranche, block=block, newly_avail_wrs=newly_avail_wrs
+                    )
 
                     if is_block_audit:
-                        from jam.block.block_view import BlockView
-                        view = BlockView()
                         view.mark_as_audited(block=block, kv=settings.main_db)
 
                     else:
-                        print("Not audited block")
+                        logger.info(
+                            "Block is not audited in this tranche",
+                            tranche=curr_tranche,
+                            header_hash=header_hash.hex(),
+                        )
 
-                    # remove block tranche history after it become audited
                     await tranche_store.remove_block_history(header_hash=header_hash)
 
                     continue
@@ -127,11 +135,9 @@ class AuditEngine:
             try:
                 await asyncio.wait_for(
                     auditor.assignment_wrs(
-                        block=block,
-                        tranche=curr_tranche,
-                        subsequent_evidence=subsequent_evidence
+                        block=block, tranche=curr_tranche, subsequent_evidence=subsequent_evidence
                     ),
-                    timeout=(next_ts - CURRENT_TIME())
+                    timeout=(next_ts - CURRENT_TIME()),
                 )
 
             except asyncio.TimeoutError:

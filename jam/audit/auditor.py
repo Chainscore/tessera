@@ -5,21 +5,30 @@ from jam.types.protocol.crypto import Ed25519Signature, HeaderHash
 from jam.types.audit.audit_tranche import TrancheIndex, Tranche, CoreReport
 from jam.types.protocol.core import EpochIndex
 from jam.types.protocol.crypto import BandersnatchVrfSignature
-from jam.types.work.report import WorkReportHash, WorkReport
+from jam.types.work.report import WorkReportHash
 from jam.block.block import Block
 
 from jam.log_setup import logger
 from jam.utils.constants import EPOCH_LENGTH
-from jam.network.protocols.ce_144 import SubsequentTrancheEvidence, CoreReportHash
+
+from jam.network.protocols.ce_144 import (
+    CE144Data,
+    AuditAnnouncement,
+    TrancheAnnouncement,
+    FirstTrancheEvidence,
+    Announcement,
+    Evidence,
+    SubsequentTrancheEvidence,
+    CoreReportHash,
+)
 
 
 class Auditor:
-
     async def assignment_wrs(
         self,
         block: Block,
         tranche: Tranche,
-        subsequent_evidence: TypedVector[SubsequentTrancheEvidence] = None,
+        subsequent_evidence: TypedVector[SubsequentTrancheEvidence] | None = None,
     ):
         """
         The function assigns work reports for auditing to each validator
@@ -33,9 +42,7 @@ class Auditor:
         entropy = block.header.entropy_source
 
         tranche_index = tranche.tranche_index
-        header_hash = tranche.header_hash
 
-        # fetch current state
         curr_state = await tranche_store.get_state(tranche=tranche)
 
         if tranche_index == TrancheIndex(0):
@@ -56,12 +63,17 @@ class Auditor:
 
         # verify this condition
         if len(assigned_wrs) == 0:
-            logger.debug("No Reports to audit", block=str(block), tranche=tranche, tranche_state=curr_state)
-
+            logger.info(
+                "No Reports to audit", block=str(block), tranche=tranche, tranche_state=curr_state
+            )
             return
 
-        await self.announcement(block=block, tranche=tranche, assigned_wrs=assigned_wrs, subsequent_evidence=subsequent_evidence)
-
+        await self.announcement(
+            block=block,
+            tranche=tranche,
+            assigned_wrs=assigned_wrs,
+            subsequent_evidence=subsequent_evidence,
+        )
 
     @classmethod
     async def announcement(
@@ -69,7 +81,7 @@ class Auditor:
         block: Block,
         tranche: Tranche,
         assigned_wrs: TypedVector[CoreReport],
-        subsequent_evidence: TypedVector[SubsequentTrancheEvidence] = None,
+        subsequent_evidence: TypedVector[SubsequentTrancheEvidence] | None = None,
     ):
         """
         This function takes a list of work reports and subsequent evidence (validators who have not given judgments),
@@ -101,30 +113,18 @@ class Auditor:
         bandersnatch_private = settings.bandersnatch_private
 
         # ------------------------------------------ BUILDING PROTOCOL DATA ------------------
-        from jam.network.protocols.ce_144 import (
-            CE144Data,
-            AuditAnnouncement,
-            TrancheAnnouncement,
-            FirstTrancheEvidence,
-            Announcement,
-            Evidence,
-        )
-
         CE144 = AuditAnnouncement()
 
         # ------------------------------------- VALIDATOR ANNOUNCEMENT AND STATEMENT ---------
-        announcement_wrs = TypedVector[CoreReportHash]([
-            CoreReportHash(
-                core_index=c_r.core_index,
-                report_hash=c_r.work_report.hash()
-            )
-            for c_r in assigned_wrs
-        ])
+        announcement_wrs = TypedVector[CoreReportHash](
+            [
+                CoreReportHash(core_index=c_r.core_index, report_hash=c_r.work_report.hash())
+                for c_r in assigned_wrs
+            ]
+        )
 
         announcement_sign = audit.validator_announcement_statement(
-            assign_report=assigned_wrs,
-            header_hash=header_hash,
-            tranche=tranche
+            assign_report=assigned_wrs, header_hash=header_hash, tranche=tranche
         )
 
         # -------------------- Handling Evidence based on Tranche Index ----------------------
@@ -144,14 +144,11 @@ class Auditor:
         curr_tranche = tranche
 
         announce = Announcement(
-                assigned_reports=announcement_wrs,
-                ed25519_signature=announcement_sign
+            assigned_reports=announcement_wrs, ed25519_signature=announcement_sign
         )
 
         await tranche_store.records_announcement(
-            tranche=curr_tranche,
-            validator_index=settings.validator_index,
-            announce=announce
+            tranche=curr_tranche, validator_index=settings.validator_index, announce=announce
         )
 
         # ---------------------- Data to be transmitted --------------------------------------
@@ -159,9 +156,8 @@ class Auditor:
             header_hash=header_hash,
             tranche=tranche_index,
             announcement=Announcement(
-                assigned_reports=announcement_wrs,
-                ed25519_signature=announcement_sign
-            )
+                assigned_reports=announcement_wrs, ed25519_signature=announcement_sign
+            ),
         )
 
         data = CE144Data(
@@ -174,11 +170,13 @@ class Auditor:
         try:
             responses = await CE144.transmit(data=data)
 
-            await cls.judgment_process(block=block, tranche=tranche,assign_wrs=assigned_wrs)
+            await cls.judgment_process(block=block, tranche=tranche, assign_wrs=assigned_wrs)
 
         except Exception as e:
             logger.error(
-                "Failed to build announcement inside announcement function ", error=str(e), error_type=type(e).__name__
+                "Unexpected error while transmitting CE144 announcement",
+                error=str(e),
+                error_type=type(e).__name__,
             )
 
     @classmethod
@@ -186,7 +184,7 @@ class Auditor:
         cls,
         block: Block,
         tranche: Tranche,
-        assign_wrs: TypedVector[CoreReport] = None,
+        assign_wrs: TypedVector[CoreReport] | None = None,
     ):
         """
         This function takes a list of work reports, creates a judgment (Valid or Invalid) for each,
@@ -207,15 +205,12 @@ class Auditor:
 
         # --------- unwrap Tranche -------------
         curr_tranche = tranche
-        tranche_index = tranche.tranche_index
-        header_hash = tranche.header_hash
         validator_index = settings.validator_index
 
         logger.info(f"Reports are available for judgment on this node is {len(assign_wrs)}")
 
         try:
             for c_r in assign_wrs:
-
                 wr = c_r.work_report
                 wr_hash = c_r.work_report.hash()
 
@@ -229,6 +224,7 @@ class Auditor:
 
                 # --------------------------- JUDGMENT EPOCH INDEX ------------------------------
                 from jam.state.state import state
+
                 epoch_index = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
 
                 judgment = Judgment(
@@ -241,9 +237,7 @@ class Auditor:
 
                 # ------------------- Save judgment in Tranche State ----------------------------
                 await tranche_store.update_judgment(
-                    tranche=curr_tranche,
-                    judgment=judgment,
-                    ed25519_public=settings.ed25519_public
+                    tranche=curr_tranche, judgment=judgment, ed25519_public=settings.ed25519_public
                 )
 
                 data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)
@@ -251,7 +245,7 @@ class Auditor:
 
         except Exception as e:
             logger.error(
-                f"Failed to build judgment inside judgment process",
+                "Unexpected error while building or transmitting judgments",
                 error=str(e),
                 error_type=type(e).__name__,
             )
