@@ -1,19 +1,14 @@
-import json
 import os
 from pathlib import Path
 
 import pytest
 from tsrkit_types import Bytes
 
-from jam.finality.finality import Finality
-from jam.state.state import State, setup_state
+from jam.state.state import setup_state
 from jam.state.utils import construct_state_key
-from jam.types import TimeSlot, HeaderHash, ServiceId, AccountData
-from jam.utils.constants import GENESIS_HASH
-from jam.utils.dummy.dummy_block import create_dummy_block
+from jam.types import TimeSlot, ServiceId, AccountData
 from jam.settings import setup_setting
 from jam.block.block import Block
-from tests.unit.api.utils import produce_chain
 from tests.unit.state.test_state_load import simulate_chain
 
 
