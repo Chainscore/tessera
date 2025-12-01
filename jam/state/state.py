@@ -278,7 +278,7 @@ class State:
 
                 logger.info(
                     "Block imported!",
-                    new_wrs=newly_avail_wrs,
+                    new_wrs=len(newly_avail_wrs),
                     header=header_hash.hex()[:16] + "...",
                     timeslot=self.tau,
                     final_state_root=self.root.hex()[:16] + "...",
