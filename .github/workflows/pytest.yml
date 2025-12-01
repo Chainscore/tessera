@@ -27,14 +27,6 @@ jobs:
         echo "=== top 40 under /home/runner ==="
         sudo du -ah /home/runner 2>/dev/null | sort -rh | head -n 40 || true
 
-    - name: 🧹 Remove runner diag & temp (free space)
-      run: |
-        sudo rm -rf /home/runner/actions-runner/cached/_diag/* 2>/dev/null || true
-        sudo rm -rf /home/runner/_diag/* 2>/dev/null || true
-        sudo rm -rf /home/runner/_work/_temp/* 2>/dev/null || true
-        sudo rm -rf /tmp/* 2>/dev/null || true
-        df -h
-
     - name: 🔧 Install system dependencies
       run: |
         sudo apt-get update
