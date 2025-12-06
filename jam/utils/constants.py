@@ -1,6 +1,6 @@
 """Constants for the JAM protocol as defined in the specification."""
 
-from tsrkit_types import Enum
+from tsrkit_types import Enum, U16, U32, U64
 
 from datetime import datetime, timezone
 from jam.utils.chainspec import chain_config
@@ -206,3 +206,5 @@ JCE_EPOCH = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
 
 # T — current seconds since JCE_EPOCH
 CURRENT_TIME = lambda: int((datetime.now(timezone.utc) - JCE_EPOCH).total_seconds())
+
+PARAMS_ENCODED = U64(B_I).encode() + U64(B_L).encode() + U64(B_S).encode() + U16(C).encode() + U32(D).encode() + U32(E).encode() + U64(G_A).encode() + U64(G_I).encode() + U64(G_R).encode() + U64(G_T).encode() + U16(H).encode() + U16(I).encode() + U16(J).encode() + U16(K).encode() + U32(L).encode() + U16(N).encode() + U16(O).encode() + U16(P).encode() + U16(Q).encode() + U16(R).encode() + U16(T).encode() + U16(U).encode() + U16(V).encode() + U32(W_A).encode() + U32(W_B).encode() + U32(W_C).encode() + U32(W_E).encode() + U32(W_M).encode() + U32(W_P).encode() + U32(W_R).encode() + U32(W_T).encode() + U32(W_X).encode() + U32(Y).encode()

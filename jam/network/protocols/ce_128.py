@@ -11,12 +11,19 @@ from jam.network.connection import NodeConnection
 from jam.types import HeaderHash 
 
 
-from tsrkit_types.integers import U32
+from tsrkit_types.integers import U32, U64
 from tsrkit_types.struct import structure
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.types.protocol.core import TimeSlot
 from jam.utils.constants import GENESIS_HASH
 from jam.utils.gather import gather_with_exceptions
+from jam.telemetry import emit_event
+from jam.telemetry.events import (
+    SendingBlockRequest, BlockRequestSent, BlockRequestFailed,
+    ReceivingBlockRequest, BlockRequestReceived, BlockTransferred,
+    BlockOutline, Bytes32
+)
+from tsrkit_types import U8, String, Bytes, Bytes32
 
 
 class Direction(Enum):
@@ -61,6 +68,7 @@ class BlockRequest(NetworkProtocol):
         header_hash = data.header.hex()[:16] + "..."
         transmitted_count = 0
         tasks = []
+        event_id = id(data) & 0xFFFFFFFFFFFFFFFF  # Unique event ID
 
         if not peers:
             # If no specific peers are provided, use all connected nodes
@@ -68,6 +76,19 @@ class BlockRequest(NetworkProtocol):
 
         for client in peers:
             try:
+                # Get peer_id - use connection's peer_id or generate from address
+                peer_id_bytes = getattr(client, 'peer_id', bytes(32))
+                if not isinstance(peer_id_bytes, bytes) or len(peer_id_bytes) != 32:
+                    peer_id_bytes = bytes(32)
+                
+                # Emit SendingBlockRequest event
+                emit_event(SendingBlockRequest(
+                    peer_id=Bytes32(peer_id_bytes),
+                    header_hash=Bytes32(data.header),
+                    direction=U8(0 if data.dir == Direction.AscExc else 1),
+                    max_blocks=data.max_blocks
+                ))
+                
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
                 client.stream_prefix[stream_id] = self._prefix
                 client.stream_buffer[stream_id] = b""
@@ -76,6 +97,9 @@ class BlockRequest(NetworkProtocol):
                 tasks.append(task)
 
                 transmitted_count += 1
+                
+                # Emit BlockRequestSent event
+                emit_event(BlockRequestSent(event_id=U64(event_id)))
 
                 logger.debug(
                     "Block request transmitted",
@@ -83,6 +107,8 @@ class BlockRequest(NetworkProtocol):
                     header_hash=header_hash,
                 )
             except Exception as e:
+                # Emit BlockRequestFailed event
+                emit_event(BlockRequestFailed(event_id=U64(event_id), reason=String(str(e)[:100])))
                 logger.error("Failed to transmit state request", error=e)
 
         responses = await gather_with_exceptions(tasks)
@@ -101,7 +127,16 @@ class BlockRequest(NetworkProtocol):
         from jam.settings import settings
         from jam.block.block import Block
 
+        # Get peer_id for telemetry
+        peer_id_bytes = getattr(server, 'peer_id', bytes(32))
+        if not isinstance(peer_id_bytes, bytes) or len(peer_id_bytes) != 32:
+            peer_id_bytes = bytes(32)
+        
+        # Emit ReceivingBlockRequest event
+        emit_event(ReceivingBlockRequest(peer_id=Bytes32(peer_id_bytes)))
+
         data = CE128Data.decode(buffer[4:])
+        event_id = id(data) & 0xFFFFFFFFFFFFFFFF
 
         logger.debug(
             "Processing block request",
@@ -110,6 +145,14 @@ class BlockRequest(NetworkProtocol):
             direction=data.dir,
             max_blocks=data.max_blocks,
         )
+        
+        # Emit BlockRequestReceived event
+        emit_event(BlockRequestReceived(
+            event_id=U64(event_id),
+            header_hash=Bytes32(data.header),
+            direction=U8(0 if data.dir == Direction.AscExc else 1),
+            max_blocks=data.max_blocks
+        ))
 
         # Get the start block
         start_block = Block.load(data.header, settings.main_db)
@@ -151,6 +194,31 @@ class BlockRequest(NetworkProtocol):
 
         if data.dir == Direction.DesInc:
             all_blocks.reverse()
+        
+        # Emit BlockTransferred events for each block
+        for i, block in enumerate(all_blocks):
+            is_last = (i == len(all_blocks) - 1)
+            block_outline = BlockOutline(
+                size=U32(len(block.encode())),
+                header_hash=Bytes32(block.header.hash()),
+                num_tickets=U32(len(block.extrinsic.tickets) if hasattr(block.extrinsic, 'tickets') else 0),
+                num_preimages=U32(len(block.extrinsic.preimages) if hasattr(block.extrinsic, 'preimages') else 0),
+                preimages_size=U32(sum(len(p.encode()) for p in block.extrinsic.preimages) if hasattr(block.extrinsic, 'preimages') else 0),
+                num_guarantees=U32(len(block.extrinsic.guarantees) if hasattr(block.extrinsic, 'guarantees') else 0),
+                num_assurances=U32(len(block.extrinsic.assurances) if hasattr(block.extrinsic, 'assurances') else 0),
+                num_disputes=U32(
+                    len(block.extrinsic.disputes.verdicts) + 
+                    len(block.extrinsic.disputes.culprits) + 
+                    len(block.extrinsic.disputes.faults) if hasattr(block.extrinsic, 'disputes') else 0
+                )
+            )
+            from tsrkit_types import Bool
+            emit_event(BlockTransferred(
+                event_id=U64(event_id),
+                slot=block.header.slot,
+                block=block_outline,
+                last_block=Bool(is_last)
+            ))
 
         # It has to be an array and not a vector 
         msg = TypedArray[Block, len(all_blocks)](all_blocks).encode()

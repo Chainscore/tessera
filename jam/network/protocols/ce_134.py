@@ -2,7 +2,7 @@ import asyncio
 
 from typing import cast
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from tsrkit_types import Option, Uint, structure, U8
+from tsrkit_types import Option, Uint, structure, U8, U64, String
 
 from jam.log_setup import network_logger as logger
 
@@ -18,6 +18,13 @@ from jam.types.work import SegmentRootLookup
 
 from jam.utils.gather import gather_with_exceptions
 from jam.utils.constants import X
+from jam.telemetry import emit_event
+from jam.telemetry.events import (
+    SharingWorkPackage, WorkPackageSharingFailed, BundleSent,
+    WorkPackageBeingShared, WorkPackageReceived, WorkPackageFailed,
+    WorkPackageOutline
+)
+from tsrkit_types import Bytes, Bytes32
 
 
 @structure
@@ -118,11 +125,20 @@ class WorkPackageSharing(NetworkProtocol):
         tasks = []
         responses = []
         transmitted_count = 0
+        event_id = id(data) & 0xFFFFFFFFFFFFFFFF
 
         for client in node.all_connected:
             try:
                 if client.val not in guarantors:
                     continue
+
+                # Get peer_id for telemetry
+                peer_id_bytes = getattr(client, 'peer_id', bytes(32))
+                if not isinstance(peer_id_bytes, bytes) or len(peer_id_bytes) != 32:
+                    peer_id_bytes = bytes(32)
+                
+                # Emit SharingWorkPackage event
+                emit_event(SharingWorkPackage(event_id=U64(event_id), peer_id=Bytes32(peer_id_bytes)))
 
                 logger.debug("Transmitting bundle", peer=client)
 
@@ -142,6 +158,9 @@ class WorkPackageSharing(NetworkProtocol):
                 res = client.close_and_wait(message=msg_b, stream_id=stream_id)
                 task = asyncio.create_task(res)
                 tasks.append(task)
+                
+                # Emit BundleSent event
+                emit_event(BundleSent(event_id=U64(event_id), peer_id=Bytes32(peer_id_bytes)))
 
                 logger.debug(
                     "Work package bundle transmitted to guarantor",
@@ -152,6 +171,8 @@ class WorkPackageSharing(NetworkProtocol):
 
 
             except Exception as e:
+                # Emit WorkPackageSharingFailed event
+                emit_event(WorkPackageSharingFailed(event_id=U64(event_id), peer_id=Bytes32(peer_id_bytes), reason=String(str(e)[:100])))
                 logger.error(
                     "Failed to transmit work package bundle to guarantor",
                     error=str(e),

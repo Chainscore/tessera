@@ -1,4 +1,4 @@
-import asyncio
+from jam.utils.task_utils import create_safe_task
 from typing import cast
 from tsrkit_types import structure, Uint, Bool, U8
 
@@ -120,7 +120,7 @@ class JudgmentPublication(NetworkProtocol):
             data = cast(CE145Data, data)
 
             # Handle received judgment
-            asyncio.create_task(self.handle_judgment(data.judgment))
+            create_safe_task(self.handle_judgment(data.judgment), name="handle_judgment")
 
             logger.debug(
                 "Received Judgment from auditor",

@@ -1,4 +1,4 @@
-import asyncio
+from jam.utils.task_utils import create_safe_task
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from jam.block.extrinsics.assurances import AvailAssurance
@@ -87,7 +87,7 @@ class Assurer:
             asr_store.store(assr_ext)
 
             data = CE141Data(assurance=assurance, len=U32(len(assurance.encode())))
-            asyncio.create_task(CE141.transmit(data=data))
+            create_safe_task(CE141.transmit(data=data), name="assurance_transmit")
         except Exception as e:
             logger.error("Failed to transmit assurance", error=e, time_slot=time_slot)
         self.clear()

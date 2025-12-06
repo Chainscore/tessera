@@ -1,4 +1,4 @@
-import asyncio
+from jam.utils.task_utils import create_safe_task
 from typing import TYPE_CHECKING, cast
 from tsrkit_types import TypedVector, Uint, structure, Choice
 
@@ -197,8 +197,9 @@ class AuditAnnouncement(NetworkProtocol):
                 header_hash=header_hash
             )
 
-            asyncio.create_task(
-                tranche_store.record_announcement(tranche, v_index, data.tranche_announcement.announcement)
+            create_safe_task(
+                tranche_store.record_announcement(tranche, v_index, data.tranche_announcement.announcement),
+                name="record_announcement"
             )
 
 

@@ -1,4 +1,4 @@
-import asyncio
+from jam.utils.task_utils import create_safe_task
 
 from py_ark_vrf import prove_ietf, vrf_output
 
@@ -83,6 +83,13 @@ class BlockProducer(NodeDispatcher):
             logger.debug("⏭ Skipping BP: Not our fallback", expected=entry.hex(), our_key=settings.bandersnatch_public.hex())
             return
 
+        # Telemetry: Authoring
+        from jam.telemetry import emit_event
+        from jam.telemetry.events import Authoring, Authored, BlockOutline
+        from tsrkit_types import U32, U64, Bytes32
+        
+        emit_event(Authoring(slot=U32(time_slot), parent_hash=Bytes32(latest.header.hash().encode())))
+
         block = latest.produce(TimeSlot(time_slot), state, ticket)
 
         is_valid = state._force_transition(block)
@@ -92,6 +99,25 @@ class BlockProducer(NodeDispatcher):
                 logger.info("⛏ Produced block using ticket", hash=block.header.hash().hex()[:16] + "...", slot=time_slot)
             else:
                 logger.info("⛏ Produced block", hash=block.header.hash().hex()[:16]+"...", slot=time_slot)
-            asyncio.create_task(up0.transmit(BlockAnnouncement.block_to_announcement(block)))
+            
+            # Telemetry: Authored
+            # Construct BlockOutline
+            outline = BlockOutline(
+                size=U32(len(block.encode())),
+                header_hash=Bytes32(block.header.hash().encode()),
+                num_tickets=U32(len(block.extrinsic.tickets)),
+                num_preimages=U32(len(block.extrinsic.preimages)),
+                preimages_size=U32(sum(len(p) for p in block.extrinsic.preimages)),
+                num_guarantees=U32(len(block.extrinsic.guarantees)),
+                num_assurances=U32(len(block.extrinsic.assurances)),
+                num_disputes=U32(
+                    len(block.extrinsic.disputes.verdicts) + 
+                    len(block.extrinsic.disputes.culprits) + 
+                    len(block.extrinsic.disputes.faults)
+                )
+            )
+            emit_event(Authored(event_id=U64(0), block=outline))
+            
+            create_safe_task(up0.transmit(BlockAnnouncement.block_to_announcement(block)), name="block_announce")
         else:
             logger.info("😓 Failed to produce a valid block", slot=time_slot, block=block.to_json())

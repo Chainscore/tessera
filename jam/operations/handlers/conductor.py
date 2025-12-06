@@ -1,4 +1,5 @@
 import asyncio
+from jam.operations.dispatcher import NodeDispatcher
 from tsrkit_types import U32
 from jam.types.protocol.ticket import TicketAttempt
 from jam.block.extrinsics.tickets import TicketEnvelope
@@ -10,7 +11,7 @@ from jam.utils.constants import EPOCH_LENGTH, X, TICKET_ENTRIES_PER_VALIDATOR
 from jam.network.protocols.ce_131 import SafroleTicketProxyDistribution, CE131Data, EpochTicket
 
 
-class Conductor:
+class Conductor(NodeDispatcher):
     
     @classmethod 
     async def run(cls, time_slot: TimeSlot, finality_time_slot: TimeSlot):

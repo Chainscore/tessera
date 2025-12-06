@@ -23,6 +23,8 @@ def run_jam():
         parser.add_argument("--builder", action="store_true", help="Flag for builders")
         parser.add_argument("--validator", action="store_true", help="Flag for validators")
         parser.add_argument("--no-rpc", action="store_false", default=True, help="Flag for turning rpc off")
+        # Pass on telemetry host:port
+        parser.add_argument("--telemetry", type=str, default=None, help="Telemetry host:port")
 
         args = parser.parse_args()
 
@@ -33,7 +35,8 @@ def run_jam():
                 args.theme,
                 args.builder,
                 args.validator,
-                args.no_rpc
+                args.no_rpc,
+                args.telemetry
             )
         )
     except asyncio.exceptions.CancelledError:

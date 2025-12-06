@@ -46,6 +46,10 @@ from jam.state.transitions import (
     Statistics,
 )
 from jam.api.rpc.subscription_handlers import subscribe_statistics
+from jam.telemetry import emit_event
+from jam.telemetry.events import BestBlockChanged, Importing, BlockExecuted, BlockExecutionFailed, BlockOutline, ServiceExecution
+from tsrkit_types import U32, U64, Bytes32, String
+from tsrkit_types.sequences import TypedVector
 
 class State:
     """
@@ -190,6 +194,25 @@ class State:
 
         try:
             header_hash = HeaderHash(block.header.hash())
+            event_id = id(block) & 0xFFFFFFFFFFFFFFFF
+            
+            # Emit Importing event
+            block_outline = BlockOutline(
+                size=U32(len(block.encode())),
+                header_hash=Bytes32(header_hash),
+                num_tickets=U32(len(block.extrinsic.tickets) if hasattr(block.extrinsic, 'tickets') else 0),
+                num_preimages=U32(len(block.extrinsic.preimages)),
+                preimages_size=U32(sum(len(p.encode()) for p in block.extrinsic.preimages)),
+                num_guarantees=U32(len(block.extrinsic.guarantees)),
+                num_assurances=U32(len(block.extrinsic.assurances)),
+                num_disputes=U32(
+                    len(block.extrinsic.disputes.verdicts) + 
+                    len(block.extrinsic.disputes.culprits) + 
+                    len(block.extrinsic.disputes.faults)
+                )
+            )
+            emit_event(Importing(slot=block.header.slot, block=block_outline))
+            
             logger.debug(
                 "Starting state transition on block",
                 header_hash=header_hash.hex(),
@@ -283,6 +306,10 @@ class State:
                     timeslot=self.tau,
                     final_state_root=self.root.hex()[:16] + "...",
                 )
+                emit_event(BestBlockChanged(slot=U32(int(self.tau)), hash=Bytes32(header_hash)))
+                
+                # Emit BlockExecuted event (services list is empty for now as we don't track individual service costs yet)
+                emit_event(BlockExecuted(event_id=U64(event_id), services=TypedVector[ServiceExecution]([])))
 
                 # TODO: Uncomment it for assurances
                 # from jam.operations.handlers.assurer import assurer
@@ -317,6 +344,8 @@ class State:
                 raise JamError(JamErrorCode.INVALID_BLOCK)
 
         except JamError as jam_e:
+            # Emit BlockExecutionFailed event
+            emit_event(BlockExecutionFailed(event_id=U64(event_id), reason=String(str(jam_e)[:100])))
             logger.error(
                 "Invalid block", error=jam_e,
                 hh=block.header.hash().hex(),
