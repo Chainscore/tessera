@@ -21,6 +21,7 @@ from jam.block import Block
 from jam.log_setup import node_logger as logger
 from jam.operations.ticket_queue import setup_ticket_queue
 from jam.api.rpc.app import rpc
+from jam.block.block_view import viewer
 
 
 shutdown_event = asyncio.Event()
@@ -81,8 +82,16 @@ async def run_node(
         # ------------ SET GENESIS BLOCK ------------
         block = Block.decode(bytes.fromhex(dev_spec["genesis_header"]))
         header_hash = block.save(main_db)
-        Finality.set_head(header_hash, main_db)
-        Finality.finalise(header_hash, main_db, True)
+        
+        # Initialize Finality Keys for Genesis
+        main_db.put(Finality.FINAL_KEY, header_hash.encode())
+        
+        # Setup Block View with Genesis
+        viewer.initialize(main_db)
+        
+        # Now set head and finalize (updates viewer internal state and emits events)
+        Finality.set_head(block, main_db)
+        Finality.finalise(block, main_db, True)
 
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:

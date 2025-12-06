@@ -57,6 +57,7 @@ from jam.utils.constants import (
     W_T,
     W_X,
     Y,
+    PARAMS_ENCODED
 )
 
 class GeneralFunctions(INVF):

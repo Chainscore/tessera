@@ -79,15 +79,15 @@ class Validator:
             total_refine_gas = total_refine_gas + x.refine_gas_limit
             total_accumulate_gas = total_accumulate_gas + x.accumulate_gas_limit
 
-        if total_refine_gas >= REFINE_GAS:
+        if total_refine_gas > REFINE_GAS:
             raise ValidatorError(
                 Code.BAD_REFINEMENT_GAS,
-                "count of extrinsic more than are more than actual value",
+                f"Total refinement gas {total_refine_gas} exceeds limit {REFINE_GAS}",
             )
-        if total_accumulate_gas >= ACCUMULATION_GAS:
+        if total_accumulate_gas > ACCUMULATION_GAS:
             raise ValidatorError(
                 Code.BAD_ACCUMULATION_GAS,
-                "count of extrinsic more than are more than actual value",
+                f"Total accumulation gas {total_accumulate_gas} exceeds limit {ACCUMULATION_GAS}",
             )
 
     def validate_wp(self, package: WorkPackage) -> bool:

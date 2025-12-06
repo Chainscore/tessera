@@ -112,24 +112,37 @@ def setup_logging(theme: str = "default", node_name: Optional[str] = None):
     os.makedirs("logs", exist_ok=True)
 
     # Configure logging with two handlers: stream and file
+    # Configure logging with two handlers: stream and file
+    handlers = {
+        "default": {
+            "level": min_level,
+            "class": "logging.StreamHandler",
+            "formatter": "colored",
+        },
+    }
+
+    # Try to configure file handler
+    log_file = f"logs/app_{node_name}_{os.getpid()}.log" if node_name else f"logs/app_{os.getpid()}.log"
+    try:
+        # Check if we can write to the log file
+        with open(log_file, "a"):
+            pass
+        
+        handlers["file"] = {
+            "level": min_level,
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": log_file,
+            "formatter": "json",
+            "maxBytes": 10485760,  # 10MB
+            "backupCount": 7,
+        }
+    except (PermissionError, OSError) as e:
+        print(f"WARNING: Could not write to log file {log_file}: {e}. File logging disabled.")
+
     logging.config.dictConfig({
         "version": 1,
         "disable_existing_loggers": False,
-        "handlers": {
-            "default": {
-                "level": min_level,
-                "class": "logging.StreamHandler",
-                "formatter": "colored",
-            },
-            "file": {
-                "level": min_level,
-                "class": "logging.handlers.RotatingFileHandler",
-                "filename": "logs/app.log",
-                "formatter": "json",
-                "maxBytes": 10485760,  # 10MB
-                "backupCount": 7,
-            },
-        },
+        "handlers": handlers,
         "formatters": {
             "colored": {
                 "()": structlog.stdlib.ProcessorFormatter,
@@ -152,7 +165,7 @@ def setup_logging(theme: str = "default", node_name: Optional[str] = None):
         },
         "loggers": {
             "": {
-                "handlers": ["default", "file"],
+                "handlers": list(handlers.keys()),
                 "level": "DEBUG",
                 "propagate": True,
             },

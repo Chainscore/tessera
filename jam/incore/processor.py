@@ -248,7 +248,7 @@ class Processor:
             logger.debug(f"Checking authorization..")
             o, g = PsiI(p, c).execute()
             # ------------------------------------------ -- ---- ---------- ------------------------------------------
-
+            o = o.unwrap().encode() if isinstance(o, WorkExecResult) else o
             s_result = 0
 
             def utils_i(j: int) -> Tuple[WorkExecResult, Gas, Segments]:
@@ -296,14 +296,13 @@ class Processor:
 
             for _j in range(len(p.items)):
                 _r, _u, _e = utils_i(_j)
-
                 comp = self.item_to_digest(p.items[_j], _r, _u)
                 r_list.append(comp)
                 e_list.append(_e)
 
             # Work Package Hash, h
             h = Hash.blake2b(p.encode())
-
+            
             # Accumulate all exported segments
             e_bar_cap = Segments([])
             for segments in e_list:
@@ -312,10 +311,17 @@ class Processor:
             logger.debug(f"Exported {len(e_bar_cap)} Segments!")
 
             # Availability Specification, s
-            logger.debug(f"Building availability specification..")
+            logger.info(f"Building availability specification..")
             specs = self.availability_specifier(h, b.encode(), e_bar_cap)
 
-            logger.debug(f"Compiling Report..")
+            logger.info(f"Compiling Report..", package_spec=specs,
+context=p.context,
+core_index=Uint(c),
+authorizer_hash=p.a,
+auth_output=Bytes(o),
+segment_root_lookup=sr_lookup,
+digests=r_list,
+auth_gas_used=Uint(g))
             report = WorkReport(
                 package_spec=specs,
                 context=p.context,
@@ -326,11 +332,12 @@ class Processor:
                 digests=r_list,
                 auth_gas_used=Uint(g),
             )
+            print(report)
 
             return report
 
         except Exception as e:
-            logger.error(f"Failed to build report", error=e)
+            logger.error(f"Failed to build report", error=e.with_traceback(e.__traceback__))
             raise
 
     def availability_specifier(
