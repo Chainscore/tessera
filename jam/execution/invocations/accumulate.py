@@ -7,7 +7,7 @@ from jam.types.state.accumulation.types import (
     OperandTuples,
     AccuContextX,
     AccumulationContext,
-    PreimageDict,
+    PreimageDict, DeferredTransfer,
 )
 from jam.execution.invocations.arg_invoke import PsiM
 from jam.execution.invocations.functions.general_fns import GeneralFunctions
@@ -22,18 +22,27 @@ from jam.execution.invocations.functions.accumulate_fns import (
     check,
 )
 from tsrkit_pvm import ExecutionStatus
-from jam.utils.constants import MAX_SERVICE_CODE_SIZE
+from jam.utils.constants import MAX_SERVICE_CODE_SIZE, MINIMUM_SERVICE_INDEX
 
 
 class PsiA(InvocationProtocol):
-    def __init__(self, u: GhostPartial, t: TimeSlot, s: ServiceId, g: Gas, o: OperandTuples, entropy: OpaqueHash):
+    def __init__(self, u: GhostPartial, t: TimeSlot, s: ServiceId, g: Gas, i: OperandTuples, entropy: OpaqueHash):
+        cloned_state = u.clone()
+        deferred_transfers: DeferredTransfers = DeferredTransfers([])
+
+        print("Length of i", len(i))
+
+        for _i in i:
+            if isinstance(i, DeferredTransfer):
+                deferred_transfers.append(_i)
+        cloned_state.service_accounts[s].service.balance = cloned_state.service_accounts[s].service.balance + Gas(sum(int(t.amount) for t in deferred_transfers))
         self.partial_state = u
         self.timeslot = t
         self.service_id = s
         self.gas = g
-        self.operandTuples = o
+        self.operandTuples = i
         self.entropy = entropy
-        self.context = AccumulationContext(x=self.initializer_fn(s, u.clone(), t, entropy), y=self.initializer_fn(s, u.clone(), t, entropy))
+        self.context = AccumulationContext(x=self.initializer_fn(s, cloned_state, t, entropy), y=self.initializer_fn(s, cloned_state, t, entropy))
         self.table = self.build_table(s, self.context.x.partial_state.service_accounts)
 
     def build_table(self, 
@@ -52,7 +61,6 @@ class PsiA(InvocationProtocol):
                     "import_segments": None,
                     "extrinsics": None,
                     "o": self.operandTuples,
-                    "t": None,
                 },
             ),
             # gas (Returns the gas remaining)
@@ -119,6 +127,7 @@ class PsiA(InvocationProtocol):
     def execute(self):
         meta_n_code = self.partial_state.service_accounts[self.service_id].m_c()
         if meta_n_code is None or len(meta_n_code[1]) > MAX_SERVICE_CODE_SIZE:
+            print("Returning from here")
             return self.partial_state, DeferredTransfers([]), None, Gas(0), set()
         else:
             # print("PSI M ID", Uint(self.service_id))
@@ -152,8 +161,8 @@ class PsiA(InvocationProtocol):
                 Hash.blake2b(
                     Uint(s).encode() + entropy.encode() + Uint(timeslot).encode()
                 )
-            ) % (2**32 - 2**9)
-        ) + 2**8
+            ) % (2**32 - MINIMUM_SERVICE_INDEX - 2**8)
+        ) + MINIMUM_SERVICE_INDEX
         i = check(state_context, value)
         context = AccuContextX(
             s_index=s,

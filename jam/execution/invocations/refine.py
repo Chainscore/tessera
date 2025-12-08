@@ -23,12 +23,14 @@ from jam.utils.constants import REFINE_GAS
 class PsiR(InvocationProtocol):
     def __init__(
         self,
+        core_index: int,
         item_index: int,
         p: WorkPackage,
         auth_trace: bytes,
         i_segments: list[list[bytes]],
         e_offset: int,
     ):
+        self.core_index = core_index
         self.item_index = Uint[16](item_index)
         self.work_package = p
         self.auth_trace = auth_trace
@@ -76,10 +78,9 @@ class PsiR(InvocationProtocol):
             11: (RefineFunctions, {}),
             12: (RefineFunctions, {}),
             13: (RefineFunctions, {}),
-            # TODO: Add core_index [we'll probably be storing core_index in node info]
             100: (
                 GeneralFunctions,
-                {"core_index": 0, "service_id": self.wi.service},
+                {"core_index": self.core_index, "service_id": self.wi.service},
             ),  # log
         }
 
@@ -93,7 +94,8 @@ class PsiR(InvocationProtocol):
         )
 
         args = (
-            Uint(self.item_index).encode()
+            Uint(self.core_index).encode()
+            + Uint(self.item_index).encode()
             + Uint(self.wi.service).encode()
             + self.wi.payload.encode()
             + bytes(Hash.blake2b(self.work_package.encode()))

@@ -1,4 +1,4 @@
-from typing import Tuple, List, Set
+from typing import Tuple, List, Set, Union
 from tsrkit_types import structure, TypedVector, Bytes, Uint
 from jam.state.partial import GhostPartial, PartialState
 from jam.types.protocol.merkle import OptionHash
@@ -15,8 +15,11 @@ from jam.types.state.iota import Iota
 GasConsumed = List[Tuple[ServiceId, Gas]]
 BeefyMap = Set[Tuple[ServiceId, OpaqueHash]]
 
+class OperandBase:
+    pass
+
 @structure
-class OperandTuple:
+class OperandTuple(OperandBase):
     p: WorkPackageHash
     e: ExportsRoot
     a: AuthorizerHash
@@ -25,19 +28,16 @@ class OperandTuple:
     l: WorkExecResult
     t: Bytes # auth_output of work report
 
-
-class OperandTuples(TypedVector[OperandTuple]):
-    ...
-
-
 @structure
-class DeferredTransfer:
+class DeferredTransfer(OperandBase):
     sender: ServiceId # s
     receiver: ServiceId # d
     amount: Balance # a
     memo: Bytes # m
     gas: Gas # g
 
+class OperandTuples(TypedVector[OperandBase]):
+    ...
 
 class DeferredTransfers(TypedVector[DeferredTransfer]):
     ...

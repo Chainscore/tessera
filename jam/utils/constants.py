@@ -206,3 +206,6 @@ JCE_EPOCH = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
 
 # T — current seconds since JCE_EPOCH
 CURRENT_TIME = lambda: int((datetime.now(timezone.utc) - JCE_EPOCH).total_seconds())
+
+# S — The minimum public service index. Services of indices below these may only be created by the Registrar
+MINIMUM_SERVICE_INDEX = 2**16

@@ -158,13 +158,15 @@ class Accumulation:
     @staticmethod
     def seq_accumulation(
         gas_limit: Gas,
+        deferred_transfers: DeferredTransfers,
         work_reports: WorkReports,
-        state: "State"
-    ) -> Tuple[int, DeferredTransfers, BeefyMap, GasConsumed]:
+        state: Sigma,
+        privileged_services: ChiZ
+    ) -> Tuple[int, BeefyMap, GasConsumed]:
         """
-        Outer accumulation function ∆+ defined in Eq 12.16
+        Outer accumulation function ∆+ defined in Eq 12.18
         Sequential Execution Pattern
-        Transforms Gas Limit, Sequence of Work Reports, Initial Partial State and Dictionary of services (free, privileged accumulation)
+        Transforms Gas Limit, Sequence of Deferred Transfers, Sequence of Work Reports, Initial Partial State and Dictionary of services (free, privileged accumulation)
         into Tuple of No. of Work Reports accumulated, Posterior state-context, Resultant deferred-transfers and Accumulation-output pairings
 
         Args:
@@ -175,7 +177,6 @@ class Accumulation:
         Returns:
             A tuple (int, GhostPartial, DeferredTransfers, BeefyMap, GasConsumed) where:
             Integer: Number of work digests successfully accumulated.
-            DeferredTransfer: A list of transfers that are deferred.
             BeefyMap: A mapping of service indices to their corresponding accumulation outputs.
             GasConsumed: Gas consumed by accumulation of each service along iwth their service id
         """
@@ -189,37 +190,44 @@ class Accumulation:
                 break
             index = index + 1
 
-        if index == 0:
-            return 0, DeferredTransfers([]), set(), []
+        n = len(deferred_transfers) + index + len(privileged_services)
+
+        if n == 0:
+            return 0, set(), []
 
         work_reports_start = work_reports[: index]
 
         transfers, outputs, gas_consumed = Accumulation.parallel_accumulation(
-            work_reports_start, state
+            work_reports_start, state, deferred_transfers, privileged_services
         )
+        gas_star = gas_limit
+
+        for t in deferred_transfers:
+            gas_star += t.gas
 
         work_reports_end = work_reports[index:]
-        gas_star = Gas(0)
+        utilized_gas = Gas(0)
         for _, gas in gas_consumed:
-            gas_star += gas
-        gas_diff = gas_limit - gas_star
+            utilized_gas += gas
+        gas_diff = gas_star - utilized_gas
 
-        j, r_transfers, r_outputs, r_gas_consumed = (
+        j, r_outputs, r_gas_consumed = (
             Accumulation.seq_accumulation(
-                gas_diff, work_reports_end, state
+                gas_diff, transfers, work_reports_end, state, ChiZ({})
             )
         )
 
-        transfers.extend(r_transfers)
         gas_consumed.extend(r_gas_consumed)
         outputs.update(r_outputs)
 
-        return index + j, transfers, outputs, gas_consumed
+        return index + j, outputs, gas_consumed
 
     @staticmethod
     def parallel_accumulation(
         work_reports: WorkReports,
-        state: "State"
+        state: "State",
+        deferred_transfers: DeferredTransfers,
+        privileged_services: ChiZ
     ) -> Tuple[DeferredTransfers, BeefyMap, GasConsumed]:
         """
         Parallelized accumulation function ∆* defined in Eq 12.17
@@ -239,7 +247,7 @@ class Accumulation:
             AccumulationOutput: A mapping of service indices to their corresponding accumulation outputs.
         """
 
-        privileged_services = state.chi.chi_z
+        # privileged_services = state.chi.chi_z
         timeslot = state.tau
 
         # All service IDs to accumulate
@@ -249,7 +257,10 @@ class Accumulation:
             for report in work_reports
             for digest in report.digests
         }
+
         services.update(privileged_services.keys())
+        for t in deferred_transfers:
+            services.add(t.receiver)
 
         # Accumulated gas by each service
         # u in 12.17
@@ -264,7 +275,7 @@ class Accumulation:
         transfers = DeferredTransfers([])
 
         collected_preimages: Set[Tuple[ServiceId, Bytes]] = set()
-        
+
         for service in services:
             partial_state = state.to_partial()
             (
@@ -274,16 +285,17 @@ class Accumulation:
                 _gas_consumed,
                 _preimages,
             ) = Accumulation.single_accumulation(
-                partial_state, work_reports, privileged_services, service, timeslot, state.eta[0]
+                partial_state, deferred_transfers, work_reports, privileged_services, service, timeslot, state.eta[0]
             )
             gas_consumed.append((service, _gas_consumed))
             if _output_hash and _output_hash.unwrap() != Null:
                 outputs.add((service, _output_hash.unwrap()))
             transfers.extend(_transfers)
             collected_preimages.update(_preimages)
-            
+
             # Add partial cache to state
             state.store += partial_state.store
+        # TODO: 12.19
 
         Accumulation.preimage_integration(
             state.delta, collected_preimages, timeslot
@@ -293,6 +305,7 @@ class Accumulation:
     @staticmethod
     def single_accumulation(
         initial_state: GhostPartial,
+        deferred_transfers: DeferredTransfers,
         work_reports: WorkReports,
         services: ChiZ,
         service_id: ServiceId,
@@ -305,6 +318,7 @@ class Accumulation:
         into Tuple of Posterior state-context, Sequence of Transfers, Possible Accumulation-outputs and Actual gas utilized in PVM,
 
         Args:
+            deferred_transfers:
             initial_state (GhostPartial): The state context before accumulation, which includes service accounts and other mutable components.
             work_reports (WorkReports): A collection of work reports that are ready to be accumulated.
             services (ChiZ): A dictionary of services (by service index) that are set up for free accumulation along with their basic gas allowances.
@@ -340,9 +354,13 @@ class Accumulation:
                             l=r.result,
                         )
                     )
+        for t in deferred_transfers:
+            if t.receiver == service_id:
+                g += t.gas
+                i.append(t)
 
         # print("ACCUMULATING", service_id)
-        return PsiA(u=initial_state, t=timeslot, s=service_id, entropy=entropy, g=g, o=i).execute()
+        return PsiA(u=initial_state, t=timeslot, s=service_id, entropy=entropy, g=g, i=i).execute()
 
     @staticmethod
     def preimage_integration(
@@ -495,7 +513,8 @@ class Accumulation:
 
         gas_limit = max(TOTAL_GAS,((ACCUMULATION_GAS*CORE_COUNT) + service_gas))
 
-        [num_accumulated, deferred_transfers, commitment_map, gas_accumulations] = Accumulation.seq_accumulation(Gas(gas_limit), star_work_reports, state)
+        deferred_transfers: DeferredTransfers = DeferredTransfers([])
+        [num_accumulated, commitment_map, gas_accumulations] = Accumulation.seq_accumulation(Gas(gas_limit), deferred_transfers, star_work_reports, state, state.chi.chi_z)
 
         accumulation_stats = {}
         for ga in gas_accumulations:
@@ -553,19 +572,11 @@ class Accumulation:
 
         pi = state.pi
         for s in services:
-            specific_transfers = Accumulation.selection_fn(deferred_transfers, s)
-            # delta_double_dagger
-            a, u = PsiT(d=state.delta, block_timeslot=block.header.slot, s=s, transfers=specific_transfers, entropy=state.eta[0]).execute()
+            pi_service = pi.services
+            if s not in pi.services:
+                pi.services[s] = ServiceStat.empty()
 
-            # Update Statistics
-            if len(specific_transfers):
-                pi_service = pi.services
-                if s not in pi.services:
-                    pi.services[s] = ServiceStat.empty()
-                pi.services[s].on_transfers_count = Uint(len(specific_transfers))
-                pi.services[s].on_transfers_gas_used = Uint(u)
-
-                pi.services = pi_service
+            pi.services = pi_service
 
         state.pi = pi
 

@@ -269,7 +269,7 @@ class Processor:
 
                 # ------------------------------------------ REFINE INVOCATION ----------------------------------------
                 logger.debug(f"Refining Work Item {j}..", payload=p.items[j].payload.hex())
-                r, e, u = PsiR(j, p, o, b.import_segments, l).execute()
+                r, e, u = PsiR(c, j, p, o, b.import_segments, l).execute()
                 logger.debug(f"REFINE RESULT: {r}", item=j, payload=list(p.items[j].payload))
                 # ------------------------------------------ ----------------- ----------------------------------------
 

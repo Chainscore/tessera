@@ -12,7 +12,8 @@ ChiM = ServiceId
 ChiA = TypedArray[ServiceId, CORE_COUNT]
 """Can alter Iota"""
 ChiV = ServiceId
-
+"""Index of service that can create new service accounts"""
+ChiR = ServiceId
 
 ChiZ = Dictionary[ServiceId, Gas]
 
@@ -22,10 +23,11 @@ class Chi:
     Component: χ
     Key: 12
 
-    Source: https://graypaper.fluffylabs.dev/#/38c4e62/121d00121d00?v=0.7.0
+    Source: https://graypaper.fluffylabs.dev/#/1c979cb/114402114402?v=0.7.1
     """
 
     chi_m: ChiM = field(metadata={"name": "bless"})
     chi_a: ChiA = field(metadata={"name": "assign"})
     chi_v: ChiV = field(metadata={"name": "designate"})
     chi_z: ChiZ = field(metadata={"name": "always_acc"})
+    chi_r: ChiR = field(metadata={"name": "register"})

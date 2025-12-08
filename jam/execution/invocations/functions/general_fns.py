@@ -80,8 +80,7 @@ class GeneralFunctions(INVF):
         item_index: int,
         import_segments: Optional[List],
         extrinsics: Optional[Extrinsics],
-        o: Optional[OperandTuples],
-        t: Optional[DeferredTransfers],
+        o: Optional[OperandTuples]
     ):
         fetch_type = registers[10]
 
@@ -184,11 +183,6 @@ class GeneralFunctions(INVF):
                 v = o.encode()
             elif w10 == 15 and w11 < len(o):
                 v = o[w11].encode()
-        elif t is not None:
-            if w10 == 16:
-                v = t.encode()
-            elif w10 == 17 and w11 < len(t):
-                v = t[w11].encode()
 
         if v is None:
             registers[7] = HostStatus.NONE.value
