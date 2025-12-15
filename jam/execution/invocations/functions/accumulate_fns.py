@@ -247,7 +247,10 @@ class AccumulateFunctions(INVF):
         if not memory.is_accessible(o, TRANSFER_MEMO_SIZE):
             raise PvmError(PANIC)
 
+        print("Transferring to ", d)
+
         if ServiceId(d) not in delta:
+            print("Not in delta", d)
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
 
