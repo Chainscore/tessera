@@ -5,7 +5,7 @@ from jam.types.protocol.ticket import TicketAttempt
 from jam.block.extrinsics.tickets import TicketEnvelope
 from jam.types.protocol.crypto import BandersnatchRingVrfSignature
 from jam.types.protocol.core import TimeSlot
-from py_ark_vrf import prove_ring
+from dot_ring import RingVRF, Bandersnatch
 from jam.log_setup import node_logger as logger
 from jam.utils.constants import EPOCH_LENGTH, X, TICKET_ENTRIES_PER_VALIDATOR
 from jam.network.protocols.ce_131 import SafroleTicketProxyDistribution, CE131Data, EpochTicket
@@ -46,19 +46,20 @@ class Conductor(NodeDispatcher):
         from jam.settings import settings
 
         eta = state.eta[2]
-        vals = [k.bandersnatch for k in state.gamma.p]
+        vals = [bytes(k.bandersnatch) for k in state.gamma.p]
 
         try:
+            # Use dot_ring for proof generation (consistent with validation)
+            ring_proof = RingVRF[Bandersnatch].prove(
+                alpha=X.TICKET.value + eta + bytes([attempt]),
+                ad=b"",
+                secret_key=settings.bandersnatch_private,
+                producer_key=settings.bandersnatch_public,
+                keys=vals,
+            )
             return TicketEnvelope(
                 attempt=TicketAttempt(attempt),
-                signature=BandersnatchRingVrfSignature(
-                    prove_ring(
-                        secret_scalar=settings.bandersnatch_private,
-                        input_data=X.TICKET.value + eta + bytes([attempt]),
-                        ring=vals,
-                        aux=b"",
-                    )
-                ),
+                signature=BandersnatchRingVrfSignature(ring_proof.to_bytes()),
             )
         except Exception as e:
             logger.error("Failed to generate ticket", error=e)

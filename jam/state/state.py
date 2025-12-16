@@ -1,6 +1,6 @@
 import json
 import asyncio
-from copy import copy, deepcopy
+from copy import copy
 
 from jam.error import JamError, JamErrorCode
 from jam.state.partial import PartialState
@@ -50,6 +50,8 @@ from jam.telemetry import emit_event
 from jam.telemetry.events import BestBlockChanged, Importing, BlockExecuted, BlockExecutionFailed, BlockOutline, ServiceExecution
 from tsrkit_types import U32, U64, Bytes32, String
 from tsrkit_types.sequences import TypedVector
+from dot_ring import RingVRF, Bandersnatch, IETF_VRF
+
 
 class State:
     """
@@ -106,6 +108,9 @@ class State:
 
     @property
     def root(self):
+        # Use cached root if set (for snapshots loaded without trie mutations)
+        if hasattr(self, '_cached_root') and self._cached_root is not None:
+            return self._cached_root
         return self.store._TRIE.root_hash
 
     def revert(self, header_hash):
@@ -116,29 +121,35 @@ class State:
         2. Apply these to Trie + DB
         3. Clear cache
         """
-        self.store._updates = self.store.load_cache(header_hash)
+        updates, _root = self.store.load_cache(header_hash)
+        self.store._updates = updates
         self.store.settle_cache()
 
     @classmethod
     def load(cls, header_hash=HeaderHash(Hash.blake2b(b"empty"))) -> "State":
         """
         Load a snapshot of state at a particular block's slot.
-        Create a cloned state (RO DB + Trie Clone w applied updates[do we really need trie?])
+        Create a cloned state (RO DB + cached updates)
 
         Args;
             - `header_hash`: Loads state at point in time when this header was imported.
             If this is not provided, we assume the request is just to have a readable instance of latest state
         """
-        # Create a clone of finalized state
-        trie_snapshot = deepcopy(state.store._TRIE)
-        store_snapshot = StateStorage(trie_snapshot, state.store._DB)
+        # Share the same trie reference - we use apply_trie=False to avoid mutations
+        # The final root is retrieved directly from stored records
+        store_snapshot = StateStorage(state.store._TRIE, state.store._DB)
 
         state_snapshot = State(store_snapshot)
 
-        # Load Past Updates
+        # Load Past Updates without applying to trie (avoid mutating shared trie)
         # Note: If Header Hash is not passed, cache remains empty
-        cache = state_snapshot.store.load_cache(header_hash)
+        cache, final_root = state_snapshot.store.load_cache(header_hash, apply_trie=False)
         state_snapshot.store._updates = cache
+        
+        # Set the expected root directly from stored records
+        # This is tracked separately since we don't mutate the trie
+        state_snapshot._cached_root = final_root
+        
         logger.debug("Loaded state instance.", header_hash=header_hash.hex(), state_root=state_snapshot.root.hex())
 
         return state_snapshot
@@ -173,7 +184,7 @@ class State:
 
         return success
 
-    def transition(self, block: Block, instant_finality: bool = True) -> bool:
+    def transition(self, block: Block, instant_finality: bool = True, skip_hooks = False) -> bool:
         """
         Main state transition function. Takes in the current state and the incoming block, returns the transitioned state
 
@@ -253,7 +264,8 @@ class State:
             Disputes.transition(pre_state, self, block)
 
             # Safrole
-            vrf_output = Safrole.get_vrf_output(block.header.entropy_source)
+            entropy_proof = IETF_VRF[Bandersnatch].from_bytes(block.header.entropy_source)
+            vrf_output = OpaqueHash(entropy_proof.proof_to_hash(entropy_proof.output_point)[:32])
             Safrole.transition(pre_state, self, block, vrf_output)
 
             # Assurances
@@ -300,22 +312,18 @@ class State:
                 Finality.set_head(block, _set.main_db)
 
                 logger.info(
-                    "Block imported!",
-                    new_wrs=len(newly_avail_wrs),
-                    header=header_hash.hex()[:16] + "...",
-                    timeslot=self.tau,
-                    final_state_root=self.root.hex()[:16] + "...",
+                    "Block imported!", hh=header_hash.hex()[:6], t=int(self.tau), sr=self.root.hex()[:6] + ".."
                 )
                 emit_event(BestBlockChanged(slot=U32(int(self.tau)), hash=Bytes32(header_hash)))
                 
                 # Emit BlockExecuted event (services list is empty for now as we don't track individual service costs yet)
                 emit_event(BlockExecuted(event_id=U64(event_id), services=TypedVector[ServiceExecution]([])))
 
-                # TODO: Uncomment it for assurances
-                # from jam.operations.handlers.assurer import assurer
-                # for ext in block.extrinsic.guarantees:
-                #     logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
-                #     asyncio.create_task(assurer._req_shard(ext))
+                if not skip_hooks:
+                    from jam.operations.handlers.assurer import assurer
+                    for ext in block.extrinsic.guarantees:
+                        logger.debug("[ASSURER]: Fetching assigned shard", wr_hash=ext.report.hash().hex())
+                        asyncio.create_task(assurer._req_shard(ext))
 
                 # TODO: Test Auditing & Refining with PJ
                 # # Start Auditing for new block received
@@ -404,13 +412,5 @@ def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spe
 
     global state
     state = new_state
-
-    # Init Executor
-    from jam.state.transitions.safrole.executor import setup_executor
-    try:
-        pubkeys = [bytes(k.bandersnatch) for k in state.gamma.p]
-        setup_executor(pubkeys)
-    except Exception as e:
-        logger.debug("Executor setup failed", err=str(e))
 
     return state

@@ -72,7 +72,7 @@ class StateStorage:
         self._updates.update(other._updates)
         return self
 
-    def load_cache(self, hh: HeaderHash, apply_trie: bool = True) -> dict:
+    def load_cache(self, hh: HeaderHash, apply_trie: bool = True) -> tuple[dict, StateRoot | None]:
         """
         Loads cache for given block's header hash.
         Optionally applies changes in trie of current store's instance.
@@ -80,9 +80,13 @@ class StateStorage:
         Args:
             hh (HeaderHash): block whose cache needs to be stashed.
             apply_trie (bool): flag for applying changes in trie.
+        
+        Returns:
+            Tuple of (updates dict, final_root). final_root is the expected
+            state root after applying all updates.
         """
         if hh == HeaderHash(32):
-            return {}
+            return {}, None
 
         from jam.settings import settings
 
@@ -101,7 +105,7 @@ class StateStorage:
         # Exit if block does not exist in our history
         target_block = Block.load(hh, kv)
         if target_block is None:
-            return _updates
+            return _updates, None
 
         # Fetch sync direction.
         # 1 for Ahead of finality. 0 for Behind of finality.
@@ -123,7 +127,9 @@ class StateStorage:
         while curr_head != head_to:
             data = kv.get(self.get_storage_key(curr_head))
             if data is None:
-                raise ValueError("Updates missing for header:", curr_head.hex())
+                # No StateRecord for this block - we've likely reached genesis
+                # or a block before our stored history. Stop traversing.
+                break
 
             records.append(StateRecord.decode(data))
 
@@ -131,11 +137,16 @@ class StateStorage:
             if block is None:
                 raise JamError("Block missing for header hash:", curr_head.hex())
 
+            # Stop if we've reached genesis (parent is zero hash)
+            if block.header.parent == HeaderHash(32):
+                break
+                
             curr_head = block.header.parent
 
         if ahead:
             records.reverse()
 
+        final_root = None
         for record in records:
             roots = record.roots
             final_root = getattr(roots, use_attr)
@@ -173,7 +184,7 @@ class StateStorage:
                         actual_root=self._TRIE.root_hash.hex()
                     )
 
-        return _updates
+        return _updates, final_root
 
     def record_cache(self, hh: HeaderHash | None = None, kv: RockStore | None = None):
         """
@@ -195,7 +206,7 @@ class StateStorage:
 
         if hh:
             block = Block.load(hh, kv)
-            previous_updates = self.load_cache(block.header.parent, False)
+            previous_updates, _ = self.load_cache(block.header.parent, False)
         else:
             previous_updates = {}
 

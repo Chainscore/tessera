@@ -22,6 +22,7 @@ from jam.log_setup import node_logger as logger
 from jam.operations.ticket_queue import setup_ticket_queue
 from jam.api.rpc.app import rpc
 from jam.block.block_view import viewer
+from jam.telemetry.client import TelemetryClient, TelemetryConfig
 
 
 shutdown_event = asyncio.Event()
@@ -56,6 +57,20 @@ async def run_node(
 
     # ---------- SETUP LOGGING ----------
     setup_logging(theme=theme, node_name=name)
+    
+    # ---------- SETUP TELEMETRY (optional) ----------
+    telemetry_client = None
+    # telemetry = "localhost:9000"
+    # if telemetry:
+    #     telemetry_host, telemetry_port_str = telemetry.split(":")
+    #     telemetry_port = int(telemetry_port_str)
+    #     telemetry_config = TelemetryConfig(
+    #         host=telemetry_host,
+    #         port=telemetry_port,
+    #         node_name=name
+    #     )
+    #     telemetry_client = TelemetryClient.setup(telemetry_config)
+    #     logger.info(f"Telemetry enabled: {telemetry_host}:{telemetry_port}")
 
     # ---------- SETUP SETTINGS ----------
     settings = setup_setting(
@@ -83,6 +98,9 @@ async def run_node(
         block = Block.decode(bytes.fromhex(dev_spec["genesis_header"]))
         header_hash = block.save(main_db)
         
+        if telemetry_client:
+            telemetry_client.set_node_identity(settings.ed25519_public, header_hash)
+
         # Initialize Finality Keys for Genesis
         main_db.put(Finality.FINAL_KEY, header_hash.encode())
         
@@ -95,6 +113,8 @@ async def run_node(
 
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:
+            if telemetry_client:
+                tg.create_task(telemetry_client.run())
             # Networking - Block Imports, WP Processing, etc
             tg.create_task(start_node(str(host), int(port), is_builder))
             if rpc_flag:

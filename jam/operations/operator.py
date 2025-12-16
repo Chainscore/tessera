@@ -46,10 +46,10 @@ async def operate(is_builder = False):
             if not node:
                 ts += 1
                 continue
-            logger.info(f"New Time Slot #{ts}", slot_index=(ts % EPOCH_LENGTH), epoch=int(ts // EPOCH_LENGTH), peers=len(node.active_peers), connections=len(node.all_connected))
-            # emit_new_timeslot(ts, int(ts // EPOCH_LENGTH), ts % EPOCH_LENGTH, len(node.active_peers))
-            # Schedule tasks to run immediately
 
+            logger.debug(f"New Time Slot #{ts}", slot_index=(ts % EPOCH_LENGTH), epoch=int(ts // EPOCH_LENGTH), peers=len(node.active_peers), connections=len(node.all_connected))
+
+            # Schedule tasks to run immediately
             from jam.settings import settings
             main_db = settings.main_db
             finality_block = Finality.load_final(main_db)

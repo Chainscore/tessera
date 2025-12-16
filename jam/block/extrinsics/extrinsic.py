@@ -14,7 +14,7 @@ from jam.types.protocol.crypto import (
     Hash,
     OpaqueHash,
 )
-from py_ark_vrf import vrf_output
+from dot_ring import RingVRF, Bandersnatch, IETF_VRF
 
 if TYPE_CHECKING:
     from jam.block.header.header import Header
@@ -57,11 +57,6 @@ class Extrinsic:
             + bytes(Hash.blake2b(self.disputes.encode()))
         )
 
-    @staticmethod
-    def get_vrf_output(signature: BandersnatchRingVrfSignature) -> OpaqueHash:
-        # return Bytes[32](RingVrf.pedersen_proof_to_hash(signature))
-        return OpaqueHash(vrf_output(signature)[:32])
-
     @classmethod
     def from_collected(cls, time_slot):
         # --- Extrinsic Collection --- #
@@ -96,7 +91,9 @@ class Extrinsic:
 
         def sort_fn(ticket: TicketEnvelope) -> int:
             # Take VRF output of the signature and sort by it
-            return int.from_bytes(Extrinsic.get_vrf_output(ticket.signature))
+            # Tickets use Ring VRF signatures
+            ring_proof = RingVRF[Bandersnatch].from_bytes(ticket.signature, skip_pedersen=False)
+            return int.from_bytes(ring_proof.proof_to_hash(ring_proof.pedersen_proof.output_point)[:32])
 
         if time_slot%EPOCH_LENGTH < TICKET_SUBMISSION_END:
             et = TicketsExtrinsic(ticket_store._store[:MAX_TICKETS_PER_EXTRINSIC])

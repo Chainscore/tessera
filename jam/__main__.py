@@ -79,16 +79,17 @@ async def main(
     setup_logging(theme=theme, node_name=name)
 
     # ---------- SETUP TELEMETRY (optional) ----------
+    telemetry_client = None
     if telemetry:
-        host, port = telemetry.split(":")
-        telemetry_port = int(port)
+        telemetry_host, telemetry_port_str = telemetry.split(":")
+        telemetry_port = int(telemetry_port_str)
         telemetry_config = TelemetryConfig(
-            host=host,
+            host=telemetry_host,
             port=telemetry_port,
             node_name=name
         )
         telemetry_client = TelemetryClient.setup(telemetry_config)
-        logger.info(f"Telemetry enabled: {host}:{telemetry_port}")
+        logger.info(f"Telemetry enabled: {telemetry_host}:{telemetry_port}")
 
     # ---------- SETUP SETTINGS ----------
     settings = setup_setting(

@@ -53,6 +53,12 @@ class AuditShardsDA(DA):
 
     def put_batch(self, er_root: ErasureRoot, data: BundleShardsDict) -> None:
         key = self.prefix + er_root.encode()
+        # Debug: print what we're storing
+        if len(data) > 0:
+            from jam.types.protocol.crypto import Hash
+            first_key = list(data.keys())[0]
+            first_hash = Hash.blake2b(data[first_key].encode()).hex()[:16]
+            print(f"[AuditShardsDA] put_batch(er_root={er_root.hex()[:16]}) -> first shard hash: {first_hash}")
         self.db.put(key, data.encode())
 
     def put(self, er_root: ErasureRoot, shard_index: ShardIndex, shard: BundleShard) -> None:
@@ -72,9 +78,15 @@ class AuditShardsDA(DA):
         data = self.db.get(key)
 
         if data is None:
-            raise KeyError("Bundle Shard not found in Audit DA")
+            raise KeyError(f"Bundle Shard not found in Audit DA for key: {key.hex()}")
 
         bs_dict = BundleShardsDict.decode(data)
+        # Debug: print first shard hash to verify correct data
+        if len(bs_dict) > 0:
+            from jam.types.protocol.crypto import Hash
+            first_key = list(bs_dict.keys())[0]
+            first_hash = Hash.blake2b(bs_dict[first_key].encode()).hex()[:16]
+            print(f"[AuditShardsDA] get(er_root={er_root.hex()[:16]}) -> first shard hash: {first_hash}")
         return bs_dict
 
     def delete(self, er_root: ErasureRoot) -> None:

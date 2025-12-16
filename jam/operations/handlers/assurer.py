@@ -9,7 +9,7 @@ from tsrkit_types import Bytes, U32, TypedVector
 
 from jam.types.protocol.crypto import Hash
 from jam.types.work.manifest import Assurers, Justification
-from jam.types.work.shard import SegmentsShard, ShardKey
+from jam.types.work.shard import SegmentsShard, ShardKey, ShardIndex
 
 from jam.storage.da.audits import AuditShardsDA, JustificationsDA
 from jam.storage.da.segments import SegmentShardsDA
@@ -50,44 +50,47 @@ class Assurer:
             # TODO: Fix Assurances Check Per Block
             pending_reps = state.rho.pending_reps()
             if len(pending_reps) == 0:
-                logger.debug("No Pending Reports. Skipping assurances.", slot=state.tau)
+                logger.debug("No Pending Reports. Skipping assurances.", slot=int(state.tau))
                 self.clear()
                 return
 
             bitfield= AvailBitField(self._collected)
-            header_hash = latest_block.header.hash()
-            sign_data = header_hash.encode() + bitfield.encode()
+            if any(self._collected):
+                header_hash = latest_block.header.hash()
+                sign_data = header_hash.encode() + bitfield.encode()
 
-            signr = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private).sign(
-                pref + Hash.blake2b(sign_data).encode()
-            )
+                signr = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private).sign(
+                    pref + Hash.blake2b(sign_data).encode()
+                )
 
-            CE141 = AssuranceDistribution()
-            assurance = Assurance(
-                anchor_hash=HeaderHash(header_hash),
-                bitfield=bitfield,
-                ed25519_signature=Ed25519Signature(signr),
-            )
+                CE141 = AssuranceDistribution()
+                assurance = Assurance(
+                    anchor_hash=HeaderHash(header_hash),
+                    bitfield=bitfield,
+                    ed25519_signature=Ed25519Signature(signr),
+                )
 
-            assr_ext = AvailAssurance(
-                anchor=HeaderHash(header_hash),
-                bitfield=bitfield,
-                validator_index=settings.validator_index,
-                signature=Ed25519Signature(signr),
-            )
+                assr_ext = AvailAssurance(
+                    anchor=HeaderHash(header_hash),
+                    bitfield=bitfield,
+                    validator_index=settings.validator_index,
+                    signature=Ed25519Signature(signr),
+                )
 
-            logger.info(
-                "Storing self assurance",
-                validator=settings.validator_index,
-                assurance=assr_ext.to_json(),
-            )
+                logger.info(
+                    "Storing self assurance",
+                    validator=settings.validator_index,
+                    assurance=assr_ext.to_json(),
+                )
 
-            # Store self-assurance
-            from jam.block.extrinsics.assurances import asr_store
-            asr_store.store(assr_ext)
+                # Store self-assurance
+                from jam.block.extrinsics.assurances import asr_store
+                asr_store.store(assr_ext)
 
-            data = CE141Data(assurance=assurance, len=U32(len(assurance.encode())))
-            create_safe_task(CE141.transmit(data=data), name="assurance_transmit")
+                data = CE141Data(assurance=assurance, len=U32(len(assurance.encode())))
+                create_safe_task(CE141.transmit(data=data), name="assurance_transmit")
+            else:
+                logger.info("No shards collected. Skipping assurances.", slot=state.tau)
         except Exception as e:
             logger.error("Failed to transmit assurance", error=e, time_slot=time_slot)
         self.clear()
@@ -123,7 +126,7 @@ class Assurer:
                 query = Query(shard_index=shard_index, erasure_root=er_root)
                 data = CE137Data(len=U32(len(query.encode())), query=query)
 
-                logger.debug(
+                logger.info(
                     "Requesting Shard",
                     shard_index=shard_index,
                     erasure_root=er_root.hex()[:16] + "...",
@@ -146,6 +149,16 @@ class Assurer:
                         )
                         shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
                         s = Bytes(shards_key.encode())
+
+                        logger.info(
+                            "Shard verification debug",
+                            shard_index=shard_index,
+                            bundle_shard_hash=bundle_shard_hash.hex()[:16],
+                            segments_shard_root=segments_shard_root.hex()[:16],
+                            segments_shard_len=len(segments_shard),
+                            leaf_hash=Hash.blake2b(s).hex()[:16],
+                            er_root=er_root.hex()[:16],
+                        )
 
                         # verifying justification
                         verification = merklizer.verify_wb_tree(
@@ -176,12 +189,18 @@ class Assurer:
 
                             logger.info(
                                 f"📩 Assured work report (Assurer)",
-                                wr_hash=wr_hash.hex()[:16] + "...",
+                                wr_hash=wr_hash.hex()[:6] + "...",
                                 slot=slot,
-                                validator_ind=validator_index
+                                validator_ind=int(validator_index)
                             )
-
                             break
+                        else:
+                            logger.warning(
+                                "Shard verification failed",
+                                wr_hash=wr_hash.hex()[:6] + "...",
+                                slot=slot,
+                                validator_ind=int(validator_index)
+                            )
             except Exception as e:
                 logger.error(
                     "Failed to request Full Shard (CE137)",
@@ -194,9 +213,9 @@ class Assurer:
 
             logger.info(
                 f"📩 Assured work report (Core Guarantor)",
-                wr_hash=wr_hash.hex()[:16] + "...",
+                wr_hash=wr_hash.hex()[:6] + "...",
                 slot=slot,
-                validator_ind=validator_index
+                validator_ind=int(validator_index)
             )
 
             # saving justification for shard assigned to itself
@@ -231,8 +250,9 @@ class Assurer:
             merklizer = BMRFunctions()
             s = TypedVector[Bytes]([])
             for i in range(chain_config.num_validators):
-                bundle_shard_hash = Hash.blake2b(bs_dict[i].encode())
-                segment_shard = SegmentsShard(ss_dict[i].shard)
+                i_idx = ShardIndex(i)  # Convert to ShardIndex for dict access
+                bundle_shard_hash = Hash.blake2b(bs_dict[i_idx].encode())
+                segment_shard = SegmentsShard(ss_dict[i_idx].shard)
                 segments_shard_root = merklizer.wb_merklize(values=segment_shard)
                 shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
                 s.append(Bytes(shards_key.encode()))

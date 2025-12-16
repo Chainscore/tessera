@@ -155,6 +155,12 @@ class ShardDistributionProtocol(NetworkProtocol):
             erasure_root = data.query.erasure_root
             shard_index = data.query.shard_index
 
+            logger.info(
+                "CE137 Shard request received",
+                erasure_root=erasure_root.hex()[:16],
+                shard_index=shard_index,
+            )
+
             d3l = settings.d3l
             audit = settings.audit_da
 
@@ -185,11 +191,22 @@ class ShardDistributionProtocol(NetworkProtocol):
             merklizer = BMRFunctions()
             s = TypedVector[Bytes]([])
             for i in range(chain_config.num_validators):
-                bundle_shard_hash = Hash.blake2b(bs_dict[i].encode())
-                segment_shard = SegmentsShard(ss_dict[i].shard)
+                i_idx = ShardIndex(i)  # Convert to ShardIndex for dict access
+                bundle_shard_hash = Hash.blake2b(bs_dict[i_idx].encode())
+                segment_shard = SegmentsShard(ss_dict[i_idx].shard)
                 segments_shard_root = merklizer.wb_merklize(values=segment_shard)
                 shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
                 s.append(Bytes(shards_key.encode()))
+                
+                # Debug logging for requested shard
+                if i == shard_index:
+                    logger.info(
+                        "CE137 Guarantor shard debug",
+                        shard_index=shard_index,
+                        bundle_shard_hash=bundle_shard_hash.hex()[:16],
+                        segments_shard_root=segments_shard_root.hex()[:16],
+                        segment_shard_len=len(segment_shard),
+                    )
 
             justification = Justification(
                 merklizer.trace_fn(values=s, index=shard_index).unwrap()

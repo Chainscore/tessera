@@ -1,6 +1,6 @@
 from jam.utils.task_utils import create_safe_task
 
-from py_ark_vrf import prove_ietf, vrf_output
+from dot_ring import IETF_VRF, Bandersnatch
 
 from jam.block.extrinsics.tickets import TicketEnvelope
 from jam.operations.dispatcher import NodeDispatcher
@@ -67,12 +67,13 @@ class BlockProducer(NodeDispatcher):
         
         if isinstance(entry, TicketBody):
             eta = state.eta[2] if time_slot % EPOCH_LENGTH == 0 else state.eta[3]
-            our_id = vrf_output(
-                prove_ietf(
-                    settings.bandersnatch_private,
-                    X.TICKET.value + eta + entry.attempt.encode(), b""
-                )
+            # Use dot_ring for IETF VRF proof and output
+            ietf_proof = IETF_VRF[Bandersnatch].prove(
+                X.TICKET.value + eta + entry.attempt.encode(),
+                settings.bandersnatch_private,
+                b"",
             )
+            our_id = ietf_proof.proof_to_hash(ietf_proof.output_point)[:32]
             entry_id = entry.id
             if our_id != entry_id:
                 logger.debug("⏭ Skipping BP: Not our ticket", sig=entry.id.hex(), our_id=our_id.hex(), entry_id=entry_id.hex())
@@ -95,10 +96,7 @@ class BlockProducer(NodeDispatcher):
         is_valid = state._force_transition(block)
 
         if is_valid:
-            if ticket:
-                logger.info("⛏ Produced block using ticket", hash=block.header.hash().hex()[:16] + "...", slot=time_slot)
-            else:
-                logger.info("⛏ Produced block", hash=block.header.hash().hex()[:16]+"...", slot=time_slot)
+            logger.info(f"⛏ Produced block ({'T' if ticket else 'F'}) {block.header.hash().hex()[:8]+".."}|{time_slot}")
             
             # Telemetry: Authored
             # Construct BlockOutline
@@ -107,7 +105,7 @@ class BlockProducer(NodeDispatcher):
                 header_hash=Bytes32(block.header.hash().encode()),
                 num_tickets=U32(len(block.extrinsic.tickets)),
                 num_preimages=U32(len(block.extrinsic.preimages)),
-                preimages_size=U32(sum(len(p) for p in block.extrinsic.preimages)),
+                preimages_size=U32(len(block.extrinsic.preimages)),
                 num_guarantees=U32(len(block.extrinsic.guarantees)),
                 num_assurances=U32(len(block.extrinsic.assurances)),
                 num_disputes=U32(

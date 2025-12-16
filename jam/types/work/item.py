@@ -56,16 +56,15 @@ class ImportSpec:
     def decode_from(
             cls, buffer: Union[bytes, bytearray, memoryview], offset: int = 0
     ) -> Tuple["ImportSpec", int]:
-
-        index = U16.decode(buffer[32:34])
+        index = U16.decode(buffer[offset+32:offset+34])
         if index < (2 ** 15):
-            sr_root = SegmentRoot.decode(buffer[:32])
+            sr_root = SegmentRoot(buffer[offset:offset+32])
             return cls(
                 tree_root=sr_root,
                 index=index
             ), offset + 34
         else:
-            wp_hash = WorkPackageHash.decode(buffer[:32])
+            wp_hash = WorkPackageHash.decode(buffer[offset:offset+32])
             return cls(
                 tree_root=wp_hash,
                 index=U16(index - 2**15)

@@ -9,7 +9,8 @@ from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
 from jam.block.extrinsics.tickets import TicketEnvelope
 from jam.utils.constants import VALIDATOR_COUNT, EPOCH_LENGTH
-from py_ark_vrf import verify_ring, vrf_output
+from dot_ring import RingVRF, Bandersnatch
+from dot_ring.vrf.ring.ring_root import RingRoot
 from jam.utils.constants import X
 
 
@@ -57,14 +58,15 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
 
         # calculate validator index using vrf output of signature
         signature = data.epoch_ticket.ticket.signature
-        vrf = vrf_output(signature)
+        ring_proof = RingVRF[Bandersnatch].from_bytes(signature, skip_pedersen=False)
+        vrf = ring_proof.proof_to_hash(ring_proof.pedersen_proof.output_point)[:32]
         proxy_validator_index = Uint.from_bytes(vrf[-4:], 'big') % VALIDATOR_COUNT
 
         # select validator from next epochs validator list using index
         from jam.state.state import state
         proxy_validator = state.gamma.p[proxy_validator_index]
 
-        logger.info(f"Transmitting ticket to proxy validators", ticket=signature.hex()[:16])
+        logger.info(f"Transmitting ticket ({signature.hex()[:6]}..) to proxy")
 
         from jam.settings import settings
         if proxy_validator.ed25519 == settings.ed25519_public:
@@ -80,8 +82,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
             for client in node.all_connected:
                 if proxy_validator.ed25519 == client.ed25519_public:
                     try:
-                        logger.debug("Transmitting ticket to proxy", client=str(client.port))
-
+                        logger.debug("Transmitting ticket", client=str(client.port))
                         stream_id = client.stream_and_keep_open(message=self._prefix.encode())
                         client.stream_prefix[stream_id] = U8(self._prefix)
                         client.stream_buffer[stream_id] = b""
@@ -135,23 +136,23 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
 
             # calculate validator index using vrf output of signature
             signature = data.epoch_ticket.ticket.signature
-            vrf = vrf_output(signature)
+            ring_proof = RingVRF[Bandersnatch].from_bytes(signature, skip_pedersen=False)
+            vrf = ring_proof.proof_to_hash(ring_proof.pedersen_proof.output_point)[:32]
             proxy_validator_index = Uint.from_bytes(vrf[-4:], 'big') % VALIDATOR_COUNT
 
             from jam.state.state import state
             proxy_validator = state.gamma.p[proxy_validator_index]
 
-            # verifying the received ticket
+            # verifying the received ticket using dot_ring
             eta = state.eta[2]
-            vals = [k.bandersnatch for k in state.gamma.p]
+            vals = [bytes(k.bandersnatch) for k in state.gamma.p]
             attempt = U8(data.epoch_ticket.ticket.attempt)
-            ad = b''
-
-            verification = verify_ring(
+            
+            ring_root = RingVRF[Bandersnatch].construct_ring_root(vals)
+            verification = ring_proof.verify(
                 X.TICKET.value + eta + bytes([attempt]),
-                data.epoch_ticket.ticket.signature,
-                vals,
-                ad
+                b"",
+                ring_root,
             )
             # check if you are supposed to be a proxy and ticket is valid
             if proxy_validator.ed25519 == settings.ed25519_public and verification:

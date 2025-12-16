@@ -311,17 +311,10 @@ class Processor:
             logger.debug(f"Exported {len(e_bar_cap)} Segments!")
 
             # Availability Specification, s
-            logger.info(f"Building availability specification..")
+            logger.debug(f"Building availability specification..")
             specs = self.availability_specifier(h, b.encode(), e_bar_cap)
 
-            logger.info(f"Compiling Report..", package_spec=specs,
-context=p.context,
-core_index=Uint(c),
-authorizer_hash=p.a,
-auth_output=Bytes(o),
-segment_root_lookup=sr_lookup,
-digests=r_list,
-auth_gas_used=Uint(g))
+            logger.debug(f"Compiling Report..")
             report = WorkReport(
                 package_spec=specs,
                 context=p.context,
@@ -332,7 +325,6 @@ auth_gas_used=Uint(g))
                 digests=r_list,
                 auth_gas_used=Uint(g),
             )
-            print(report)
 
             return report
 
@@ -470,7 +462,7 @@ auth_gas_used=Uint(g))
 
             # Erasure Root
             u = self.merklizer.wb_merklize(shards_keys)
-            logger.info(
+            logger.debug(
                 f"Erasure Root calculated - {u.hex()}",
                 wp_hash=package_hash.hex()[:16] + "...",
             )
@@ -501,7 +493,7 @@ auth_gas_used=Uint(g))
                 exports_count=Uint[16](n),
             )
 
-            logger.info(
+            logger.debug(
                 f"Compiled availability specification",
                 erasure_root=u.hex(),
                 exports_root=e.hex(),
@@ -535,7 +527,7 @@ auth_gas_used=Uint(g))
             report = self.build_report(bundle, core, sr_lookup, store)
 
             wr_hash = WorkReportHash(Hash.blake2b(report.encode()))
-            logger.info(
+            logger.debug(
                 f"Report compiled", wp_hash=wp_hash.hex(), wr_hash=wr_hash.hex()
             )
 

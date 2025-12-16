@@ -151,29 +151,24 @@ class BlockAnnouncement(NetworkProtocol):
 
         message = announcement.encode()
         if announcement.header.hash() not in self._processed_headers: 
-            logger.info("Announcing new block to peers",
-                bs=int(announcement.header.slot),
-                parent_hash=announcement.header.parent.hex()[:16] + "...", message_size=len(message), 
-            )
+            logger.info(f"Announcing new block ({announcement.header.hash().hex()[:8]+".."}) to peers")
 
         announced_count = 0
         chunk = U32(len(message)).encode() + message
         
+        # I think we're supposed to emit for each peer seperately, but that's too many events;
+        # Maybe once we optimise frontend, we can emit for each peer seperately
+        emit_event(BlockAnnounced(
+            peer_id=Bytes32(bytes(32)),
+            announcer=U8(0),  # 0 = Local
+            slot=announcement.header.slot,
+            header_hash=Bytes32(announcement.header.hash())
+        ))
+
         for conn in node.active_peers:
             conn.stream_and_keep_open(chunk, conn.up0_stream)
             announced_count += 1
             
-            # Emit BlockAnnounced event (announcer=0 for Local)
-            peer_id_bytes = getattr(conn, 'peer_id', bytes(32))
-            if not isinstance(peer_id_bytes, bytes) or len(peer_id_bytes) != 32:
-                peer_id_bytes = bytes(32)
-            emit_event(BlockAnnounced(
-                peer_id=Bytes32(peer_id_bytes),
-                announcer=U8(0),  # 0 = Local
-                slot=announcement.header.slot,
-                header_hash=Bytes32(announcement.header.hash())
-            ))
-
             logger.debug(
                 "📣 Block announced to peer",
                 block_slot=int(announcement.header.slot),
@@ -242,17 +237,6 @@ class BlockAnnouncement(NetworkProtocol):
             
             anc = Announcement.decode(data[4:])
             hh = anc.header.hash()
-            
-            # Emit BlockAnnounced event (announcer=1 for Remote)
-            peer_id_bytes = getattr(conn, 'peer_id', bytes(32))
-            if not isinstance(peer_id_bytes, bytes) or len(peer_id_bytes) != 32:
-                peer_id_bytes = bytes(32)
-            emit_event(BlockAnnounced(
-                peer_id=Bytes32(peer_id_bytes),
-                announcer=U8(1),  # 1 = Remote
-                slot=anc.header.slot,
-                header_hash=Bytes32(hh)
-            ))
             
             # if we have not already processed this header, announce it 
             if hh not in self._processed_headers:

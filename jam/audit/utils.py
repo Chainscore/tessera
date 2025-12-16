@@ -21,10 +21,8 @@ from jam.types.audit.tranche import TrancheIndex, Tranche, TrancheState, Optiona
 from jam.utils.constants import VALIDATOR_COUNT, AUDIT_BIAS_FACTOR
 
 from jam.log_setup import logger
-from py_ark_vrf import prove_ietf, vrf_output
+from dot_ring import IETF_VRF, Bandersnatch
 
-
-# Module-specifier logger
 
 
 class Utils:
@@ -53,16 +51,24 @@ class Utils:
         """
         tranche_index = tranche.tranche_index
 
-        entropy_vrf_proof = BandersnatchVrfSignature(vrf_output(entropy_source.encode()))
+        # Use dot_ring for VRF output extraction
+        entropy_ring_proof = IETF_VRF[Bandersnatch].from_bytes(entropy_source.encode())
+        entropy_vrf_proof = BandersnatchVrfSignature(
+            entropy_ring_proof.proof_to_hash(entropy_ring_proof.output_point)[:32]
+        )
 
         context = X.AUDIT.value + entropy_vrf_proof
 
         if tranche_index != TrancheIndex(0):
             context += w_r.hash().encode() + tranche_index.encode()
 
-        signature = prove_ietf(bandersnatch_key, context, b"")
+        ietf_proof = IETF_VRF[Bandersnatch].prove(
+            context,
+            bandersnatch_key,
+            b"",
+        )
 
-        return BandersnatchVrfSignature(signature)
+        return BandersnatchVrfSignature(ietf_proof.to_bytes())
 
     @classmethod
     def verifiable_random_selection(
@@ -88,14 +94,15 @@ class Utils:
         Source: https://graypaper.fluffylabs.dev/#/1c979cb/1efb001e4701?v=0.7.1
         """
 
-        entropy = vrf_output(
-            cls.vrf_signature_bandersnatch(
-                entropy_source=entropy_source,
-                bandersnatch_key=bandersnatch_key,
-                tranche=tranche,
-                w_r=None,
-            )
+        # Extract VRF output using dot_ring
+        vrf_sig = cls.vrf_signature_bandersnatch(
+            entropy_source=entropy_source,
+            bandersnatch_key=bandersnatch_key,
+            tranche=tranche,
+            w_r=None,
         )
+        ietf_proof = IETF_VRF[Bandersnatch].from_bytes(vrf_sig)
+        entropy = ietf_proof.proof_to_hash(ietf_proof.output_point)[:32]
 
         # ---------------------------- mapping q's reports as tuple[CoreIndex, Option[WorkReport]] ---------------------
         core_report = list[tuple[CoreIndex, Option[WorkReport]]]([])
@@ -225,10 +232,10 @@ class Utils:
                     w_r=rep,
                 )
 
-                # HERE WE CHECK VRF CONDITION
-                vrf_check = (VALIDATOR_COUNT / (256 * AUDIT_BIAS_FACTOR)) * vrf_output(
-                    random_quantity
-                )[1:]
+                # HERE WE CHECK VRF CONDITION - extract VRF output using dot_ring
+                rand_proof = IETF_VRF[Bandersnatch].from_bytes(random_quantity)
+                vrf_out = rand_proof.proof_to_hash(rand_proof.output_point)[:32]
+                vrf_check = (VALIDATOR_COUNT / (256 * AUDIT_BIAS_FACTOR)) * vrf_out[1:]
 
                 # NO-JUDGMENT FOR THAT WORK REPORT
                 prev_tranche_index = tranche_index - TrancheIndex(1)
