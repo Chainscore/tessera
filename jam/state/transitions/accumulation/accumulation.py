@@ -21,7 +21,7 @@ from jam.types.state.pi import ServiceStat
 from jam.types.state.sigma import Sigma
 from jam.types.state.delta import Delta, LookupTable, Timestamps
 from jam.types.state.tau import Tau
-from jam.types.state.chi import ChiZ
+from jam.types.state.chi import ChiZ, Chi, ChiA
 from jam.types.state.omega import AllReadyWRs, ReadyWR
 from jam.types.state.theta import Commitment, Theta
 from jam.utils.constants import EPOCH_LENGTH, TOTAL_GAS, ACCUMULATION_GAS, CORE_COUNT
@@ -285,6 +285,37 @@ class Accumulation:
             
             # Add partial cache to state
             state.store += partial_state.store
+        
+        # Accumulation of priviledged services
+        partial_state = state.to_partial()
+        chi = state.chi
+        chi_v = chi.chi_v
+
+        # 1. psi_m -> m', a*, v*, z'
+        partial_state, _, _, _, _ = Accumulation.single_accumulation(
+            partial_state, work_reports, privileged_services, partial_state.privileges.chi_m, timeslot, state.eta[0]
+        )
+        chi_m = partial_state.privileges.chi_m
+        chi_z = partial_state.privileges.chi_z
+        chi_v_star = partial_state.privileges.chi_v
+        chi_a_star = partial_state.privileges.chi_a
+        chi_a = state.chi.chi_a
+
+        for c_index in range(CORE_COUNT):
+            partial_state, _, _, _, _ = Accumulation.single_accumulation(
+                partial_state, work_reports, privileged_services, chi_a_star[c_index], timeslot, state.eta[0]
+            )
+            chi_a[c_index] = partial_state.privileges.chi_a[c_index]
+        
+        partial_state, _, _, _, _ = Accumulation.single_accumulation(
+            partial_state, work_reports, privileged_services, chi_v_star, timeslot, state.eta[0]
+        )
+        chi_v_posterior = partial_state.privileges.chi_v
+        partial_state, _, _, _, _ = Accumulation.single_accumulation(
+            partial_state, work_reports, privileged_services, chi_v, timeslot, state.eta[0]
+        )
+        state.iota = partial_state.validator_keys
+        state.chi = Chi(chi_a=chi_a, chi_v=chi_v_posterior, chi_m=chi_m, chi_z=chi_z)
 
         Accumulation.preimage_integration(
             state.delta, collected_preimages, timeslot
@@ -342,7 +373,7 @@ class Accumulation:
                         )
                     )
 
-        # print("\n", "=" * 20, f"accumulation({service_id.encode().hex()})", "=" * 20)
+        print("\n", "=" * 20, f"accumulation({service_id.encode().hex()})", "=" * 20)
         return PsiA(u=initial_state, t=timeslot, s=service_id, entropy=entropy, g=g, o=i).execute()
 
     @staticmethod
@@ -524,7 +555,6 @@ class Accumulation:
         # Update Chi, Iota, Phi, Theta
         theta = Theta([])
         for service_id, op in commitment_map:
-            # print("SERVICE ID", service_id, op)
             commitment = Commitment(service_id, op)
             theta.append(commitment)
 
@@ -553,22 +583,26 @@ class Accumulation:
                     services.append(service_id)
 
         pi = state.pi
-        for s in services:
-            specific_transfers = Accumulation.selection_fn(deferred_transfers, s)
-            # delta_double_dagger
+        st = {}
+        for t in reversed(deferred_transfers):
+            if t.receiver not in st:
+                st[t.receiver] = DeferredTransfers([])
+            st[t.receiver].append(t)
+        for s, transfers in st.items():
+            print("\n", "=" * 10, f"on_transfer({int(s)})", "=" * 10)
+            print(len(transfers))
+            for t in transfers:
+                print(f"{int(t.sender)} ---{int(t.amount)}--> {int(t.receiver)}")
+            a, u = PsiT(d=state.delta, block_timeslot=block.header.slot, s=s, transfers=transfers, entropy=state.eta[0]).execute()
             
-            # print("\n", "=" * 10, f"on_transfer({int(s)})", "=" * 10)
-            # for t in specific_transfers:
-            #     print(f"{int(t.sender)} ---{int(t.amount)}--> {int(t.receiver)}")
-            a, u = PsiT(d=state.delta, block_timeslot=block.header.slot, s=s, transfers=specific_transfers, entropy=state.eta[0]).execute()
-            # print("gas consumed =", int(u))
+            print("gas consumed =", int(u))
 
             # Update Statistics
-            if len(specific_transfers):
+            if len(transfers) > 0:
                 pi_service = pi.services
                 if s not in pi.services:
                     pi.services[s] = ServiceStat.empty()
-                pi.services[s].on_transfers_count = Uint(len(specific_transfers))
+                pi.services[s].on_transfers_count = Uint(len(transfers))
                 pi.services[s].on_transfers_gas_used = Uint(u)
 
                 pi.services = pi_service

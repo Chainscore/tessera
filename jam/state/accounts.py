@@ -221,7 +221,7 @@ class StorageView:
             meta_view.num_o = meta_view.num_o + len(value) - len(curr_data)
         # Publishes updates for service value
         asyncio.create_task(subscribe_service_value(self.id, key, list(value)))
-        # print("\n", ">>>", f"storage({self.id.encode().hex()})[{storage_key.hex()}] = {value.hex()}")
+        print("\n", ">>>", f"storage({self.id.encode().hex()})[{storage_key.hex()}] = {value.hex()}")
         self.store.put(storage_key, value)
 
     def __delitem__(self, key: Bytes):

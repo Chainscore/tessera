@@ -42,7 +42,7 @@ class PsiH:
         current_gas = gas
         current_pc = pc
 
-        # host_calls = set()
+        host_calls = set()
         
         while True:
             # Direct PVM execution call
@@ -50,7 +50,6 @@ class PsiH:
                 program, current_pc, current_gas, registers, memory, logger
             )
             
-            # Optimized terminal state checking with early returns
             if status == ExecutionStatus.HALT:
                 return status, current_pc, remaining_gas, registers, memory, context
             elif status == ExecutionStatus.PANIC:
@@ -62,13 +61,13 @@ class PsiH:
             elif status == ExecutionStatus.HOST:
                 try:
                     host_register = int(status.value.register)
-                    # host_calls.add(host_register)
+                    host_calls.add(host_register)
 
                     status, remaining_gas, registers, memory, context = dispatch_fn(
                         host_register, remaining_gas, registers, memory, context
                     )
                     
-                    # print(f"host calls = {host_calls}")
+                    print(f"host calls = {host_calls}")
                     if remaining_gas < 0:
                         return ExecutionStatus.OUT_OF_GAS, current_pc, remaining_gas, registers, memory, context
 

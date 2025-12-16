@@ -95,6 +95,7 @@ class AccumulateFunctions(INVF):
 
         registers[7] = HostStatus.OK.value
         context.x.partial_state.privileges = Chi(chi_m=ChiM(m), chi_a=chi_a, chi_v=ChiV(v), chi_z=z_dict)
+        print("OK", Chi(chi_m=ChiM(m), chi_a=chi_a, chi_v=ChiV(v), chi_z=z_dict))
         return CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -139,7 +140,9 @@ class AccumulateFunctions(INVF):
         o = registers[7]
         if not memory.is_accessible(o, VALIDATOR_COUNT * 336):
             raise PvmError(PANIC)
+            
         if context.x.s_index != context.x.partial_state.privileges.chi_v:
+            print("HUH", context.x.s_index, context.x.partial_state.privileges.chi_v)
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
 
@@ -205,13 +208,13 @@ class AccumulateFunctions(INVF):
             })
         )
 
-        if accounts[context.x.s_index].service.balance < new_service.service.balance:
+        if accounts[ServiceId(context.x.s_index)].service.balance < new_service.service.balance:
             registers[7] = HostStatus.CASH.value
             return CONTINUE, gas, registers, memory, context
 
         registers[7] = context.x.i_index
-        accounts[context.x.i_index] = new_service
-        accounts[context.x.s_index].service.balance -= new_service.service.balance
+        accounts[ServiceId(context.x.i_index)] = new_service
+        accounts[ServiceId(context.x.s_index)].service.balance -= new_service.service.balance
         context.x.i_index = check(
             u=context.x.partial_state,
             i=ServiceId(2**8 + (context.x.i_index - 2**8 + 42) % (2**32 - 2**9)),
@@ -247,20 +250,20 @@ class AccumulateFunctions(INVF):
         if not memory.is_accessible(o, TRANSFER_MEMO_SIZE):
             raise PvmError(PANIC)
 
-        print("Transferring to ", d)
 
         if ServiceId(d) not in delta:
-            print("Not in delta", d)
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
 
+        print(f"{int(context.x.s_index)}[{int(delta[context.x.s_index].service.balance)}] ---{a}--> {d}[{int(delta[ServiceId(d)].service.balance)}]")
+        
         memo = memory.read(o, TRANSFER_MEMO_SIZE)
 
         t: DeferredTransfer = DeferredTransfer(
             sender=ServiceId(context.x.s_index),
             receiver=ServiceId(d),
             amount=Balance(a),
-            memo=Bytes(memo),
+            memo=Bytes[128](memo),
             gas=Gas(l),
         )
 
@@ -270,7 +273,7 @@ class AccumulateFunctions(INVF):
             registers[7] = HostStatus.LOW.value
             return CONTINUE, gas, registers, memory, context
 
-        if Balance(a) < delta[context.x.s_index].service.t:
+        if new_balance_sender < delta[context.x.s_index].service.t:
             registers[7] = HostStatus.CASH.value
             return CONTINUE, gas, registers, memory, context
         else:
