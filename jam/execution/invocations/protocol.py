@@ -27,8 +27,7 @@ class InvocationProtocol(Protocol):
     def dispatch(
         self, host_call: int, gas: int, registers: list, memory: MemoryLike, x: Context
     ) -> DispatchReturn:
-
-        print("Dispatching call ", host_call)
+        print(f">> HOST({host_call})")
         table_entry = self.table.get(host_call)
         if table_entry is None:
             registers[7] = HostStatus.WHAT.value

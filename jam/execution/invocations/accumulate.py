@@ -33,7 +33,7 @@ class PsiA(InvocationProtocol):
         self.gas = g
         self.operandTuples = o
         self.entropy = entropy
-        self.context = AccumulationContext(x=self.initializer_fn(s, u.clone(), t, entropy), y=self.initializer_fn(s, u.clone(), t, entropy))
+        self.context = AccumulationContext(x=self.initializer_fn(s, u.clone(True), t, entropy), y=self.initializer_fn(s, u.clone(True), t, entropy))
         self.table = self.build_table(s, self.context.x.partial_state.service_accounts)
 
     def build_table(self, 
@@ -121,7 +121,6 @@ class PsiA(InvocationProtocol):
         if meta_n_code is None or len(meta_n_code[1]) > MAX_SERVICE_CODE_SIZE:
             return self.partial_state, DeferredTransfers([]), None, Gas(0), set()
         else:
-            # print("PSI M ID", Uint(self.service_id))
             gas, status, context = PsiM.execute(
                 meta_n_code[1],
                 5,

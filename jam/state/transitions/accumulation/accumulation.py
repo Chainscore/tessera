@@ -342,7 +342,7 @@ class Accumulation:
                         )
                     )
 
-        print("\n", "=" * 10, f"accumulation({int(service_id)})", "=" * 10)
+        # print("\n", "=" * 20, f"accumulation({service_id.encode().hex()})", "=" * 20)
         return PsiA(u=initial_state, t=timeslot, s=service_id, entropy=entropy, g=g, o=i).execute()
 
     @staticmethod
@@ -556,11 +556,13 @@ class Accumulation:
         for s in services:
             specific_transfers = Accumulation.selection_fn(deferred_transfers, s)
             # delta_double_dagger
-            print("\n", "=" * 10, f"on_transfer({int(s)})", "=" * 10)
-            for t in specific_transfers:
-                print(f"{int(t.sender)} ---{int(t.amount)}--> {int(t.receiver)}")
+            
+            # print("\n", "=" * 10, f"on_transfer({int(s)})", "=" * 10)
+            # for t in specific_transfers:
+            #     print(f"{int(t.sender)} ---{int(t.amount)}--> {int(t.receiver)}")
             a, u = PsiT(d=state.delta, block_timeslot=block.header.slot, s=s, transfers=specific_transfers, entropy=state.eta[0]).execute()
-            print("gas consumed =", int(u))
+            # print("gas consumed =", int(u))
+
             # Update Statistics
             if len(specific_transfers):
                 pi_service = pi.services

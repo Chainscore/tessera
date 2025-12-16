@@ -41,6 +41,8 @@ class PsiH:
     ) -> HostCallReturn:
         current_gas = gas
         current_pc = pc
+
+        # host_calls = set()
         
         while True:
             # Direct PVM execution call
@@ -59,17 +61,17 @@ class PsiH:
                 return status, current_pc, remaining_gas, registers, memory, context
             elif status == ExecutionStatus.HOST:
                 try:
-                    # Ultra-fast host call dispatch
                     host_register = int(status.value.register)
+                    # host_calls.add(host_register)
+
                     status, remaining_gas, registers, memory, context = dispatch_fn(
                         host_register, remaining_gas, registers, memory, context
                     )
                     
-                    # Inline gas check for maximum performance
+                    # print(f"host calls = {host_calls}")
                     if remaining_gas < 0:
                         return ExecutionStatus.OUT_OF_GAS, current_pc, remaining_gas, registers, memory, context
 
-                    # Direct continue check without function call overhead
                     if status == CONTINUE:
                         current_gas = remaining_gas
                         # Continue loop directly
