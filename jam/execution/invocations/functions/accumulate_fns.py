@@ -95,7 +95,6 @@ class AccumulateFunctions(INVF):
 
         registers[7] = HostStatus.OK.value
         context.x.partial_state.privileges = Chi(chi_m=ChiM(m), chi_a=chi_a, chi_v=ChiV(v), chi_z=z_dict)
-        print("OK", Chi(chi_m=ChiM(m), chi_a=chi_a, chi_v=ChiV(v), chi_z=z_dict))
         return CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -142,7 +141,6 @@ class AccumulateFunctions(INVF):
             raise PvmError(PANIC)
             
         if context.x.s_index != context.x.partial_state.privileges.chi_v:
-            print("HUH", context.x.s_index, context.x.partial_state.privileges.chi_v)
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
 
@@ -255,8 +253,6 @@ class AccumulateFunctions(INVF):
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
 
-        print(f"{int(context.x.s_index)}[{int(delta[context.x.s_index].service.balance)}] ---{a}--> {d}[{int(delta[ServiceId(d)].service.balance)}]")
-        
         memo = memory.read(o, TRANSFER_MEMO_SIZE)
 
         t: DeferredTransfer = DeferredTransfer(

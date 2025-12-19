@@ -207,7 +207,6 @@ class GeneralFunctions(INVF):
             raise PvmError(PANIC)
 
         registers[7] = len(v)
-        print(f"FETCH({w10}): {v[f:f+l].hex()}")
         memory.write(memory_start, v[f : f + l])
 
         return CONTINUE, gas, registers, memory, context

@@ -67,7 +67,6 @@ class PsiH:
                         host_register, remaining_gas, registers, memory, context
                     )
                     
-                    print(f"host calls = {host_calls}")
                     if remaining_gas < 0:
                         return ExecutionStatus.OUT_OF_GAS, current_pc, remaining_gas, registers, memory, context
 
