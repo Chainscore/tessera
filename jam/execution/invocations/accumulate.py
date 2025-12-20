@@ -1,5 +1,6 @@
 from typing import Any, Dict, Tuple
 from tsrkit_types import U32
+from jam.state.accounts import DeltaView
 from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
     DeferredTransfers,
@@ -32,12 +33,12 @@ class PsiA(InvocationProtocol):
         self.gas = g
         self.operandTuples = o
         self.entropy = entropy
-        self.context = AccumulationContext(x=self.initializer_fn(s, u.clone(), t, entropy), y=self.initializer_fn(s, u.clone(), t, entropy))
+        self.context = AccumulationContext(x=self.initializer_fn(s, u.clone(True), t, entropy), y=self.initializer_fn(s, u.clone(True), t, entropy))
         self.table = self.build_table(s, self.context.x.partial_state.service_accounts)
 
     def build_table(self, 
-        xs: int,
-        delta: Dict[int, Any]
+        xs: ServiceId,
+        delta: DeltaView
     ) -> Dict[int, InvocationInfo]:
         return {
             # fetch

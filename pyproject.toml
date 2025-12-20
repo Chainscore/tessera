@@ -117,5 +117,5 @@ tests = "./scripts/test.sh"
 testnet = "./scripts/testnet.sh"
 update-deps = "uv lock --upgrade"
 deploy-azure = "./scripts/deploy-to-azure.sh"
-lint = ["uv run flake8 jam tests", "uv run mypy jam tests", "uv run black --check jam tests", "uv run isort --check-only jam tests"]
-format = ["uv run black jam tests", "uv run isort jam tests"]
+lint = "uv run flake8 jam tests && uv run mypy jam tests && uv run black --check jam tests && uv run isort --check-only jam tests"
+format = "uv run black jam tests && uv run isort jam tests"

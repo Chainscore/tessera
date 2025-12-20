@@ -142,9 +142,9 @@ class BlockView:
             ghost_block = self._index_map[bh]
 
         else:
-            if parent not in self._index_map:
-                # print("Block View not setup!")
-                raise ValueError("Block View not setup!")
+            # if parent not in self._index_map:
+            #     # print("Block View not setup!")
+            #     raise ValueError("Block View not setup!")
 
             ghost_parent = self._index_map.get(parent, None)
             if parent in self.heads:

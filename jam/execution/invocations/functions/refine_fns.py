@@ -173,7 +173,7 @@ class RefineFunctions(INVF):
     @staticmethod
     @INVF.register(10, gas_cost=10)
     def poke(gas: Gas, registers: list, memory: Memory, context: RefineContext):
-        [n, o, s, z] = registers[7:11]
+        [n, s, o, z] = registers[7:11]
 
         if not memory.is_accessible(s, z):
             raise PvmError(PANIC)

@@ -1,6 +1,6 @@
 
 from copy import deepcopy
-from typing import Tuple, Set, List
+from typing import Tuple, Set, List, Dict
 from jam.execution.invocations.accumulate import PsiA
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import Uint
@@ -21,7 +21,7 @@ from jam.types.state.pi import ServiceStat
 from jam.types.state.sigma import Sigma
 from jam.types.state.delta import Delta, LookupTable, Timestamps
 from jam.types.state.tau import Tau
-from jam.types.state.chi import ChiZ
+from jam.types.state.chi import ChiZ, Chi, ChiA
 from jam.types.state.omega import AllReadyWRs, ReadyWR
 from jam.types.state.theta import Commitment, Theta
 from jam.utils.constants import EPOCH_LENGTH, TOTAL_GAS, ACCUMULATION_GAS, CORE_COUNT
@@ -192,7 +192,7 @@ class Accumulation:
         if index == 0:
             return 0, DeferredTransfers([]), set(), []
 
-        work_reports_start = work_reports[: index + 1]
+        work_reports_start = work_reports[: index]
 
         transfers, outputs, gas_consumed = Accumulation.parallel_accumulation(
             work_reports_start, state
@@ -239,7 +239,13 @@ class Accumulation:
             AccumulationOutput: A mapping of service indices to their corresponding accumulation outputs.
         """
 
+        # work_reports = w
+
+        partial_state = state.to_partial()
+        e = partial_state.clone(True)
+
         privileged_services = state.chi.chi_z
+
         timeslot = state.tau
 
         # All service IDs to accumulate
@@ -264,9 +270,15 @@ class Accumulation:
         transfers = DeferredTransfers([])
 
         collected_preimages: Set[Tuple[ServiceId, Bytes]] = set()
-        
+
+        # accumulation cache
+        acc_map: Dict[ServiceId, GhostPartial] = {}
+
+        # --------------------------------------
+        # Accumulation of reported services (W) &
+        # always accumulate services (CHI_Z)
+        # --------------------------------------
         for service in services:
-            partial_state = state.to_partial()
             (
                 partial_state,
                 _transfers,
@@ -274,9 +286,11 @@ class Accumulation:
                 _gas_consumed,
                 _preimages,
             ) = Accumulation.single_accumulation(
-                partial_state, work_reports, privileged_services, service, timeslot, state.eta[0]
+                e, work_reports, privileged_services, service, timeslot, state.eta[0]
             )
+            acc_map[service] = partial_state
             gas_consumed.append((service, _gas_consumed))
+
             if _output_hash and _output_hash.unwrap() != Null:
                 outputs.add((service, _output_hash.unwrap()))
             transfers.extend(_transfers)
@@ -284,10 +298,131 @@ class Accumulation:
             
             # Add partial cache to state
             state.store += partial_state.store
+        # --------------------------------------
 
+
+        # --------------------------------------
+        # Preimages Integration
+        # --------------------------------------
         Accumulation.preimage_integration(
             state.delta, collected_preimages, timeslot
         )
+
+
+        # q
+        prior_phi = e.authorizer_keys
+
+        # m
+        prior_chi_m = e.privileges.chi_m
+
+        # a
+        prior_chi_a = e.privileges.chi_a
+
+        # v
+        prior_chi_v = e.privileges.chi_v
+        # --------------------------------------
+
+
+        # --------------------------------------
+        # Accumulation of privileged services
+        # (CHI_M, CHI_A, CHI_V)
+        # --------------------------------------
+
+        # 1. chi_m -> m', a*, v*, z'
+        if prior_chi_m not in acc_map:
+            partial_state, _, _, _, _ = Accumulation.single_accumulation(
+                e, work_reports, privileged_services, prior_chi_m, timeslot, state.eta[0]
+            )
+            acc_map[prior_chi_m] = partial_state
+        else:
+            partial_state = acc_map[prior_chi_m]
+
+        # e*
+        e_star = partial_state.clone(True)
+
+        # m'
+        posterior_chi_m = e_star.privileges.chi_m
+
+        # a*
+        chi_a_star = e_star.privileges.chi_a
+
+        # v*
+        chi_v_star = e_star.privileges.chi_v
+
+        # z'
+        posterior_chi_z = e_star.privileges.chi_z
+
+
+        # 2. chi_a_star -> a'
+
+        # a'
+        posterior_chi_a = prior_chi_a
+
+        for c_index in range(CORE_COUNT):
+            if chi_a_star[c_index] == prior_chi_a[c_index]:
+                if chi_a_star[c_index] not in acc_map:
+                    partial_state, _, _, _, _ = Accumulation.single_accumulation(
+                        e, work_reports, privileged_services, chi_a_star[c_index], timeslot, state.eta[0]
+                    )
+                    acc_map[chi_a_star[c_index]] = partial_state
+                else:
+                    partial_state = acc_map[chi_a_star[c_index]]
+            else:
+                partial_state = e_star
+
+            posterior_chi_a[c_index] = partial_state.privileges.chi_a[c_index]
+
+        # 3. chi_v_star -> v'
+        if chi_v_star == prior_chi_v:
+            if chi_v_star not in acc_map:
+                partial_state, _, _, _, _ = Accumulation.single_accumulation(
+                    e, work_reports, privileged_services, chi_v_star, timeslot, state.eta[0]
+                )
+                acc_map[chi_v_star] = partial_state
+            else:
+                partial_state = acc_map[chi_v_star]
+        else:
+            partial_state = e_star
+
+        # v'
+        posterior_chi_v = partial_state.privileges.chi_v
+
+        # 4. chi_v -> i'
+        if prior_chi_v not in acc_map:
+            partial_state, _, _, _, _ = Accumulation.single_accumulation(
+                e, work_reports, privileged_services, prior_chi_v, timeslot, state.eta[0]
+            )
+            acc_map[prior_chi_v] = partial_state
+        else:
+            partial_state = acc_map[prior_chi_v]
+
+
+        # i'
+        posterior_iota = partial_state.validator_keys
+
+        # 5. chi_a -> q'
+
+        # q'
+        posterior_phi = prior_phi
+
+        for c_index in range(CORE_COUNT):
+            if prior_chi_a[c_index] not in acc_map:
+                partial_state, _, _, _, _ = Accumulation.single_accumulation(
+                    e, work_reports, privileged_services, prior_chi_a[c_index], timeslot, state.eta[0]
+                )
+                acc_map[prior_chi_a[c_index]] = partial_state
+            else:
+                partial_state = acc_map[prior_chi_a[c_index]]
+
+            posterior_phi[c_index] = partial_state.authorizer_keys[c_index]
+
+        # --------------------------------------
+
+        state.phi = posterior_phi
+        state.iota = posterior_iota
+        state.chi = Chi(chi_m=posterior_chi_m, chi_a=posterior_chi_a, chi_v=posterior_chi_v, chi_z=posterior_chi_z)
+
+
         return transfers, outputs, gas_consumed
 
     @staticmethod
@@ -498,7 +633,11 @@ class Accumulation:
 
         accumulation_stats = {}
         for ga in gas_accumulations:
-            accumulation_stats[ga[0]] = [ga[1], 0]
+            if accumulation_stats.get(ga[0]):
+                prev_gas = accumulation_stats.get(ga[0])[0]
+                accumulation_stats[ga[0]] = [prev_gas + ga[1], 0]
+            else:
+                accumulation_stats[ga[0]] = [ga[1], 0]
         for i in range(num_accumulated):
             for d in star_work_reports[i].digests:
                 accumulation_stats[d.service_id][1] += 1
@@ -521,8 +660,13 @@ class Accumulation:
             commitment = Commitment(service_id, op)
             theta.append(commitment)
 
-        state.theta = theta
-        
+        def sort_fn(comm: Commitment):
+            return (
+                int(comm.service_id),
+                comm.output,
+            )
+
+        state.theta = Theta(sorted(theta, key=sort_fn))
 
         # ----------------------
         # Section 12.3 Deferred Transfers & State Integration (Step 4)
@@ -541,17 +685,20 @@ class Accumulation:
                     services.append(service_id)
 
         pi = state.pi
-        for s in services:
-            specific_transfers = Accumulation.selection_fn(deferred_transfers, s)
-            # delta_double_dagger
-            a, u = PsiT(d=state.delta, block_timeslot=block.header.slot, s=s, transfers=specific_transfers, entropy=state.eta[0]).execute()
+        st = {}
+        for t in reversed(deferred_transfers):
+            if t.receiver not in st:
+                st[t.receiver] = DeferredTransfers([])
+            st[t.receiver].append(t)
+        for s, transfers in st.items():
+            a, u = PsiT(d=state.delta, block_timeslot=block.header.slot, s=s, transfers=transfers, entropy=state.eta[0]).execute()
 
             # Update Statistics
-            if len(specific_transfers):
+            if len(transfers) > 0:
                 pi_service = pi.services
                 if s not in pi.services:
                     pi.services[s] = ServiceStat.empty()
-                pi.services[s].on_transfers_count = Uint(len(specific_transfers))
+                pi.services[s].on_transfers_count = Uint(len(transfers))
                 pi.services[s].on_transfers_gas_used = Uint(u)
 
                 pi.services = pi_service

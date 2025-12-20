@@ -21,10 +21,10 @@ from tsrkit_pvm import (
     PvmError,
     ExecutionStatus,
 )
-from jam.types import Timestamps
+from jam.types import Timestamps, ChiZ
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.protocol.merkle import OptionHash
-from jam.types.state.chi import Chi
+from jam.types.state.chi import Chi, ChiM, ChiV, ChiA
 from jam.types.state.delta import (
     AccountData,
     AccountLookup,
@@ -67,7 +67,7 @@ class AccumulateFunctions(INVF):
             logger.warning("Memory access violation in bless function: inaccessible chi_a memory region")
             raise PvmError(PANIC)
 
-        chi_a = U32.decode(memory.read(a, 4 * CORE_COUNT))
+        chi_a = ChiA.decode(memory.read(a, 4 * CORE_COUNT))
 
         if not memory.is_accessible(o, 12 * n):
             logger.warning("Memory access violation in bless function: inaccessible chi_z memory region")
@@ -77,11 +77,11 @@ class AccumulateFunctions(INVF):
         buf: bytes = memory.read(o, 12 * n)
 
         # build a dict mapping each 4-byte U32 → its 8-byte U64
-        z_dict = {}
+        z_dict = ChiZ({})
         for i in range(n):
             chunk = buf[12 * i : 12 * i + 12]
-            s = U32.decode_from(chunk[:4])  # first  4 bytes
-            g = U64.decode_from(chunk[4:12], offset=0)  # next   8 bytes
+            s = U32.decode(chunk[:4])  # first  4 bytes
+            g = U64.decode(chunk[4:12], offset=0)  # next   8 bytes
             z_dict[s] = g
 
         if context.x.s_index != context.x.partial_state.privileges.chi_m:
@@ -94,7 +94,7 @@ class AccumulateFunctions(INVF):
             return CONTINUE, gas, registers, memory, context
 
         registers[7] = HostStatus.OK.value
-        context.x.partial_state.privileges = Chi(chi_m=m, chi_a=chi_a, chi_v=v, chi_z=z_dict)
+        context.x.partial_state.privileges = Chi(chi_m=ChiM(m), chi_a=chi_a, chi_v=ChiV(v), chi_z=z_dict)
         return CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -137,11 +137,12 @@ class AccumulateFunctions(INVF):
     @INVF.register(16, gas_cost=10)
     def designate(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         o = registers[7]
+        if not memory.is_accessible(o, VALIDATOR_COUNT * 336):
+            raise PvmError(PANIC)
+            
         if context.x.s_index != context.x.partial_state.privileges.chi_v:
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
-        if not memory.is_accessible(o, VALIDATOR_COUNT * 336):
-            raise PvmError(PANIC)
 
         buf: bytes = memory.read(o, 336 * VALIDATOR_COUNT)
 
@@ -205,13 +206,13 @@ class AccumulateFunctions(INVF):
             })
         )
 
-        if accounts[context.x.s_index].service.balance < new_service.service.balance:
+        if accounts[ServiceId(context.x.s_index)].service.balance < new_service.service.balance:
             registers[7] = HostStatus.CASH.value
             return CONTINUE, gas, registers, memory, context
 
         registers[7] = context.x.i_index
-        accounts[context.x.i_index] = new_service
-        accounts[context.x.s_index].service.balance -= new_service.service.balance
+        accounts[ServiceId(context.x.i_index)] = new_service
+        accounts[ServiceId(context.x.s_index)].service.balance -= new_service.service.balance
         context.x.i_index = check(
             u=context.x.partial_state,
             i=ServiceId(2**8 + (context.x.i_index - 2**8 + 42) % (2**32 - 2**9)),
@@ -240,8 +241,13 @@ class AccumulateFunctions(INVF):
 
         delta: DeltaView = context.x.partial_state.service_accounts
 
+        if d > (2**32-1):
+            registers[7] = HostStatus.NONE.value
+            return CONTINUE, gas, registers, memory, context
+
         if not memory.is_accessible(o, TRANSFER_MEMO_SIZE):
             raise PvmError(PANIC)
+
 
         if ServiceId(d) not in delta:
             registers[7] = HostStatus.WHO.value
@@ -253,7 +259,7 @@ class AccumulateFunctions(INVF):
             sender=ServiceId(context.x.s_index),
             receiver=ServiceId(d),
             amount=Balance(a),
-            memo=Bytes(memo),
+            memo=Bytes[128](memo),
             gas=Gas(l),
         )
 
@@ -333,7 +339,7 @@ class AccumulateFunctions(INVF):
         lookup_value = context.x.partial_state.service_accounts[context.x.s_index].lookup[
             lookup_key
         ] # a' s value
-        if lookup_value == None:
+        if lookup_value is None:
             registers[7] = HostStatus.NONE.value
             registers[8] = 0
         elif len(lookup_value) == 0:
@@ -357,7 +363,7 @@ class AccumulateFunctions(INVF):
             )
             raise PvmError(PANIC)
 
-        return ExecutionStatus.CONTINUE, gas, registers, memory, context
+        return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(23, gas_cost=10)
@@ -427,6 +433,10 @@ class AccumulateFunctions(INVF):
         lookup_key = LookupTable(hash=preimage_hash, length=BlobLength(preimage_len))
         a = context.x.partial_state.service_accounts[context.x.s_index]
         lookup_value = a.lookup[lookup_key]
+
+        if lookup_value is None:
+            registers[7] = HostStatus.HUH.value
+            return CONTINUE, gas, registers, memory, context
         if len(a.lookup[lookup_key]) == 1:
             lookup_value.append(block_timeslot)
             a.lookup[lookup_key] = lookup_value
@@ -443,12 +453,12 @@ class AccumulateFunctions(INVF):
             lookup_value[0] = lookup_value[2]
             lookup_value[1] = block_timeslot
             lookup_value = lookup_value.pop()
-            a.lookup[lookup_key] = lookup_value
+            a.lookup[lookup_key] = Timestamps([lookup_value])
         else:
             registers[7] = HostStatus.HUH.value
-            return ExecutionStatus.CONTINUE, gas, registers, memory, context
+            return CONTINUE, gas, registers, memory, context
         registers[7] = HostStatus.OK.value
-        return ExecutionStatus.CONTINUE, gas, registers, memory, context
+        return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(25, gas_cost=10)
