@@ -121,7 +121,6 @@ class AuditAnnouncement(NetworkProtocol):
         )
 
         tasks = []
-        responses = []
 
         logger.info("Transmitting Audit announcement", count=len(node.all_connected))
 

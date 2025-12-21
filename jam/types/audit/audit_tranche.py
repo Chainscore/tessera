@@ -58,7 +58,7 @@ class AuditRecord:
     def empty() -> "AuditRecord":
         """Initialized empty audit records"""
         return AuditRecord(
-            announces=ValidatorSet(), true_votes=set(), false_votes=set(), no_shows=NoShows([])
+            announces=ValidatorSet(), true_votes=JudgmentSet(), false_votes=JudgmentSet(), no_shows=NoShows([])
         )
 
     def carry_forward(self) -> "AuditRecord":
@@ -118,5 +118,5 @@ class Tranche:
         idx = int(self.tranche_index)
         return f"Tranche({short_hash}@{idx})"
 
-    def __hash__(self):
-        return int.from_bytes(Hash.blake2b(self.encode()))
+    def __hash__(self) -> int:
+        return int.from_bytes(Hash.blake2b(self.encode()), byteorder="big")

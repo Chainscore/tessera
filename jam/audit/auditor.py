@@ -1,16 +1,19 @@
 import math
 from tsrkit_types import U8, U32, TypedVector, Null, Bool, Uint
-from jam.audit.audit import Audit
 from jam.types.protocol.crypto import Ed25519Signature, HeaderHash
 from jam.types.audit.audit_tranche import TrancheIndex, Tranche, CoreReport
 from jam.types.protocol.core import EpochIndex
 from jam.types.protocol.crypto import BandersnatchVrfSignature
+
 from jam.types.work.report import WorkReportHash
 from jam.block.block import Block
+from jam.audit.audit import Audit
+from jam.audit.utils import Utils
 
 from jam.log_setup import logger
 from jam.utils.constants import EPOCH_LENGTH
 
+# Protocol Imports
 from jam.network.protocols.ce_144 import (
     CE144Data,
     AuditAnnouncement,
@@ -40,12 +43,9 @@ class Auditor:
         audit = Audit()
 
         entropy = block.header.entropy_source
-
-        tranche_index = tranche.tranche_index
-
         curr_state = await tranche_store.get_state(tranche=tranche)
 
-        if tranche_index == TrancheIndex(0):
+        if tranche.tranche_index == TrancheIndex(0):
             assigned_wrs = audit.verifiable_random_selection(
                 entropy_source=entropy,
                 bandersnatch_key=settings.bandersnatch_private,
@@ -63,7 +63,7 @@ class Auditor:
 
         # verify this condition
         if len(assigned_wrs) == 0:
-            logger.info(
+            logger.debug(
                 "No Reports to audit", block=str(block), tranche=tranche, tranche_state=curr_state
             )
             return
@@ -100,22 +100,18 @@ class Auditor:
         from jam.storage.tranche_audit_store import tranche_store
 
         audit = Audit()
+        CE144 = AuditAnnouncement()
 
-        # --------------------------------------------- CONDITION CHECK ---------------------
-        if HeaderHash(block.header.hash()) != HeaderHash(tranche.header_hash):
-            logger.info("Block's header_has and tranche header_hash are different")
-            return
-
-        # ---------------------------------------------- DEFINES VALUE -----------------------
         tranche_index = tranche.tranche_index
         header_hash = block.header.hash()
         entropy_source = BandersnatchVrfSignature(block.header.entropy_source)
         bandersnatch_private = settings.bandersnatch_private
 
-        # ------------------------------------------ BUILDING PROTOCOL DATA ------------------
-        CE144 = AuditAnnouncement()
+        if HeaderHash(header_hash) != HeaderHash(tranche.header_hash):
+            logger.error("Header hash mismatch between block and tranche")
+            return
 
-        # ------------------------------------- VALIDATOR ANNOUNCEMENT AND STATEMENT ---------
+        # Prepare Announcement Data efficiently
         announcement_wrs = TypedVector[CoreReportHash](
             [
                 CoreReportHash(core_index=c_r.core_index, report_hash=c_r.work_report.hash())
@@ -127,8 +123,7 @@ class Auditor:
             assign_report=assigned_wrs, header_hash=header_hash, tranche=tranche
         )
 
-        # -------------------- Handling Evidence based on Tranche Index ----------------------
-
+        #  Handling Evidence based on Tranche Index
         if tranche_index == TrancheIndex(0):
             bandersnatch_sign = audit.vrf_signature_bandersnatch(
                 entropy_source=entropy_source,
@@ -151,7 +146,7 @@ class Auditor:
             tranche=curr_tranche, validator_index=settings.validator_index, announce=announce
         )
 
-        # ---------------------- Data to be transmitted --------------------------------------
+        # reports to be transmitted over the network
         tranche_announce = TrancheAnnouncement(
             header_hash=header_hash,
             tranche=tranche_index,
@@ -168,8 +163,7 @@ class Auditor:
         )
 
         try:
-            responses = await CE144.transmit(data=data)
-
+            await CE144.transmit(data=data)
             await cls.judgment_process(block=block, tranche=tranche, assign_wrs=assigned_wrs)
 
         except Exception as e:
@@ -197,17 +191,20 @@ class Auditor:
         """
         from jam.settings import settings
         from jam.storage.tranche_audit_store import tranche_store
-        from jam.audit.utils import Utils
         from jam.audit.audit import Audit
+        from jam.network.protocols.ce_145 import JudgmentPublication, CE145Data, Judgment
 
-        utils = Utils()
         audit = Audit()
+        CE145 = JudgmentPublication()
 
-        # --------- unwrap Tranche -------------
         curr_tranche = tranche
         validator_index = settings.validator_index
 
-        logger.info(f"Reports are available for judgment on this node is {len(assign_wrs)}")
+        if not assign_wrs:
+            logger.info("No assigned work reports for judgment", tranche=tranche)
+            return
+
+        logger.debug(f"Reports are available for judgment on this node is {len(assign_wrs)}")
 
         try:
             for c_r in assign_wrs:
@@ -215,14 +212,8 @@ class Auditor:
                 wr_hash = c_r.work_report.hash()
 
                 validity = await audit.refine(wr=wr)
-                ed25519_signature = Audit.judgment_signature(wr_hash=wr_hash, validity=validity)
+                ed25519_signature = audit.judgment_signature(wr_hash=wr_hash, validity=validity)
 
-                # ---------------------------------- BUILDING PROTOCOL DATA ----------------------
-                from jam.network.protocols.ce_145 import JudgmentPublication, CE145Data, Judgment
-
-                CE145 = JudgmentPublication()
-
-                # --------------------------- JUDGMENT EPOCH INDEX ------------------------------
                 from jam.state.state import state
 
                 epoch_index = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
@@ -235,7 +226,7 @@ class Auditor:
                     ed25519_signature=Ed25519Signature(ed25519_signature),
                 )
 
-                # ------------------- Save judgment in Tranche State ----------------------------
+                #  Save judgment in Tranche State
                 await tranche_store.update_judgment(
                     tranche=curr_tranche, judgment=judgment, ed25519_public=settings.ed25519_public
                 )
