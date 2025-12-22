@@ -84,7 +84,7 @@ MAX_TICKETS_PER_EXTRINSIC = chain_config.max_tickets_per_extrinsic
 K = MAX_TICKETS_PER_EXTRINSIC
 
 # L — Max age (in timeslots) of the lookup anchor.
-LOOKUP_ANCHOR_MAX_AGE = 14_400
+LOOKUP_ANCHOR_MAX_AGE = chain_config.lookup_anchor_max_age
 L = LOOKUP_ANCHOR_MAX_AGE
 
 # N — Ticket entries per validator.

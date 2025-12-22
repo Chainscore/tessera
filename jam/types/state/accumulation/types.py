@@ -9,6 +9,7 @@ from jam.types.state.chi import Chi
 from jam.types.protocol.core import ServiceId, Gas, OpaqueHash, Balance, ExportsRoot
 from jam.types.state.delta import Delta
 from jam.types.state.iota import Iota
+from jam.utils.constants import W_T
 
 
 # Accumulation Types
@@ -35,7 +36,7 @@ class DeferredTransfer:
     sender: ServiceId # s
     receiver: ServiceId # d
     amount: Balance # a
-    memo: Bytes # m
+    memo: Bytes[W_T] # m
     gas: Gas # g
 
 

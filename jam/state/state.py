@@ -33,7 +33,7 @@ from jam.types import (
 )
 from jam.block.block import Block
 from jam.log_setup import block_logger as logger
-from jam.types.state.theta import Theta
+from jam.types.state.theta import Theta, Commitment
 from jam.state.transitions import (
     Accumulation,
     Reporting,
@@ -119,26 +119,32 @@ class State:
     def load(cls, header_hash=HeaderHash(Hash.blake2b(b"empty"))) -> "State":
         """
         Load a snapshot of state at a particular block's slot.
-        Create a cloned state (RO DB + Trie Clone w applied updates[do we really need trie?])
+        Create a cloned state (RO DB + cached updates)
 
         Args;
             - `header_hash`: Loads state at point in time when this header was imported.
             If this is not provided, we assume the request is just to have a readable instance of latest state
         """
-        # Create a clone of finalized state
-        trie_snapshot = deepcopy(state.store._TRIE)
-        store_snapshot = StateStorage(trie_snapshot, state.store._DB)
+        # Share the same trie reference - we use apply_trie=False to avoid mutations
+        # The final root is retrieved directly from stored records
+        store_snapshot = StateStorage(state.store._TRIE, state.store._DB)
 
         state_snapshot = State(store_snapshot)
 
-        # Load Past Updates
+        # Load Past Updates without applying to trie (avoid mutating shared trie)
         # Note: If Header Hash is not passed, cache remains empty
-        cache = state_snapshot.store.load_cache(header_hash)
+        cache, final_root = state_snapshot.store.load_cache(header_hash, apply_trie=False)
         state_snapshot.store._updates = cache
+        
+        # Set the expected root directly from stored records
+        # This is tracked separately since we don't mutate the trie
+        state_snapshot._cached_root = final_root
+        
         logger.debug("Loaded state instance.", header_hash=header_hash.hex(), state_root=state_snapshot.root.hex())
 
         return state_snapshot
 
+        
     def stash(self, header_hash: HeaderHash):
         """Records all the cache updates in database."""
         from jam.settings import settings
@@ -255,9 +261,10 @@ class State:
             # Recent History
             bmr_merklizer = BMRFunctions()
 
+
             # Calculate Merkle root of Accumulation Outputs
             accumulate_root = bmr_merklizer.wb_merklize(
-                TypedVector[Bytes](sorted([Bytes(comm[0].encode() + comm[1].encode()) for comm in self.theta])),
+                TypedVector[Bytes]([Bytes(comm.service_id.encode() + comm.output.encode()) for comm in self.theta]),
                 Hash.keccak256
             )
             RecentHistory.transition(pre_state, self, block, accumulate_root, header_hash)

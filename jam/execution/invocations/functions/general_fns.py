@@ -431,7 +431,11 @@ class GeneralFunctions(INVF):
 
         if target_service == 2**64 - 1:
             target_service = service_index
-            
+
+        if target_service > 2**32-1:
+            registers[7] = HostStatus.NONE.value
+            return CONTINUE, gas, registers, memory, context
+
         if target_service not in accounts:
             registers[7] = HostStatus.NONE.value
             return CONTINUE, gas, registers, memory, context
@@ -454,10 +458,11 @@ class GeneralFunctions(INVF):
         l = min(registers[10], len(v) - f)
 
         if not memory.is_accessible(output_offset, l, Accessibility.WRITE):
-            logger.error("Host call info: memory not accessible", output_offset=output_offset, required_size=len(m))
+            logger.error("Host call info: memory not accessible", output_offset=output_offset, required_size=l)
             raise PvmError(PANIC)
         
         registers[7] = len(v)
+        # print(f"INFO: {v[f:f+l].hex()}")
         memory.write(output_offset, v[f:f+l])
 
         return CONTINUE, gas, registers, memory, context
