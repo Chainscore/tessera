@@ -31,7 +31,7 @@ jobs:
             runner: ubuntu-22.04
           - os: darwin
             arch: x64
-            runner: macos-13
+            runner: macos-15
 
     steps:
       - name: 📥 Checkout code with submodules
