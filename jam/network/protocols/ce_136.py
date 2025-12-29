@@ -59,7 +59,7 @@ class WorkReportRequest(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE136
 
-    async def transmit(self, data: CE136Data, assurers: Assurers = None) -> WorkReport | None:
+    async def transmit(self, data: CE136Data) -> WorkReport | None:
         """Request Work Report from Node"""
 
         from jam.network.start import node
@@ -71,25 +71,24 @@ class WorkReportRequest(NetworkProtocol):
 
         for client in node.all_connected:
             try:
-                if Uint[16](client.validator_index) in assurers:
-                    logger.debug("Requesting report from", peer=client)
+                logger.debug("Requesting report from", peer=client)
 
-                    # Send Protocol Prefix
-                    stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                # Send Protocol Prefix
+                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-                    # set prefix and buffer
-                    client.stream_prefix[stream_id] = U8(self._prefix)
-                    client.stream_buffer[stream_id] = b""
+                # set prefix and buffer
+                client.stream_prefix[stream_id] = U8(self._prefix)
+                client.stream_buffer[stream_id] = b""
 
-                    # Send Messages with their lengths
-                    client.stream_and_keep_open(message=len_a, stream_id=stream_id)
-                    res = await client.close_and_wait(
-                        message=msg_a, stream_id=stream_id
-                    )
+                # Send Messages with their lengths
+                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                res = await client.close_and_wait(
+                    message=msg_a, stream_id=stream_id
+                )
 
-                    if res is not None:
-                        return res
-                    else:
+                if res is not None:
+                    return res
+                else:
                         logger.error("Error fetching work report from: ", peer=client)
             except Exception as e:
                 logger.error(Code.BAD_RESPONSE, error=str(e))

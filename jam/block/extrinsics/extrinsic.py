@@ -65,11 +65,12 @@ class Extrinsic:
     @classmethod
     def from_collected(cls, time_slot):
         # --- Extrinsic Collection --- #
-        eg, et, ea, ep = GuaranteesExtrinsic([]), [], [], PreimagesExtrinsic([])
+        eg, et, ea, ep, ed = GuaranteesExtrinsic([]), [], [], PreimagesExtrinsic([]), DisputesExtrinsic.empty()
         from .tickets import ticket_store
         from .guarantees import wrg_store
         from .assurances import asr_store
         from .preimages import preimg_store
+        from .disputes import dpt_store
 
         # Sort Assurances
         ea = AssurancesExtrinsic(sorted(asr_store._store, key=lambda a: a.validator_index))
@@ -94,6 +95,14 @@ class Extrinsic:
 
         ep.sort(key=preimage_sort_fn)
 
+        # Already sorted
+        if dpt_store._store:
+            ed = DisputesExtrinsic(
+                verdicts=Verdicts([d.verdicts for d in dpt_store._store]),
+                culprits=Culprits([d.culprits for d in dpt_store._store]),
+                faults=Faults([d.faults for d in dpt_store._store]),
+            )
+
         def sort_fn(ticket: TicketEnvelope) -> int:
             # Take VRF output of the signature and sort by it
             return int.from_bytes(Extrinsic.get_vrf_output(ticket.signature))
@@ -109,7 +118,7 @@ class Extrinsic:
             preimages=ep,
             guarantees=eg,
             assurances=ea,
-            disputes=DisputesExtrinsic.empty(),
+            disputes=ed,
         )
 
     def clear_from_stores(self):
@@ -121,12 +130,13 @@ class Extrinsic:
         from .guarantees import wrg_store
         from .assurances import asr_store
         from .preimages import preimg_store
+        from .disputes import dpt_store
 
         ticket_store.remove(self.tickets)
         wrg_store.remove(self.guarantees)
         asr_store.remove(self.assurances)
         preimg_store.remove(self.preimages)
-        # TODO: Handle disputes
+        dpt_store.remove(self.disputes)
         return
 
     def validate(self, header: "Header") -> bool:

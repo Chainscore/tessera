@@ -40,7 +40,8 @@ class JamConfig:
     recovery_threshold: int
     num_ec_pieces_per_segment: int
     max_block_gas: int
-    max_refine_gas: int 
+    max_refine_gas: int
+    audit_report_assign: int
     lookup_anchor_max_age: int
 
     @classmethod
@@ -65,6 +66,7 @@ class JamConfig:
             num_ec_pieces_per_segment=1026,
             max_block_gas=20000000,
             max_refine_gas=1000000000,
+            audit_report_assign=2,
             lookup_anchor_max_age=24
         )
 
@@ -240,7 +242,8 @@ class JamConfig:
             num_ec_pieces_per_segment=6,
             max_block_gas=3500000000,
             max_refine_gas=5000000000,
-            lookup_anchor_max_age=14400
+            lookup_anchor_max_age=14400,
+            audit_report_assign=10
         )
 
     @classmethod
