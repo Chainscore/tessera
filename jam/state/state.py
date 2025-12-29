@@ -125,15 +125,14 @@ class State:
             - `header_hash`: Loads state at point in time when this header was imported.
             If this is not provided, we assume the request is just to have a readable instance of latest state
         """
-        # Share the same trie reference - we use apply_trie=False to avoid mutations
-        # The final root is retrieved directly from stored records
-        store_snapshot = StateStorage(state.store._TRIE, state.store._DB)
+        # Create a clone of finalized state
+        trie_snapshot = deepcopy(state.store._TRIE)
+        store_snapshot = StateStorage(trie_snapshot, state.store._DB)
 
         state_snapshot = State(store_snapshot)
 
-        # Load Past Updates without applying to trie (avoid mutating shared trie)
         # Note: If Header Hash is not passed, cache remains empty
-        cache, final_root = state_snapshot.store.load_cache(header_hash, apply_trie=False)
+        cache, final_root = state_snapshot.store.load_cache(header_hash, apply_trie=True)
         state_snapshot.store._updates = cache
         
         # Set the expected root directly from stored records
