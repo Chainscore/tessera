@@ -65,7 +65,7 @@ class JamConfig:
             preimage_expunge_period=32,
             num_ec_pieces_per_segment=1026,
             max_block_gas=20000000,
-            max_refine_gas=5000000000,
+            max_refine_gas=1000000000,
             audit_report_assign=2,
             lookup_anchor_max_age=24
         )
