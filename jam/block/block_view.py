@@ -101,11 +101,11 @@ class BlockView:
             self.heads = Heads([ghost_final.header])
 
         else:
-            print("LATEST HEADS", latest_heads)
+            # print("LATEST HEADS", latest_heads)
             for head in latest_heads:
                 branch_stack = []
                 curr_head = head
-                print("CURR HEAD", head)
+                # print("CURR HEAD", head)
                 while curr_head != self.final.header:
                     block = Block.load(curr_head, kv)
                     branch_stack.append(block)
@@ -142,8 +142,9 @@ class BlockView:
             ghost_block = self._index_map[bh]
 
         else:
-            if parent not in self._index_map:
-                raise ValueError("Block View not setup!")
+            # if parent not in self._index_map:
+            #     # print("Block View not setup!")
+            #     raise ValueError("Block View not setup!")
 
             ghost_parent = self._index_map.get(parent, None)
             if parent in self.heads:
@@ -199,6 +200,7 @@ class BlockView:
             return
 
         if ghost_block.parent is None or ghost_block.parent.header != pre_final.header:
+            # print("pre-final must be direct parent of the block being finalized")
             raise ValueError("pre-final must be direct parent of the block being finalized")
 
         self._index_map.pop(pre_final.header, None)

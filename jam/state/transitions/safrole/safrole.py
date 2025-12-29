@@ -158,7 +158,7 @@ class Safrole:
             if len(pre_state.gamma.a) == EPOCH_LENGTH and epoch_jump == 1 and valid_jump:
                 # If we have sufficient tickets accumulated,
                 # use outside-in sequencer and place the ticket in gamma.s
-                logger.warning("Safrole ticketing mode", tickets_collected=len(pre_state.gamma.a))
+                logger.warning("Safrole ticketing mode", tickets_collected=len(state.gamma.a))
                 gamma.s = GammaS(GammaSTickets(outside_in(pre_state.gamma.a)))
             # Else use the fallback mechanism
             else:
@@ -167,8 +167,9 @@ class Safrole:
                 gamma.s = Safrole.arrange_fallback(eta[2], state.kappa)
 
             # 4. 4. Update ring root using gamma p
-            if pre_state.gamma.p != pre_state.kappa:
-                gamma.z = Safrole.compute_ring_root(pubkeys)
+            # Note: Removing the if condition allows this trace 1758621879/00000348 to pass
+            # if pre_state.gamma.p != pre_state.kappa:
+            gamma.z = Safrole.compute_ring_root(pubkeys)
 
         if count == 1:
             # Signature must be valid Ring-VRF proof

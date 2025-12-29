@@ -74,6 +74,7 @@ async def run_node(
         dev_spec = json.load(open("dev-spec.json"))
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
         state = setup_state(settings.state_db, "dev-spec.json")
+        update_state(state=state)
 
         # FIX: setup ticket queue
         setup_ticket_queue()
@@ -81,8 +82,8 @@ async def run_node(
         # ------------ SET GENESIS BLOCK ------------
         block = Block.decode(bytes.fromhex(dev_spec["genesis_header"]))
         header_hash = block.save(main_db)
-        Finality.set_head(header_hash, main_db)
-        Finality.finalise(header_hash, main_db, True)
+        Finality.set_head(block, main_db)
+        Finality.finalise(block, main_db, True)
 
         # ----------- START NODE --------------
         async with asyncio.TaskGroup() as tg:

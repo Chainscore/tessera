@@ -7,7 +7,6 @@ import pytest
 from jam.finality.finality import Finality
 
 from tests.unit.api.utils import Vectors
-from tsrkit_types import TypedVector, structure
 
 
 FINALIZED_BLOCK = 3

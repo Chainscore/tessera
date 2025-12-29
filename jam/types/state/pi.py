@@ -1,3 +1,5 @@
+from dataclasses import field
+
 from tsrkit_types.sequences import TypedArray
 from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.integers import Uint, U32
@@ -66,8 +68,8 @@ class ServiceStat:
     extrinsic_count: Uint  # x
     accumulate_count: Uint  # a[0]
     accumulate_gas_used: Uint  # a[1]
-    on_transfers_count: Uint  # t[0]
-    on_transfers_gas_used: Uint  # t[1]
+    on_transfers_count: Uint = field(metadata={"default": Uint(0)}) # t[0]
+    on_transfers_gas_used: Uint  = field(metadata={"default": Uint(0)}) # t[1]
 
     @staticmethod
     def empty() -> "ServiceStat":
