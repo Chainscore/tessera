@@ -27,6 +27,7 @@ At = Balance
 
 @structure
 class AccountMetadata:
+    version: Uint[8] = field(metadata={"default": Uint[8](0)})
     code_hash: ServiceCodeHash  # code_hash, c
     balance: Balance  # balance, b
     gas_limit: Gas = field(metadata={"name": "min_item_gas"}) # g
