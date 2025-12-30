@@ -5,7 +5,7 @@ from jam.execution.invocations.functions.protocol import (
     InvocationFunctions as INVF,
 )
 from jam.execution.invocations.protocol import Context, DispatchReturn
-from jam.types.state.accumulation.types import DeferredTransfers, OperandTuples
+from jam.types.state.accumulation.types import AccumulationInputs
 from jam.types.work.manifest import Extrinsics
 from tsrkit_pvm import (
     Memory,
@@ -17,7 +17,7 @@ from tsrkit_pvm import (
     Accessibility
 )
 from tsrkit_types import U64, U32, U16, Bytes, Uint
-from jam.types.protocol.crypto import Hash, OpaqueHash
+from jam.types.protocol.crypto import OpaqueHash
 from jam.types.state.delta import AccountData
 from jam.types.protocol.core import Gas, ServiceId, Register
 from jam.types.state.delta import Delta
@@ -80,7 +80,7 @@ class GeneralFunctions(INVF):
         item_index: int,
         import_segments: Optional[List],
         extrinsics: Optional[Extrinsics],
-        o: Optional[OperandTuples]
+        o: Optional[AccumulationInputs]
     ):
         fetch_type = registers[10]
 

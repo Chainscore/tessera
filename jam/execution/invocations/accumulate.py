@@ -1,10 +1,12 @@
-from typing import Any, Dict, Tuple
+from typing import Dict, Tuple
+
+from jam.types import Balance
 from tsrkit_types import U32
 from jam.state.accounts import DeltaView
 from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
     DeferredTransfers,
-    OperandTuples,
+    AccumulationInputs,
     AccuContextX,
     AccumulationContext,
     PreimageDict, DeferredTransfer,
@@ -26,16 +28,16 @@ from jam.utils.constants import MAX_SERVICE_CODE_SIZE, MINIMUM_SERVICE_INDEX
 
 
 class PsiA(InvocationProtocol):
-    def __init__(self, u: GhostPartial, t: TimeSlot, s: ServiceId, g: Gas, i: OperandTuples, entropy: OpaqueHash):
+    def __init__(self, u: GhostPartial, t: TimeSlot, s: ServiceId, g: Gas, i: AccumulationInputs, entropy: OpaqueHash):
         cloned_state = u.clone(True)
-        deferred_transfers: DeferredTransfers = DeferredTransfers([])
 
-        print("Length of i", len(i))
-
+        bal = Balance(0)
         for _i in i:
-            if isinstance(i, DeferredTransfer):
-                deferred_transfers.append(_i)
-        cloned_state.service_accounts[s].service.balance = cloned_state.service_accounts[s].service.balance + Gas(sum(int(t.amount) for t in deferred_transfers))
+            _t = _i.unwrap()
+            if isinstance(_t, DeferredTransfer):
+                bal += _t.amount
+
+        cloned_state.service_accounts[s].service.balance = cloned_state.service_accounts[s].service.balance + bal
         self.partial_state = u
         self.timeslot = t
         self.service_id = s
@@ -81,7 +83,7 @@ class PsiA(InvocationProtocol):
                 {"service_data": delta[xs], "service_index": xs},
             ),
             5: (GeneralFunctions, {"service_index": xs, "accounts": delta}),  # info
-            # bless (Updates previlaged accounts)
+            # bless (Updates previleged accounts)
             14: (AccumulateFunctions, {}),
             # assign (Updates authorizer_keys/Phi)
             15: (AccumulateFunctions, {}),
@@ -115,7 +117,7 @@ class PsiA(InvocationProtocol):
             # yield_ (Updates context[x]_hash)
             25: (AccumulateFunctions, {}),  
             # provide (Updates preimage)
-            26: (AccumulateFunctions, {"service_id": xs}),  
+            26: (AccumulateFunctions, {}),
             # log
             # TODO: Add core_index
             100: (

@@ -1,20 +1,20 @@
-
 from copy import deepcopy
-from typing import Tuple, Set, List, Dict
-from jam.execution.invocations.accumulate import PsiA
+from typing import Tuple, Set, List, Dict, TYPE_CHECKING
+
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import Uint
 from tsrkit_types.null import Null
+
 from jam.block import Block
-from jam.execution.invocations.on_transfer import PsiT
+from jam.execution.invocations.accumulate import PsiA
 from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
     AccumulationOutput,
     DeferredTransfers,
-    OperandTuples,
+    AccumulationInputs,
     OperandTuple,
     BeefyMap,
-    GasConsumed,
+    GasConsumed, AccumulationInput,
 )
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.state.pi import ServiceStat
@@ -24,15 +24,14 @@ from jam.types.state.tau import Tau
 from jam.types.state.chi import ChiZ, Chi, ChiA
 from jam.types.state.omega import AllReadyWRs, ReadyWR
 from jam.types.state.theta import Commitment, Theta
-from jam.utils.constants import EPOCH_LENGTH, TOTAL_GAS, ACCUMULATION_GAS, CORE_COUNT
 from jam.types.protocol.core import Gas, ServiceId
 from jam.types.work import (
     WorkDependencies,
     WorkReports,
     WorkReport,
 )
+from jam.utils.constants import EPOCH_LENGTH, TOTAL_GAS, ACCUMULATION_GAS, CORE_COUNT
 
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from jam.state.state import State
 
@@ -167,18 +166,23 @@ class Accumulation:
         Outer accumulation function ∆+ defined in Eq 12.18
         Sequential Execution Pattern
         Transforms Gas Limit, Sequence of Deferred Transfers, Sequence of Work Reports, Initial Partial State and Dictionary of services (free, privileged accumulation)
-        into Tuple of No. of Work Reports accumulated, Posterior state-context, Resultant deferred-transfers and Accumulation-output pairings
+        into Tuple of No. of Work results accumulated, Accumulation-output pairings, Gas utilized per service in PVM
 
         Args:
             gas_limit (Gas): The total gas available for the accumulation process.
             work_reports (WorkReports): A collection of work reports that are ready to be accumulated.
-            state (State): Posterior State
+            deferred_transfers (DeferredTransfers): A sequence of deferred transfers.
+            state (State): Posterior State for building initial partial state.
+            privileged_services (ChiZ): Set of services enjoying free accumulation.
 
         Returns:
-            A tuple (int, GhostPartial, DeferredTransfers, BeefyMap, GasConsumed) where:
+            A tuple (int, BeefyMap, GasConsumed) where:
             Integer: Number of work digests successfully accumulated.
             BeefyMap: A mapping of service indices to their corresponding accumulation outputs.
-            GasConsumed: Gas consumed by accumulation of each service along iwth their service id
+            GasConsumed: Gas consumed by accumulation of each service along with their service id
+
+        Note:
+            PartialState is not returned as all the changes are available in global state itself.
         """
 
         index = 0
@@ -197,18 +201,21 @@ class Accumulation:
 
         work_reports_start = work_reports[: index]
 
+        # Parallely accumulate ChiZ services (always accumulate services)
         transfers, outputs, gas_consumed = Accumulation.parallel_accumulation(
-            work_reports_start, state, deferred_transfers, privileged_services
+            state, deferred_transfers, work_reports_start, privileged_services
         )
-        gas_star = gas_limit
 
+        gas_star = gas_limit
         for t in deferred_transfers:
             gas_star += t.gas
 
         work_reports_end = work_reports[index:]
+
         utilized_gas = Gas(0)
         for _, gas in gas_consumed:
             utilized_gas += gas
+
         gas_diff = gas_star - utilized_gas
 
         j, r_outputs, r_gas_consumed = (
@@ -224,40 +231,41 @@ class Accumulation:
 
     @staticmethod
     def parallel_accumulation(
-        work_reports: WorkReports,
         state: "State",
         deferred_transfers: DeferredTransfers,
+        work_reports: WorkReports,
         privileged_services: ChiZ
     ) -> Tuple[DeferredTransfers, BeefyMap, GasConsumed]:
         """
-        Parallelized accumulation function ∆* defined in Eq 12.17
+        Parallelized accumulation function ∆* defined in Eq 12.19
         Non-Sequential, Service-Aggregated Execution Pattern
-        Transforms Initial Partial State, Sequence of Work Reports, and Dictionary of services (free, privileged accumulation)
-        into Tuple of Total gas utilized in PVM, Posterior state-context, Resultant deferred-transfers and Accumulation-output pairings
+        Transforms Initial Partial State, Sequence of Deferred transfers, Sequence of Work Reports,
+        and Dictionary of services (free, privileged accumulation)
+        into Tuple of Resultant deferred-transfers and Accumulation-output pairings, Gas utilized per service in PVM.
 
         Args:
+            state (State): Posterior State.
+            deferred_transfers (DeferredTransfers): A sequence of Deferred transfers.
             work_reports (WorkReports): A collection of work reports that are ready to be accumulated.
-            state (State): Posterior State
+            privileged_services (ChiZ): Set of services enjoying free accumulation
 
         Returns:
-            A tuple (int, GhostPartial, DeferredTransfer, AccumulationOutput) where:
-            Integer: Total gas utilized in PVM.
-            GhostPartial: The updated state context after applying accumulation.
-            DeferredTransfer: A list of transfers that are deferred.
-            AccumulationOutput: A mapping of service indices to their corresponding accumulation outputs.
-        """
+            A tuple (DeferredTransfers, BeefyMap, GasConsumed) where:
+            DeferredTransfers: A list of transfers that are deferred.
+            BeefyMap: A mapping of service indices to their corresponding accumulation outputs.
+            GasConsumed: Gas consumed by accumulation of each service along with their service id
 
-        # work_reports = w
+        Note:
+            PartialState is not returned as all the changes are available in global state itself.
+        """
 
         partial_state = state.to_partial()
         e = partial_state.clone(True)
 
-        # privileged_services = state.chi.chi_z
-
         timeslot = state.tau
 
         # All service IDs to accumulate
-        # s in 12.17
+        # s in 12.19
         services: Set[ServiceId] = {
             digest.service_id
             for report in work_reports
@@ -269,15 +277,15 @@ class Accumulation:
             services.add(t.receiver)
 
         # Accumulated gas by each service
-        # u in 12.17
+        # u in 12.19
         gas_consumed: GasConsumed = []
 
         # Accumulation output hashes
-        # b in 12.17
+        # b in 12.19
         outputs: BeefyMap = set()
 
         # Deferred transfers
-        # t_telda in 12.17
+        # t_telda in 12.19
         transfers = DeferredTransfers([])
 
         collected_preimages: Set[Tuple[ServiceId, Bytes]] = set()
@@ -309,7 +317,6 @@ class Accumulation:
 
             # Add partial cache to state
             state.store += partial_state.store
-        # TODO: 12.19
         # --------------------------------------
 
 
@@ -338,12 +345,13 @@ class Accumulation:
         # --------------------------------------
         # Accumulation of privileged services
         # (CHI_M, CHI_A, CHI_V)
+        # TODO: Add ChiR
         # --------------------------------------
 
         # 1. chi_m -> m', a*, v*, z'
         if prior_chi_m not in acc_map:
             partial_state, _, _, _, _ = Accumulation.single_accumulation(
-                e, work_reports, privileged_services, prior_chi_m, timeslot, state.eta[0]
+                e, deferred_transfers, work_reports, privileged_services, prior_chi_m, timeslot, state.eta[0]
             )
             acc_map[prior_chi_m] = partial_state
         else:
@@ -374,7 +382,7 @@ class Accumulation:
             if chi_a_star[c_index] == prior_chi_a[c_index]:
                 if chi_a_star[c_index] not in acc_map:
                     partial_state, _, _, _, _ = Accumulation.single_accumulation(
-                        e, work_reports, privileged_services, chi_a_star[c_index], timeslot, state.eta[0]
+                        e, deferred_transfers, work_reports, privileged_services, chi_a_star[c_index], timeslot, state.eta[0]
                     )
                     acc_map[chi_a_star[c_index]] = partial_state
                 else:
@@ -388,7 +396,7 @@ class Accumulation:
         if chi_v_star == prior_chi_v:
             if chi_v_star not in acc_map:
                 partial_state, _, _, _, _ = Accumulation.single_accumulation(
-                    e, work_reports, privileged_services, chi_v_star, timeslot, state.eta[0]
+                    e, deferred_transfers, work_reports, privileged_services, chi_v_star, timeslot, state.eta[0]
                 )
                 acc_map[chi_v_star] = partial_state
             else:
@@ -399,10 +407,13 @@ class Accumulation:
         # v'
         posterior_chi_v = partial_state.privileges.chi_v
 
+        # r'
+        # TODO: add chi_r -> r'
+
         # 4. chi_v -> i'
         if prior_chi_v not in acc_map:
             partial_state, _, _, _, _ = Accumulation.single_accumulation(
-                e, work_reports, privileged_services, prior_chi_v, timeslot, state.eta[0]
+                e, deferred_transfers, work_reports, privileged_services, prior_chi_v, timeslot, state.eta[0]
             )
             acc_map[prior_chi_v] = partial_state
         else:
@@ -420,7 +431,7 @@ class Accumulation:
         for c_index in range(CORE_COUNT):
             if prior_chi_a[c_index] not in acc_map:
                 partial_state, _, _, _, _ = Accumulation.single_accumulation(
-                    e, work_reports, privileged_services, prior_chi_a[c_index], timeslot, state.eta[0]
+                    e, deferred_transfers, work_reports, privileged_services, prior_chi_a[c_index], timeslot, state.eta[0]
                 )
                 acc_map[prior_chi_a[c_index]] = partial_state
             else:
@@ -448,9 +459,11 @@ class Accumulation:
         entropy: OpaqueHash
     ) -> AccumulationOutput:
         """
-        Single-Service accumulation function ∆1 defined in Eq 12.19
-        Transforms Initial Partial State, Sequence of Work Reports, Dictionary of services (free, privileged accumulation), and Service index
-        into Tuple of Posterior state-context, Sequence of Transfers, Possible Accumulation-outputs and Actual gas utilized in PVM,
+        Single-Service accumulation function ∆1 defined in Eq 12.23
+        Transforms Initial Partial State, Sequence of Work Reports,
+        dictionary of services (free, privileged accumulation), and Service index
+        into Tuple of Posterior state-context, Sequence of Transfers, Possible Accumulation-outputs
+        and Actual gas utilized in PVM,
 
         Args:
             deferred_transfers:
@@ -469,7 +482,7 @@ class Accumulation:
         """
 
         g = Gas(0)
-        i = OperandTuples([])
+        i = AccumulationInputs([])
 
         if service_id in services:
             g = services[service_id]
@@ -479,20 +492,22 @@ class Accumulation:
                 if r.service_id == service_id:
                     g += r.accumulate_gas
                     i.append(
-                        OperandTuple(
-                            p=w.package_spec.hash,
-                            e=w.package_spec.exports_root,
-                            a=w.authorizer_hash,
-                            y=r.payload_hash,
-                            g=Uint(r.accumulate_gas),
-                            t=w.auth_output,
-                            l=r.result,
+                        AccumulationInput(
+                            OperandTuple(
+                                p=w.package_spec.hash,
+                                e=w.package_spec.exports_root,
+                                a=w.authorizer_hash,
+                                y=r.payload_hash,
+                                g=Uint(r.accumulate_gas),
+                                t=w.auth_output,
+                                l=r.result,
+                            )
                         )
                     )
         for t in deferred_transfers:
             if t.receiver == service_id:
                 g += t.gas
-                i.append(t)
+                i.append(AccumulationInput(t))
 
         return PsiA(u=initial_state, t=timeslot, s=service_id, entropy=entropy, g=g, i=i).execute()
 
@@ -688,7 +703,7 @@ class Accumulation:
         state.theta = Theta(sorted(theta, key=sort_fn))
 
         # ----------------------
-        # Section 12.3 Deferred Transfers & State Integration (Step 4)
+        # Section 12.3 Final State Integration (Step 4)
         # ----------------------
 
         # fetch updated services

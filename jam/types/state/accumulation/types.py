@@ -1,5 +1,5 @@
 from typing import Tuple, List, Set, Union
-from tsrkit_types import structure, TypedVector, Bytes, Uint
+from tsrkit_types import structure, TypedVector, Bytes, Uint, Choice
 from jam.state.partial import GhostPartial, PartialState
 from jam.types.protocol.merkle import OptionHash
 from jam.types.state.phi import Phi, AuthorizerHash
@@ -16,11 +16,8 @@ from jam.utils.constants import W_T
 GasConsumed = List[Tuple[ServiceId, Gas]]
 BeefyMap = Set[Tuple[ServiceId, OpaqueHash]]
 
-class OperandBase:
-    pass
-
 @structure
-class OperandTuple(OperandBase):
+class OperandTuple:
     p: WorkPackageHash
     e: ExportsRoot
     a: AuthorizerHash
@@ -30,14 +27,23 @@ class OperandTuple(OperandBase):
     t: Bytes # auth_output of work report
 
 @structure
-class DeferredTransfer(OperandBase):
+class DeferredTransfer:
     sender: ServiceId # s
     receiver: ServiceId # d
     amount: Balance # a
     memo: Bytes[W_T] # m
     gas: Gas # g
 
-class OperandTuples(TypedVector[OperandBase]):
+class AccumulationInput(Choice):
+    """
+    Set I = U U X
+
+    Source: https://graypaper.fluffylabs.dev/#/1c979cb/179400179400?v=0.7.1
+    """
+    tuple: OperandTuple
+    transfer: DeferredTransfer
+
+class AccumulationInputs(TypedVector[AccumulationInput]):
     ...
 
 class DeferredTransfers(TypedVector[DeferredTransfer]):
