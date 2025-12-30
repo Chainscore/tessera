@@ -626,10 +626,15 @@ class Processor:
 
         # Check majority & Build guarantees:
         guarantees = [og_guarantee]
+        vi = {int(settings.validator_index)}
 
         for cred, peer in signatures:
             if cred is not None and cred.work_report_hash == wr_hash:
                 try:
+                    if int(peer.validator_index) in vi:
+                        logger.error("Duplicate guarantee received from peer", peer=peer)
+                        continue
+
                     Ed25519PublicKey.from_public_bytes(peer.ed25519_public).verify(
                         cred.ed25519_signature,
                         payload,
@@ -641,6 +646,7 @@ class Processor:
                     )
 
                     guarantees.append(guarantee)
+                    vi.add(peer.validator_index)
                 except InvalidSignature:
                     logger.error("Invalid guarantee received from peer", peer=peer)
 

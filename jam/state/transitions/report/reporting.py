@@ -117,7 +117,7 @@ class Reporting:
                 ):
                     raise ReportingError(
                         ReportingErrorCode.NOT_SORTED_OR_UNIQUE_GUARANTORS,
-                        "Signature's validator index order is not sorted",
+                        "Signature's validator index order is not sorted or are not unique",
                     )
 
             # --------- not-authorized -----------------
