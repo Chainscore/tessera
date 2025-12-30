@@ -339,16 +339,18 @@ class Accumulation:
 
         # v
         prior_chi_v = e.privileges.chi_v
+
+        # r
+        prior_chi_r = e.privileges.chi_r
         # --------------------------------------
 
 
         # --------------------------------------
         # Accumulation of privileged services
-        # (CHI_M, CHI_A, CHI_V)
-        # TODO: Add ChiR
+        # (CHI_M, CHI_A, CHI_V, CHI_R)
         # --------------------------------------
 
-        # 1. chi_m -> m', a*, v*, z'
+        # 1. chi_m -> m', a*, v*, r*, z'
         if prior_chi_m not in acc_map:
             partial_state, _, _, _, _ = Accumulation.single_accumulation(
                 e, deferred_transfers, work_reports, privileged_services, prior_chi_m, timeslot, state.eta[0]
@@ -368,6 +370,9 @@ class Accumulation:
 
         # v*
         chi_v_star = e_star.privileges.chi_v
+
+        # r*
+        chi_r_star = e_star.privileges.chi_r
 
         # z'
         posterior_chi_z = e_star.privileges.chi_z
@@ -407,10 +412,22 @@ class Accumulation:
         # v'
         posterior_chi_v = partial_state.privileges.chi_v
 
-        # r'
-        # TODO: add chi_r -> r'
+        # 4. chi_r* -> r'
+        if chi_r_star == prior_chi_r:
+            if chi_r_star not in acc_map:
+                partial_state, _, _, _, _ = Accumulation.single_accumulation(
+                    e, deferred_transfers, work_reports, privileged_services, chi_r_star, timeslot, state.eta[0]
+                )
+                acc_map[chi_r_star] = partial_state
+            else:
+                partial_state = acc_map[chi_r_star]
+        else:
+            partial_state = e_star
 
-        # 4. chi_v -> i'
+        # r'
+        posterior_chi_r = partial_state.privileges.chi_r
+
+        # 5. chi_v -> i'
         if prior_chi_v not in acc_map:
             partial_state, _, _, _, _ = Accumulation.single_accumulation(
                 e, deferred_transfers, work_reports, privileged_services, prior_chi_v, timeslot, state.eta[0]
@@ -423,7 +440,7 @@ class Accumulation:
         # i'
         posterior_iota = partial_state.validator_keys
 
-        # 5. chi_a -> q'
+        # 6. chi_a -> q'
 
         # q'
         posterior_phi = prior_phi
@@ -443,7 +460,7 @@ class Accumulation:
 
         state.phi = posterior_phi
         state.iota = posterior_iota
-        state.chi = Chi(chi_m=posterior_chi_m, chi_a=posterior_chi_a, chi_v=posterior_chi_v, chi_z=posterior_chi_z)
+        state.chi = Chi(chi_m=posterior_chi_m, chi_a=posterior_chi_a, chi_v=posterior_chi_v, chi_r=posterior_chi_r, chi_z=posterior_chi_z)
 
 
         return transfers, outputs, gas_consumed

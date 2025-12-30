@@ -29,5 +29,5 @@ class Chi:
     chi_m: ChiM = field(metadata={"name": "bless"})
     chi_a: ChiA = field(metadata={"name": "assign"})
     chi_v: ChiV = field(metadata={"name": "designate"})
-    chi_z: ChiZ = field(metadata={"name": "always_acc"})
     chi_r: ChiR = field(metadata={"name": "register"})
+    chi_z: ChiZ = field(metadata={"name": "always_acc"})

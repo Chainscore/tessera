@@ -40,7 +40,7 @@ class GhostPartial:
     validator_keys: Iota
     # q
     authorizer_keys: Phi
-    # m, a, v, z
+    # m, a, v, r, z
     privileges: Chi
 
     def clone(self) -> "GhostPartial":
