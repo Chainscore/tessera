@@ -27,7 +27,7 @@ from jam.utils.constants import MAX_SERVICE_CODE_SIZE, MINIMUM_SERVICE_INDEX
 
 class PsiA(InvocationProtocol):
     def __init__(self, u: GhostPartial, t: TimeSlot, s: ServiceId, g: Gas, i: OperandTuples, entropy: OpaqueHash):
-        cloned_state = u.clone()
+        cloned_state = u.clone(True)
         deferred_transfers: DeferredTransfers = DeferredTransfers([])
 
         print("Length of i", len(i))
@@ -127,10 +127,8 @@ class PsiA(InvocationProtocol):
     def execute(self):
         meta_n_code = self.partial_state.service_accounts[self.service_id].m_c()
         if meta_n_code is None or len(meta_n_code[1]) > MAX_SERVICE_CODE_SIZE:
-            print("Returning from here")
             return self.partial_state, DeferredTransfers([]), None, Gas(0), set()
         else:
-            # print("PSI M ID", Uint(self.service_id))
             gas, status, context = PsiM.execute(
                 meta_n_code[1],
                 5,

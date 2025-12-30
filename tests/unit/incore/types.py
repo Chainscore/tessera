@@ -1,7 +1,8 @@
 from tsrkit_types import structure, TypedVector, Bytes, Vector
 
 from jam.block import Block
-from jam.state.state import Rho
+# from jam.state.state import Rho
+from jam.types.state.rho import Rho
 from jam.types import (
     WorkPackage,
     CoreIndex,

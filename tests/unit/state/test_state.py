@@ -1,11 +1,9 @@
 import pytest
-from coverage.annotate import os
+import os
 
 from jam.block import Block
 from jam.state.ghost import GhostState
-from jam.state.state import setup_state, set_state
-from jam.types import HeaderHash
-from jam.utils.constants import GENESIS_HASH
+from jam.state.state import setup_state
 from rockstore import RockStore
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U32, U64

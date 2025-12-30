@@ -158,7 +158,7 @@ class Safrole:
             if len(pre_state.gamma.a) == EPOCH_LENGTH and epoch_jump == 1 and valid_jump:
                 # If we have sufficient tickets accumulated,
                 # use outside-in sequencer and place the ticket in gamma.s
-                logger.warning("Safrole ticketing mode", tickets_collected=len(pre_state.gamma.a))
+                logger.warning("Safrole ticketing mode", tickets_collected=len(state.gamma.a))
                 gamma.s = GammaS(GammaSTickets(outside_in(pre_state.gamma.a)))
             # Else use the fallback mechanism
             else:

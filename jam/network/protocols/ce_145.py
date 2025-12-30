@@ -1,24 +1,27 @@
 import asyncio
+import math
 from typing import cast
-from tsrkit_types import structure, Uint, Bool, U8
-
-from jam.network.protocols.ce_144 import Announcement
+from tsrkit_types import structure, Uint, U8, U32
 from jam.types.protocol.core import ValidatorIndex, EpochIndex
-
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
-from jam.log_setup import network_logger as logger
-from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature, HeaderHash
-
+from jam.log_setup import network_logger
+from jam.types.protocol.crypto import Ed25519Signature, Ed25519Public
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.utils.gather import gather_with_exceptions
+from jam.types.work.report import WorkReportHash
+from jam.utils.constants import EPOCH_LENGTH
+from jam.types.audit.audit_tranche import Tranche
+from jam.state.state import state
+
+logger = network_logger
 
 
 @structure
 class Judgment:
     epoch_index: EpochIndex
     validator_index: ValidatorIndex
-    validity: Bool
+    validity: Uint[8]
     work_report_hash: WorkReportHash
     ed25519_signature: Ed25519Signature
 
@@ -37,10 +40,10 @@ class CE145Data:
 
 class JudgmentPublication(NetworkProtocol):
     """
-    CE 145 (Judgement Publication) protocol for sharing Judgment to other Auditors
+    CE 145 (Judgement Publication) protocol for sharing Judgment to other Auditors.
 
     Protocol Flow:
-        Auditor -> Auditor
+        Auditor -> Validator
 
         --> Epoch_index ++ Validator_Index ++ Validity ++ Work_Report_Hash ++ Ed25519_Signature
         --> FIN
@@ -48,7 +51,6 @@ class JudgmentPublication(NetworkProtocol):
 
     sources:
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-145-judgment-publication
-
     """
 
     def __init__(self):
@@ -57,76 +59,122 @@ class JudgmentPublication(NetworkProtocol):
 
     async def transmit(self, data: CE145Data):
         """Transmit Judgments for the particular Work Report to other Auditors"""
+
         from jam.network.start import node
+
         len_a = data.len_a.encode()
         msg_a = data.judgment.encode()
 
         logger.info(
-            f"Transmitting Work-report judgement to {len(node.all_connected)} validators",
+            "Transmitting Work-report judgement to other Auditors",
             judgment=data.judgment,
-            len_a=data.len_a
+            len_a=data.len_a,
         )
 
         tasks = []
         transmitted_count = 0
 
         try:
+            logger.info(f"Transmitting Judgment to {len(node.all_connected)} validators")
+
             for client in node.all_connected:
+                try:
+                    # send protocol prefix
+                    stream_id = client.stream_and_keep_open(message=self._prefix.encode())
 
-                logger.debug("Transmitting judgement to", peer=client)
+                    # set prefix and buffer
+                    client.stream_prefix[stream_id] = U8(self._prefix)
+                    client.stream_buffer[stream_id] = b""
 
-                # send protocol prefix
-                stream_id = client.stream_and_keep_open(message=self._prefix.encode())
+                    transmitted_count += 1
 
-                # set prefix and buffer
-                client.stream_prefix[stream_id] = U8(self._prefix)
-                client.stream_buffer[stream_id] = b""
+                    # send message with their length
+                    client.stream_and_keep_open(message=len_a, stream_id=stream_id)
 
-                transmitted_count += 1
+                    res = client.close_and_wait(message=msg_a, stream_id=stream_id)
+                    task = asyncio.create_task(res)
+                    tasks.append(task)
 
-                # send message with their length
-                client.stream_and_keep_open(message=len_a, stream_id=stream_id)
+                    logger.debug(
+                        "Judgment transmitted successfully",
+                        stream_id=stream_id,
+                        port=client.port,
+                        validator=client,
+                    )
+                except Exception as e:
+                    logger.error(
+                        "Failed to transmit to client",
+                        client=client,
+                        error=str(e),
+                        exc_info=True,
+                    )
 
-                res = client.close_and_wait(message=msg_a, stream_id=stream_id)
-                task = asyncio.create_task(res)
-                tasks.append(task)
-
-                logger.debug(
-                    "Judgment transmitted",
-                    stream_id=stream_id,
-                    port=client.port,
-                    validator=client,
-                )
             responses = await gather_with_exceptions(tasks)
             return responses
 
         except Exception as e:
             logger.error(
-                "Failed to transmit judgment",
+                "Failed to transmitting judgment",
                 error=str(e),
                 error_type=type(e).__name__,
             )
 
     def req_intercept(self, stream_id: int, server: NodeConnection):
-        """Intercept individual Judgment from other Auditors for their assigned Work Reports """
-        from jam.storage.tranche_store import tranche_store, Tranche
-        from jam.finality.finality import Finality
+        """Intercept individual Judgment from other Auditors for their assigned Work Reports"""
+        from jam.state.state import state
         from jam.settings import settings
 
         buffer = server.stream_buffer[stream_id][1:]
+
+        if not buffer:
+            logger.warning("Empty buffer in req_intercept", stream_id=stream_id, server=server)
+            return
 
         try:
             data = CE145Data.decode(buffer)
             data = cast(CE145Data, data)
 
-            # Handle received judgment
-            asyncio.create_task(self.handle_judgment(data.judgment))
-
             logger.debug(
-                "Received Judgment from auditor",
+                f"Received Judgment from auditor {server.validator_index}",
                 stream_id=stream_id,
                 peer=server,
                 buffer_size=len(buffer[1:]),
+                data=data,
+            )
+        except Exception as e:
+            server.stop_stream(stream_id, 1)
+            logger.error(
+                "Failed to decode CE145Data",
+                stream_id=stream_id,
+                server=server,
+                error=str(e),
+                exc_info=True,
+            )
+            return
+
+        try:
+            # ----------------------- break down judgments properties -----------------
+            epoch_index = data.judgment.epoch_index
+            validator_index = data.judgment.validator_index
+            validity = data.judgment.validity
+            wr_hash = data.judgment.work_report_hash
+            ed25519_signature = data.judgment.ed25519_signature
+
+            # epoch compare
+            curr_epoch_index = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
+            if curr_epoch_index == epoch_index:
+                ed25519_key = state.kappa[settings.validator_index].ed25519
+                logger.info("Same epoch judgment received")
+            else:
+                if curr_epoch_index - EpochIndex(1) == epoch_index:
+                    ed25519_key = state.lambda_[settings.validator_index].ed25519
+                    logger.info("Judgments received for last epoch")
+                else:
+                    raise KeyError("Judgment age is not valid; work report is too old.")
+
+            # Handling received judgment
+            asyncio.create_task(
+                self.handle_judgment(judgment=data.judgment, ed25519_key=ed25519_key)
             )
 
             if not data.is_valid:
@@ -151,8 +199,9 @@ class JudgmentPublication(NetworkProtocol):
         buffer = client.stream_buffer[stream_id]
 
         if buffer == b"":
-            logger.debug(
+            logger.info(
                 "Judgment acknowledge received",
+                client_index=client.validator_index,
                 stream_id=stream_id,
                 buffer_size=len(buffer),
             )
@@ -160,23 +209,67 @@ class JudgmentPublication(NetworkProtocol):
 
         return False
 
-    @staticmethod
-    async def handle_judgment(judgment: Judgment):
-        from jam.storage.tranche_store import tranche_store
+    async def handle_judgment(self, judgment: Judgment, ed25519_key: Ed25519Public):
+        """Find tranche for received work report and if get negative judgments handle it."""
+        from jam.storage.tranche_audit_store import tranche_store
 
         try:
-            # Fetch Report's Tranche
             tranche = await tranche_store.fetch_rep_tranche(judgment)
+
             if not tranche:
                 raise ValueError(f"Tranche not found for report {judgment.work_report_hash.hex()}")
 
-            # Handle Judgement
-            await tranche_store.update_judgment(tranche=tranche, judgment=judgment)
+            if judgment.validity == U8(0):
+                asyncio.create_task(self.negative_judgments(judgment=judgment, tranche=tranche))
+
+            await tranche_store.update_judgment(
+                tranche=tranche, judgment=judgment, ed25519_public=ed25519_key
+            )
 
         except Exception as JERR:
             logger.error(
-                "Error Handling Judgment",
+                "Error Handling Judgment, fetching tranche for work report",
                 judgment=judgment.to_json(),
                 err=str(JERR),
-                err_type=type(JERR).__name__
+                err_type=type(JERR).__name__,
+                exc_info=True,
             )
+
+    async def negative_judgments(self, judgment: Judgment, tranche: Tranche):
+        """this handle only negative judgments, do refine and transmit judgments."""
+        from jam.settings import settings
+        from jam.storage.tranche_audit_store import tranche_store
+        from jam.audit.audit import Audit
+        from jam.audit.utils import Utils
+
+        audit = Audit()
+        utils = Utils()
+
+        validator_index = settings.validator_index
+        wr_hash = judgment.work_report_hash
+
+        # process refine results
+        wr = await utils.fetch_report(wr_hash=wr_hash)
+        update_validity = await audit.refine(wr=wr)
+
+        epoch_index = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
+
+        ed25519_signature = Audit.judgment_signature(
+            wr_hash=judgment.work_report_hash, validity=update_validity
+        )
+
+        judgment = Judgment(
+            epoch_index=epoch_index,
+            validator_index=validator_index,
+            validity=update_validity,
+            work_report_hash=judgment.work_report_hash,
+            ed25519_signature=Ed25519Signature(ed25519_signature),
+        )
+
+        # ------------------- Save judgment in Tranche State ---------------------------------------------
+        await tranche_store.update_judgment(
+            tranche=tranche, judgment=judgment, ed25519_public=settings.ed25519_public
+        )
+
+        data = CE145Data(len_a=U32(len(judgment.encode())), judgment=judgment)
+        response = await self.transmit(data=data)

@@ -144,6 +144,7 @@ class AccumulateFunctions(INVF):
         o = registers[7]
         if not memory.is_accessible(o, VALIDATOR_COUNT * 336):
             raise PvmError(PANIC)
+            
         if context.x.s_index != context.x.partial_state.privileges.chi_v:
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
@@ -210,7 +211,7 @@ class AccumulateFunctions(INVF):
             })
         )
 
-        if accounts[context.x.s_index].service.balance < new_service.service.balance:
+        if accounts[ServiceId(context.x.s_index)].service.balance < new_service.service.balance:
             registers[7] = HostStatus.CASH.value
             return CONTINUE, gas, registers, memory, context
 
@@ -224,8 +225,8 @@ class AccumulateFunctions(INVF):
             return CONTINUE, gas, registers, memory, context
 
         registers[7] = context.x.i_index
-        accounts[context.x.i_index] = new_service
-        accounts[context.x.s_index].service.balance -= new_service.service.balance
+        accounts[ServiceId(context.x.i_index)] = new_service
+        accounts[ServiceId(context.x.s_index)].service.balance -= new_service.service.balance
         context.x.i_index = check(
             u=context.x.partial_state,
             i=ServiceId(MINIMUM_SERVICE_INDEX + (context.x.i_index - MINIMUM_SERVICE_INDEX + 42) % (2**32 - MINIMUM_SERVICE_INDEX - 2**8)),
@@ -261,6 +262,7 @@ class AccumulateFunctions(INVF):
         if not memory.is_accessible(o, TRANSFER_MEMO_SIZE):
             raise PvmError(PANIC)
 
+
         if ServiceId(d) not in delta:
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
@@ -271,7 +273,7 @@ class AccumulateFunctions(INVF):
             sender=ServiceId(context.x.s_index),
             receiver=ServiceId(d),
             amount=Balance(a),
-            memo=Bytes(memo),
+            memo=Bytes[128](memo),
             gas=Gas(l),
         )
 
@@ -281,7 +283,7 @@ class AccumulateFunctions(INVF):
             registers[7] = HostStatus.LOW.value
             return CONTINUE, gas, registers, memory, context
 
-        if Balance(a) < delta[context.x.s_index].service.t:
+        if new_balance_sender < delta[context.x.s_index].service.t:
             registers[7] = HostStatus.CASH.value
             return CONTINUE, gas, registers, memory, context
         else:

@@ -3,8 +3,8 @@ from typing import Dict, List
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.integers import U32
 
+from jam.types import OpaqueHash, ValidatorIndex, Sigma
 from jam.types import OpaqueHash, ValidatorIndex, Sigma, ValidatorData
-from jam.types.audit.tranche import ValidatorList
 from jam.types.protocol.core import CoreIndex, TimeSlot
 
 from jam.utils.constants import (
@@ -17,6 +17,7 @@ from math import floor
 from jam.utils.shuffle import shuffle
 from collections import deque
 
+ValidatorList = TypedVector[ValidatorIndex]
 
 def guarantor_assignment(
     eta, kappa, lambda_, gamma_p, block_slot, report_slot, tau

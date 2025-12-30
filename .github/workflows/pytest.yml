@@ -14,9 +14,18 @@ jobs:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0
+        fetch-depth: 1
         token: ${{ secrets.PRIVATE_REPO_TOKEN }}
         submodules: false
+
+    - name: 🧾 Show disk usage (before)
+      run: |
+        echo "=== df -h ==="
+        df -h
+        echo "=== du top-level /home/runner ==="
+        sudo du -sh /home/runner/* 2>/dev/null || true
+        echo "=== top 40 under /home/runner ==="
+        sudo du -ah /home/runner 2>/dev/null | sort -rh | head -n 40 || true
 
     - name: 🔧 Install system dependencies
       run: |
@@ -57,6 +66,28 @@ jobs:
         cd deps/tsrkit-pvm/
         uv run python setup.py build_ext --inplace
         cd ../../
+
+    - name: 🧼 Aggressive cleanup before tests (pip/cargo/uv caches)
+      run: |
+        # clean pip cache
+        pip3 cache purge || true
+        rm -rf ~/.cache/pip ~/.cache/* || true
+
+        # remove uv caches
+        rm -rf ~/.uv || true
+        rm -rf $HOME/.local/share/uv || true
+
+        # remove cargo registry & git cache
+        rm -rf ~/.cargo/registry ~/.cargo/git || true
+
+        # if submodules include .git directories you don't need during tests, remove them
+        find . -name ".git" -type d -prune -exec rm -rf {} \; || true
+
+        # final check
+        df -h
+        echo "Top large files now:"
+        sudo du -ah /home/runner 2>/dev/null | sort -rh | head -n 40 || true
+
 
     - name: 🏗️ Run unit tests
       run: ASYNC=1 uv run pytest tests/unit/
