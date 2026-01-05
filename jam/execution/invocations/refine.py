@@ -60,7 +60,6 @@ class PsiR(InvocationProtocol):
                     "import_segments": self.i_segments,
                     "extrinsics": ItemExtrinsics(settings.main_db).get_all(self.work_package),
                     "o": None,
-                    "t": None,
                 },
             ),
             6: (
