@@ -5,7 +5,7 @@ from jam.utils.constants import (
     MAX_IMPORT_ITEM,
     EXTRINSIC_COUNT,
     MAX_ENCODED_WORK_PACKAGE_SIZE,
-    SEGMENT_SIZE,
+    SEGMENT_FOOTPRINT,
     REFINE_GAS,
     ACCUMULATION_GAS,
 )
@@ -60,7 +60,7 @@ class Validator:
                 extrinsic_len = extrinsic_len + y.len
 
             item_count = (
-                len(x.payload) + len(x.import_segments) * SEGMENT_SIZE + extrinsic_len
+                len(x.payload) + len(x.import_segments) * SEGMENT_FOOTPRINT + extrinsic_len
             )
 
         package_size = auth_token + parameterization + item_count

@@ -128,7 +128,7 @@ MAX_AUTH_CODE_SIZE = 64_000
 W_A = MAX_AUTH_CODE_SIZE
 
 # W_B — Max encoded size of a work-package (extrinsics + imports), in octets.
-MAX_ENCODED_WORK_PACKAGE_SIZE = 13_794_305
+MAX_ENCODED_WORK_PACKAGE_SIZE = 13_791_360 # = W_M * W_F + 4096 + 64 + 64
 W_B = MAX_ENCODED_WORK_PACKAGE_SIZE
 
 # W_C — Max size of service code, in octets.
@@ -142,6 +142,10 @@ W_E = BASIC_ERASURE_SIZE
 # W_G — Size of a segment in octets.
 SEGMENT_SIZE = 4104  # = W_P * W_E
 W_G = SEGMENT_SIZE
+
+# W_F — Footprint of a segment in Audits DA.
+SEGMENT_FOOTPRINT = 4488  # = W_G + 32⌈log2(W_M)⌉
+W_F = SEGMENT_FOOTPRINT
 
 # W_M — Max number of imports in a work-package.
 MAX_IMPORT_ITEM = 3072
