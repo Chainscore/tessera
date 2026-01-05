@@ -247,7 +247,6 @@ class AccumulateFunctions(INVF):
     @INVF.register(20, gas_cost=10)
     def transfer(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         [d, a, l, o] = registers[7 : 7 + 4]
-        gas = gas - l
 
         delta: DeltaView = context.x.partial_state.service_accounts
 
@@ -286,6 +285,7 @@ class AccumulateFunctions(INVF):
             registers[7] = HostStatus.OK.value
             context.x.deferred_transfers.append(t)
             delta[context.x.s_index].service.balance = new_balance_sender
+            gas = gas - l
             return CONTINUE, gas, registers, memory, context
 
     @staticmethod
