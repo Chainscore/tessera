@@ -13,7 +13,7 @@
 [submodule "test-suites"]
 	path = test-suites
 	url = https://github.com/Chainscore/tessera-test-suites.git
-	branch = sync/0.7.0
+	branch = sync/0.7.1
 [submodule "deps/tsrkit-types"]
 	path = deps/tsrkit-types
 	url = https://github.com/Chainscore/tsrkit-types.git
