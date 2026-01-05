@@ -476,7 +476,7 @@ class Accumulation:
         entropy: OpaqueHash
     ) -> AccumulationOutput:
         """
-        Single-Service accumulation function ∆1 defined in Eq 12.23
+        Single-Service accumulation function ∆1 defined in Eq 12.24
         Transforms Initial Partial State, Sequence of Work Reports,
         dictionary of services (free, privileged accumulation), and Service index
         into Tuple of Posterior state-context, Sequence of Transfers, Possible Accumulation-outputs
@@ -697,6 +697,10 @@ class Accumulation:
         pi = state.pi
         pi_service = pi.services
         for service_id in accumulation_stats.keys():
+            # Sanity Check
+            if accumulation_stats[service_id][0] + accumulation_stats[service_id][1] == 0:
+                continue
+
             if service_id not in pi_service:
                 pi_service[service_id] = ServiceStat.empty()
             pi_service[service_id].accumulate_gas_used = Uint(accumulation_stats[service_id][0])
