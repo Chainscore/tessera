@@ -37,8 +37,9 @@ class PsiA(InvocationProtocol):
             if isinstance(_t, DeferredTransfer):
                 bal += _t.amount
 
-        cloned_state.service_accounts[s].service.balance = cloned_state.service_accounts[s].service.balance + bal
-        self.partial_state = u
+        # TODO: Check this later
+        cloned_state.service_accounts[s].service.balance = (cloned_state.service_accounts[s].service.balance or Balance(0)) + bal
+        self.partial_state = cloned_state
         self.timeslot = t
         self.service_id = s
         self.gas = g
@@ -83,7 +84,7 @@ class PsiA(InvocationProtocol):
                 {"service_data": delta[xs], "service_index": xs},
             ),
             5: (GeneralFunctions, {"service_index": xs, "accounts": delta}),  # info
-            # bless (Updates previleged accounts)
+            # bless (Updates privileged accounts)
             14: (AccumulateFunctions, {}),
             # assign (Updates authorizer_keys/Phi)
             15: (AccumulateFunctions, {}),
