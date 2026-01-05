@@ -165,7 +165,7 @@ class GeneralFunctions(INVF):
             if w10 == 7:
                 v = package.encode()
             elif w10 == 8:
-                v = package.authorizer.code_hash + package.authorizer.params.encode()
+                v = package.authorizer.params
             elif w10 == 9:
                 v = package.authorization
             elif w10 == 10:
