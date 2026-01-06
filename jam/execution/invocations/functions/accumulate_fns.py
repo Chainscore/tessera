@@ -158,7 +158,7 @@ class AccumulateFunctions(INVF):
     def checkpoint(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         context.y.i_index = context.x.i_index
         context.y.s_index = context.x.s_index
-        context.y.partial_state.store._updates.update(context.x.partial_state.store._updates)
+        context.y.partial_state = context.x.partial_state.clone(True, reset_inherited=False)
         context.y.deferred_transfers = context.x.deferred_transfers.copy()
         context.y.hash = context.x.hash
         context.y.preimage = context.x.preimage.copy()
@@ -405,30 +405,22 @@ class AccumulateFunctions(INVF):
         # storing the initial lookup value
         lookup_val: Timestamps | None = account.lookup[lookup_key]
         # TODO: check updated t > balance
-        at = account.service.t
 
         if not lookup_val:
             account.lookup[lookup_key] = Timestamps([])
-            # at = (
-            #     at
-            #     + (2 * ADDITIONAL_BALANCE_PER_ITEM)
-            #     + (preimage_len * ADDITIONAL_BALANCE_PER_OCTET)
-            # )
         elif len(lookup_val) == 2:
-            lookup_val.append(U32(block_timeslot)) # It should be updating the account data
+            lookup_val.append(U32(block_timeslot))
+            account.lookup[lookup_key] = lookup_val
         else:
             registers[7] = HostStatus.HUH.value
             return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
         if account.service.balance < account.service.t:
-            # state.store.clear()
-            registers[7] = HostStatus.FULL.value
-            return ExecutionStatus.CONTINUE, gas, registers, memory, context
+             registers[7] = HostStatus.FULL.value
+             return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
-        # account.lookup[lookup_key] = lookup_val
         registers[7] = HostStatus.OK.value
-
-        return ExecutionStatus.CONTINUE, gas, registers, memory, context
+        return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(24, gas_cost=10)
@@ -463,12 +455,9 @@ class AccumulateFunctions(INVF):
             del a.preimages[preimage_hash]
         elif (
             len(a.lookup[lookup_key]) == 3
-            and a.lookup[lookup_key][1] < block_timeslot - PREIMAGE_EVICTION_TIMESLOTS
+            and int(block_timeslot) - int(a.lookup[lookup_key][1]) >= PREIMAGE_EVICTION_TIMESLOTS
         ):
-            lookup_value[0] = lookup_value[2]
-            lookup_value[1] = block_timeslot
-            lookup_value = lookup_value.pop()
-            a.lookup[lookup_key] = Timestamps([lookup_value])
+            a.lookup[lookup_key] = Timestamps([a.lookup[lookup_key][2], U32(block_timeslot)])
         else:
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context

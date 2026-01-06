@@ -39,17 +39,20 @@ class StateStorage:
     _TRIE: StateTrie
     _DB: RockStore
 
-    _updates: dict[bytes, bytes] = {}
+    _updates: dict[bytes, bytes]
     _cache_mode = False
     _read_only = True
-    _prop_cache: dict[int, OrderedDict] = {}
+    _prop_cache: dict[int, OrderedDict]
 
-    def __init__(self, trie: StateTrie, db: RockStore, _cache_updates={}, cache_mode = False):
+    def __init__(self, trie: StateTrie, db: RockStore, _cache_updates=None, cache_mode = False, inherited_keys=None):
         self._TRIE = trie
         self._DB = db
-        self._updates = _cache_updates
+        self._updates = _cache_updates if _cache_updates is not None else {}
         self._cache_mode = cache_mode
         self._prop_cache = {}
+        # Keys that existed before this store was created (inherited from parent clone)
+        # Only applies to cloned stores - used to filter merge to only include new writes
+        self._inherited_keys = inherited_keys or set()
 
     @staticmethod
     def get_storage_key(header: HeaderHash):
@@ -69,7 +72,9 @@ class StateStorage:
     def __add__(self, other: "StateStorage") -> Self:
         if not isinstance(other, StateStorage):
             raise TypeError("Can only add StateStorage instances")
-        self._updates.update(other._updates)
+        # Only merge keys that are NOT inherited (i.e., new writes during this accumulation)
+        new_writes = {k: v for k, v in other._updates.items() if k not in other._inherited_keys}
+        self._updates.update(new_writes)
         return self
 
     def load_cache(self, hh: HeaderHash, apply_trie: bool = True) -> tuple[dict, StateRoot | None]:
@@ -278,6 +283,8 @@ class StateStorage:
     def put(self, key_bytes: bytes, value_bytes: bytes, sync: bool = False):
         if self._cache_mode:
             self._updates[key_bytes] = value_bytes
+            # Key is now explicitly written, not inherited - include in merge
+            self._inherited_keys.discard(key_bytes)
         else:
             self._DB.put(key_bytes, value_bytes, sync)
             self._TRIE.update(Bytes(key_bytes), Bytes(value_bytes))
