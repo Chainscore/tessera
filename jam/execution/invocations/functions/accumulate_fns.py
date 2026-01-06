@@ -158,7 +158,7 @@ class AccumulateFunctions(INVF):
     def checkpoint(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         context.y.i_index = context.x.i_index
         context.y.s_index = context.x.s_index
-        context.y.partial_state.store._updates.update(context.x.partial_state.store._updates)
+        context.y.partial_state = context.x.partial_state.clone(True)
         context.y.deferred_transfers = context.x.deferred_transfers.copy()
         context.y.hash = context.x.hash
         context.y.preimage = context.x.preimage.copy()
@@ -206,8 +206,6 @@ class AccumulateFunctions(INVF):
                 LookupTable(hash=ServiceCodeHash(c), length=BlobLength(l)): Timestamps([])
             })
         )
-        # new_service.service.balance = new_service.service.t
-        # print("new balance", new_service.service.balance)
 
 
         if accounts[ServiceId(context.x.s_index)].service.balance < new_service.service.balance:
@@ -264,7 +262,6 @@ class AccumulateFunctions(INVF):
         if ServiceId(d) not in delta:
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
-        # print("SERVICE DSDSD", ServiceId(d), context.x.s_index, delta[context.x.s_index].service.balance, Balance(a))
 
         memo = memory.read(o, TRANSFER_MEMO_SIZE)
 
@@ -275,14 +272,14 @@ class AccumulateFunctions(INVF):
             memo=Bytes[128](memo),
             gas=Gas(l),
         )
-        # print("SERVICE BAL", context.x.s_index, delta[context.x.s_index].service.balance, Balance(a))
-        new_balance_sender = int(delta[context.x.s_index].service.balance) - int(a)
 
         if l < delta[d].service.min_gas:
             registers[7] = HostStatus.LOW.value
             return CONTINUE, gas, registers, memory, context
 
-        if new_balance_sender < int(delta[context.x.s_index].service.t):
+        new_balance_sender = int(delta[context.x.s_index].service.balance) - int(a)
+
+        if new_balance_sender < delta[context.x.s_index].service.t:
             registers[7] = HostStatus.CASH.value
             return CONTINUE, gas, registers, memory, context
         else:
@@ -313,7 +310,7 @@ class AccumulateFunctions(INVF):
         if d in delta and d != context.x.s_index:
             account = delta[d]
 
-        if account == None or account.service.code_hash != ServiceCodeHash(list(context.x.s_index.encode()) + [0] * 28):
+        if account is None or account.service.code_hash != ServiceCodeHash(list(context.x.s_index.encode()) + [0] * 28):
             logger.warning("Eject function called with mismatched code hash for service account")
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
@@ -361,14 +358,14 @@ class AccumulateFunctions(INVF):
             registers[7] = 0
             registers[8] = 0
         elif len(lookup_value) == 1:
-            registers[7] = 1 + 2**32 * lookup_value[0]
+            registers[7] = 1 + 2**32 * U64(lookup_value[0])
             registers[8] = 0
         elif len(lookup_value) == 2:
-            registers[7] = 2 + 2**32 * lookup_value[0]
+            registers[7] = 2 + 2**32 * U64(lookup_value[0])
             registers[8] = lookup_value[1]
         elif len(lookup_value) == 3:
-            registers[7] = 3 + 2**32 * lookup_value[0]
-            registers[8] = lookup_value[1] + 2**32 * lookup_value[2]
+            registers[7] = 3 + 2**32 * U64(lookup_value[0])
+            registers[8] = U64(lookup_value[1]) + 2**32 * U64(lookup_value[2])
         else:
             logger.critical(
                 "Unexpected metadata",
