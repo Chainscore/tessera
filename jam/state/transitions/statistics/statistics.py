@@ -7,7 +7,8 @@ from jam.block.block import Block
 
 
 from jam.types.state.pi import ServiceStat
-from jam.utils.constants import EPOCH_LENGTH, SEGMENT_SIZE
+from jam.utils.constants import EPOCH_LENGTH, SEGMENT_SIZE, ROTATION_PERIOD
+from jam.state.transitions.report.guarantee_assignment import assign_fn
 from tsrkit_types import Uint
 
 
@@ -56,11 +57,40 @@ class Statistics:
             for preimage in block.extrinsic.preimages:
                 pi_curr[author_index].pre_images_size += len(preimage.blob)
         
-        reporter_set = set([
-            sig.validator_index
-            for guarantee in block.extrinsic.guarantees
-            for sig in guarantee.signatures
-        ])
+        curr_mapping, _, prev_mapping, _ = assign_fn(state)
+        
+        # Build map for remapping keys to current indices
+        kappa_lookup = {v.ed25519: i for i, v in enumerate(state.kappa)}
+
+        reporter_set = set()
+        for guarantee in block.extrinsic.guarantees:
+            report_slot = guarantee.slot
+            block_slot = block.header.slot
+
+            # Determine which mapping to use based on rotation
+            is_current_rotation = (report_slot // ROTATION_PERIOD) == (block_slot // ROTATION_PERIOD)
+            
+            mapping = curr_mapping if is_current_rotation else prev_mapping
+
+            assigned_validators = mapping.get(guarantee.report.core_index, [])
+            
+            # Create a set for O(1) lookup of assigned validator indices
+            assigned_validator_indices = {v for v in assigned_validators}
+
+            for sig in guarantee.signatures:
+                # Check 1: Validator must be assigned to this core
+                if sig.validator_index in assigned_validator_indices:
+                    # If prior rotation (epoch change), map lambda index to kappa index
+                    if not is_current_rotation and (report_slot // EPOCH_LENGTH) != (block_slot // EPOCH_LENGTH):
+                        # Get pubkey from Lambda (priot validator set)
+                        pubkey = state.lambda_[sig.validator_index].ed25519
+                        # Add to reporter set if the prior validaor still exists in Kappa
+                        # Find index in Kappa
+                        if pubkey in kappa_lookup:
+                            reporter_set.add(kappa_lookup[pubkey])
+                    else:
+                        reporter_set.add(sig.validator_index)
+
         for validator_index in reporter_set:
             pi_curr[validator_index].guarantees += 1
 
