@@ -387,7 +387,7 @@ class GeneralFunctions(INVF):
         storage_len = len(curr_value) if curr_value else HostStatus.NONE.value
 
         if vz == 0:
-            a.__delitem__(k)
+            del a[k]
         elif memory.is_accessible(vo, vz):
             pre_data = a[k]
             a[k] = Bytes(memory.read(vo, vz))
@@ -470,7 +470,7 @@ class GeneralFunctions(INVF):
         return CONTINUE, gas, registers, memory, context
 
     @staticmethod
-    @INVF.register(host_call=100, gas_cost=0)
+    @INVF.register(host_call=100, gas_cost=10)
     def log(
         gas: Gas,
         registers: list,
