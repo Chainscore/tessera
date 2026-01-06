@@ -25,6 +25,7 @@ class WorkExecResult(Choice):
     # circle dot
     bad_exports: NullType
     # circle minus
+    # TODO: result_oversize -> output_oversize
     result_oversize: NullType
     # BAD
     bad_code: NullType
