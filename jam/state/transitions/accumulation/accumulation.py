@@ -740,12 +740,15 @@ class Accumulation:
                     services.append(service_id)
 
         pi = state.pi
-        for s in services:
-            pi_service = pi.services
-            if s not in pi.services:
-                pi.services[s] = ServiceStat.empty()
-
-            pi.services = pi_service
+        
+        # Cleanup removed services from Pi
+        pi_services_to_remove = []
+        for s_id in pi.services.keys():
+            if s_id not in state.delta:
+                pi_services_to_remove.append(s_id)
+        
+        for s_id in pi_services_to_remove:
+            del pi.services[s_id]
 
         state.pi = pi
 
