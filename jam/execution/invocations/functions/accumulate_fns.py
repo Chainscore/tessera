@@ -202,7 +202,7 @@ class AccumulateFunctions(INVF):
                 LookupTable(hash=ServiceCodeHash(c), length=BlobLength(l)): Timestamps([])
             })
         )
-        new_service.service.balance = new_service.service.t()
+        new_service.service.balance = new_service.service.t
         # print("new balance", new_service.service.balance)
 
 
