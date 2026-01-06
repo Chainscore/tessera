@@ -186,7 +186,11 @@ class AccumulateFunctions(INVF):
         new_service = AccountData(
             service=AccountMetadata(
                 code_hash=ServiceCodeHash(c),
-                balance=Balance(0),
+                balance=Balance(
+                    BASIC_MINIMUM_BALANCE
+                    + ADDITIONAL_BALANCE_PER_ITEM * 2
+                    + ADDITIONAL_BALANCE_PER_OCTET * (81 + l) - f
+                ),
                 gas_limit=Gas(g),
                 min_gas=Gas(m),
                 num_o=Ao(0),
@@ -202,7 +206,7 @@ class AccumulateFunctions(INVF):
                 LookupTable(hash=ServiceCodeHash(c), length=BlobLength(l)): Timestamps([])
             })
         )
-        new_service.service.balance = new_service.service.t
+        # new_service.service.balance = new_service.service.t
         # print("new balance", new_service.service.balance)
 
 
