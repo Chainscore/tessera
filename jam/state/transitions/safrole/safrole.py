@@ -263,7 +263,7 @@ class Safrole:
         for i in range(EPOCH_LENGTH):
             # Add entropy to encoded4(i)
             hashed = Hash.blake2b(bytes(entropy) + U32(i).encode())
-            index = int.from_bytes(hashed, "little")
-            val_key = validators[index % len(validators)].bandersnatch
+            index, _ = U32.decode_from(bytes(Bytes(hashed[:4])))
+            val_key = validators[int(index) % len(validators)].bandersnatch
             fallback.append(val_key)
         return GammaS(GammaSFallback(fallback))
