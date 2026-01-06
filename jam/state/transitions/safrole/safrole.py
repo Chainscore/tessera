@@ -151,7 +151,7 @@ class Safrole:
 
             # 4. 4. Update ring root using gamma p
             # Note: Removing the if condition allows this trace 1758621879/00000348 to pass
-            if pre_state.gamma.p != pre_state.kappa:
+            if pre_state.gamma.p != state.gamma.p:
                 pubkeys = [bytes(k.bandersnatch) for k in gamma.p]
                 ring_root = RingVRF[Bandersnatch].construct_ring_root(pubkeys)
                 gamma.z = GammaZ(ring_root.to_bytes())
