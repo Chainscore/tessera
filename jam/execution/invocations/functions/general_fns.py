@@ -1,6 +1,6 @@
 from typing import Any, Optional, List
 
-from jam.log_setup import pvm_logger as logger, logger as jam_logger
+from jam.log_setup import logger as logger, logger as jam_logger
 from jam.execution.invocations.functions.protocol import (
     InvocationFunctions as INVF,
 )
@@ -80,7 +80,7 @@ class GeneralFunctions(INVF):
         item_index: int,
         import_segments: Optional[List],
         extrinsics: Optional[Extrinsics],
-        o: Optional[AccumulationInputs]
+        o: Optional[AccumulationInputs]  # bold i
     ):
         fetch_type = registers[10]
 
@@ -132,21 +132,33 @@ class GeneralFunctions(INVF):
             v = trace
         elif (
             w10 == 3
-            and item_index is not None
+            and extrinsics is not None
             and w11 < len(extrinsics)
             and w12 < len(extrinsics[int(w11)])
         ):
             v = extrinsics[w11][int(w12)]
-        elif w10 == 4 and item_index is not None and w11 < len(extrinsics[item_index]):
+        elif (
+                w10 == 4
+                and extrinsics is not None
+                and item_index is not None
+                and item_index < len(extrinsics)
+                and w11 < len(extrinsics[item_index])
+        ):
             v = extrinsics[item_index][w11]
         elif (
             w10 == 5
-            and item_index is not None
+            and import_segments is not None
             and w11 < len(import_segments)
             and w12 < len(import_segments[w11])
         ):
             v = import_segments[w11][w12]
-        elif w10 == 6 and item_index is not None and w11 < len(import_segments[item_index]):
+        elif (
+                w10 == 6
+                and import_segments is not None
+                and item_index is not None
+                and item_index < len(import_segments)
+                and w11 < len(import_segments[item_index])
+        ):
             v = import_segments[item_index][w11]
         elif package is not None:
 
@@ -347,7 +359,7 @@ class GeneralFunctions(INVF):
         service_data: AccountData,
         service_index: ServiceId,
     ):
-        # Get key,value start,end
+        # Get key, value offset & size
         [ko, kz, vo, vz] = registers[7 : 7 + 4]
 
         logger.debug(
@@ -367,25 +379,21 @@ class GeneralFunctions(INVF):
             )
             raise PvmError(PANIC)
 
-    
-        # TODO: Handle out of balance using temp caches
-        # from jam.state.state import state
-        # state.store.save_n_clear_cache()
-
         k = Bytes(memory.read(ko, kz))
         
         a = service_data.storage
 
         curr_value = a.get(k)
         storage_len = len(curr_value) if curr_value else HostStatus.NONE.value
+
         if vz == 0:
             a.__delitem__(k)
-        elif memory.is_accessible(vo, vz, Accessibility.WRITE):
+        elif memory.is_accessible(vo, vz):
             pre_data = a[k]
             a[k] = Bytes(memory.read(vo, vz))
             if service_data.service.t > service_data.service.balance:
-                # state.store.clear()
                 registers[7] = HostStatus.FULL.value
+                # print("Storing FULL val on r[7]", registers[7])
                 if pre_data is None:
                     del a[k]
                 else:
@@ -400,6 +408,7 @@ class GeneralFunctions(INVF):
             )
             raise PvmError(PANIC)
 
+        # print("Storing s_len val on r[7]", storage_len)
         registers[7] = storage_len
         return CONTINUE, gas, registers, memory, context
 
@@ -426,15 +435,14 @@ class GeneralFunctions(INVF):
         if target_service == 2**64 - 1:
             target_service = service_index
 
-        if target_service > 2**32-1:
+
+        if target_service > 2**32-1 or target_service not in accounts:
             registers[7] = HostStatus.NONE.value
             return CONTINUE, gas, registers, memory, context
 
-        if target_service not in accounts:
-            registers[7] = HostStatus.NONE.value
-            return CONTINUE, gas, registers, memory, context
-
+        # print("TYPE OF SERVICE", target_service, type(target_service))
         acc: AccountData = accounts[target_service]
+
         v = (
             bytes(acc.service.code_hash)
             + U64(acc.service.balance).encode()

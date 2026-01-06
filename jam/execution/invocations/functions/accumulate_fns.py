@@ -1,4 +1,3 @@
-import asyncio
 from jam.state.accounts import AccountDataView, DeltaView
 from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
@@ -187,10 +186,7 @@ class AccumulateFunctions(INVF):
         new_service = AccountData(
             service=AccountMetadata(
                 code_hash=ServiceCodeHash(c),
-                balance=Balance(BASIC_MINIMUM_BALANCE
-                    + ADDITIONAL_BALANCE_PER_ITEM * 2
-                    + ADDITIONAL_BALANCE_PER_OCTET * (81+l) - f
-                ),
+                balance=Balance(0),
                 gas_limit=Gas(g),
                 min_gas=Gas(m),
                 num_o=Ao(0),
@@ -206,6 +202,9 @@ class AccumulateFunctions(INVF):
                 LookupTable(hash=ServiceCodeHash(c), length=BlobLength(l)): Timestamps([])
             })
         )
+        new_service.service.balance = new_service.service.t()
+        # print("new balance", new_service.service.balance)
+
 
         if accounts[ServiceId(context.x.s_index)].service.balance < new_service.service.balance:
             registers[7] = HostStatus.CASH.value
@@ -261,6 +260,7 @@ class AccumulateFunctions(INVF):
         if ServiceId(d) not in delta:
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
+        # print("SERVICE DSDSD", ServiceId(d), context.x.s_index, delta[context.x.s_index].service.balance, Balance(a))
 
         memo = memory.read(o, TRANSFER_MEMO_SIZE)
 
@@ -271,20 +271,20 @@ class AccumulateFunctions(INVF):
             memo=Bytes[128](memo),
             gas=Gas(l),
         )
-
-        new_balance_sender = delta[context.x.s_index].service.balance - Balance(a)
+        # print("SERVICE BAL", context.x.s_index, delta[context.x.s_index].service.balance, Balance(a))
+        new_balance_sender = int(delta[context.x.s_index].service.balance) - int(a)
 
         if l < delta[d].service.min_gas:
             registers[7] = HostStatus.LOW.value
             return CONTINUE, gas, registers, memory, context
 
-        if new_balance_sender < delta[context.x.s_index].service.t:
+        if new_balance_sender < int(delta[context.x.s_index].service.t):
             registers[7] = HostStatus.CASH.value
             return CONTINUE, gas, registers, memory, context
         else:
             registers[7] = HostStatus.OK.value
             context.x.deferred_transfers.append(t)
-            delta[context.x.s_index].service.balance = new_balance_sender
+            delta[context.x.s_index].service.balance = Balance(new_balance_sender)
             gas = gas - l
             return CONTINUE, gas, registers, memory, context
 
@@ -309,13 +309,14 @@ class AccumulateFunctions(INVF):
         if d in delta and d != context.x.s_index:
             account = delta[d]
 
-        l = BlobLength(max(81, account.service.num_o) - 81)
-        lookup_key = LookupTable(hash=ServiceCodeHash(code_hash), length=BlobLength(l))
         if account == None or account.service.code_hash != ServiceCodeHash(list(context.x.s_index.encode()) + [0] * 28):
             logger.warning("Eject function called with mismatched code hash for service account")
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
-        elif account.service.num_i != 2 or account.lookup[lookup_key] is None:
+        l = BlobLength(max(81, account.service.num_o) - 81)
+        lookup_key = LookupTable(hash=ServiceCodeHash(code_hash), length=BlobLength(l))
+
+        if account.service.num_i != 2 or account.lookup[lookup_key] is None:
             logger.warning("Eject function called with invalid number of items or missing lookup entry for service account")
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context

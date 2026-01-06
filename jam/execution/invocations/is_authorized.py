@@ -38,9 +38,10 @@ class PsiI(InvocationProtocol):
     def execute(self):
         from jam.state.state import state
 
+        # pc == pu
         _, pc = self.work_package.m_c(state.delta)
 
-        if pc == None:
+        if pc is None:
             return HostStatus.BAD, 0
         elif len(pc) > MAX_AUTH_CODE_SIZE:
             return HostStatus.BIG, 0
