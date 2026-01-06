@@ -51,7 +51,7 @@ async def start_node(
         max_data=(100*1024*1024), 
         max_stream_data=(10*1024*1024), 
         max_datagram_size=1350, 
-        idle_timeout=120
+        idle_timeout=600  # Increased from 120 to diagnose timeout-related crash
     )
     cfg.quic_logger = QuicLogger()
     cfg.load_cert_chain(f"seeds/{port}/cert.pem", f"seeds/{port}/key.pem")

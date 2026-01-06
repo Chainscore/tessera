@@ -1,7 +1,7 @@
 import asyncio
 from typing import cast
 
-from tsrkit_types import U8
+from tsrkit_types import U8, U64, String, U16
 from tsrkit_types.struct import structure
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import Uint, U32
@@ -13,6 +13,12 @@ from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
 from jam.utils.gather import gather_with_exceptions
+from jam.telemetry import emit_event
+from jam.telemetry.events import (
+    SendingGuarantee, GuaranteeSent, GuaranteeSendFailed,
+    ReceivingGuarantee, GuaranteeReceived, GuaranteeReceiveFailed,
+    GuaranteeOutline, Bytes32
+)
 
 @structure
 class CE135Data:

@@ -1,4 +1,5 @@
 import os
+from jam.operations.dispatcher import NodeDispatcher
 from tsrkit_types import Bytes, U16, Uint
 
 from tsrkit_pvm import Code
@@ -15,7 +16,7 @@ from jam.types.protocol.core import CoreIndex, Gas, ServiceId, SegmentRoot
 
 
 
-class WPBuilder:
+class WPBuilder(NodeDispatcher):
     """
     WP Engine: Continuously produces work packages and transmits them.
     Work Package is shared $SLOT_PERIOD seconds apart.
@@ -28,60 +29,63 @@ class WPBuilder:
         Starts the WP producer engine in asyncio loop.
         Assumes that the node is initialized and the latest synchronized state is stored in the db.
         """
-        from jam.network.start import node
+        try:
+            from jam.network.start import node
 
-        CE133 = WorkPackageSubmission()
+            CE133 = WorkPackageSubmission()
 
-        wp_iter = time_slot % 4
+            wp_iter = time_slot % 4
 
-        curr_ts = time_slot
-        curr_ep = int(curr_ts // EPOCH_LENGTH)
+            curr_ts = time_slot
+            curr_ep = int(curr_ts // EPOCH_LENGTH)
 
-        # TODO: Remove hard-coded transmission. Use desired guarantors' connections.
-        if not node:
+            # TODO: Remove hard-coded transmission. Use desired guarantors' connections.
+            if not node:
+                logger.debug(
+                    "Network not initialized - skipping work package production",
+                    # node_name=node.name,
+                    iteration=wp_iter,
+                )
+                return
+
+            # Get state from db
+            from jam.state.state import state
+
             logger.debug(
-                "Network not initialized - skipping work package production",
+                "Work package production cycle",
                 # node_name=node.name,
                 iteration=wp_iter,
+                curr_timeslot=curr_ts,
+                curr_epoch=curr_ep,
+                gamma_mode=state.gamma.s._choice_key,
             )
-            return
 
-        # Get state from db
-        from jam.state.state import state
+            wp = cls._build_package(wp_iter)
 
-        logger.debug(
-            "Work package production cycle",
-            # node_name=node.name,
-            iteration=wp_iter,
-            curr_timeslot=curr_ts,
-            curr_epoch=curr_ep,
-            gamma_mode=state.gamma.s._choice_key,
-        )
-
-        wp = cls._build_package(wp_iter)
-
-        wc = WorkPackageCore(wp, CoreIndex(1))
-        ext = Extrinsics([Extrinsic(b"") for i in range(len(wp.items))])
+            wc = WorkPackageCore(wp, CoreIndex(1))
+            ext = Extrinsics([Extrinsic(b"") for i in range(len(wp.items))])
 
 
-        package_len = Uint[32](len(wc.encode()))
-        ext_len = Uint[32](len(ext.encode()))
-        data = CE133Data(
-            package_len=package_len, package_data=wc, extrinsics_len=ext_len, extrinsics=ext
-        )
+            package_len = Uint[32](len(wc.encode()))
+            ext_len = Uint[32](len(ext.encode()))
+            data = CE133Data(
+                package_len=package_len, package_data=wc, extrinsics_len=ext_len, extrinsics=ext
+            )
 
-        logger.info(
-            "Producing work package",
-            iteration=wp_iter,
-            core_index=1,
-            extrinsics_count=0,
-            curr_timeslot=curr_ts,
-        )
+            logger.info(
+                "Producing work package",
+                iteration=wp_iter,
+                core_index=1,
+                extrinsics_count=0,
+                curr_timeslot=curr_ts,
+            )
 
-        responses = await CE133.transmit(data)
-        logger.debug("Work package transmitted",
-                     # node_name=node.name,
-                     iteration=wp_iter)
+            responses = await CE133.transmit(data)
+            logger.debug("Work package transmitted",
+                         # node_name=node.name,
+                         iteration=wp_iter)
+        except Exception as e:
+            logger.error("Failed in WPBuilder.run()", error=str(e), exc_info=True, time_slot=time_slot)
 
     @staticmethod
     def _build_package(wp_iter: int) -> WorkPackage:

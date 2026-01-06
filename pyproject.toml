@@ -21,7 +21,7 @@ authors = [
 ]
 license = "GPL-3.0-only"
 readme = "README.md"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "cryptography==45.0.2",
     "structlog>=25.2.0",
@@ -36,7 +36,6 @@ dependencies = [
     "numpy>=2.2.6",
     "bitarray>=3.7.1,<4.0.0",
     "rockstore",
-    "py-ark-vrf",
     "tsrkit-types",
     "tsrkit-pvm",
     "pytest>=8.4.2",
@@ -45,6 +44,8 @@ dependencies = [
     "tsrkit-asm",
     "pre-commit>=4.0.1",
     "safe-pysha3>=1.0.5",
+    "dot-ring>=0.1.4",
+    "py-ark-vrf",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -52,10 +53,10 @@ packages = ["jam"]
 
 [tool.uv.sources]
 rockstore = { workspace = true }
-py-ark-vrf = { workspace = true }
 tsrkit-types = { workspace = true }
 tsrkit-pvm = { workspace = true }
 tsrkit-asm = { workspace = true }
+py-ark-vrf = { workspace = true }
 
 [project.optional-dependencies]
 dev = [

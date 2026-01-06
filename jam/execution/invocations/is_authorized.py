@@ -6,6 +6,8 @@ from jam.types.protocol.crypto import OpaqueHash
 from jam.types.work import WorkPackage
 from jam.utils.constants import IS_AUTHORIZED_GAS, MAX_AUTH_CODE_SIZE
 from tsrkit_pvm import HostStatus
+from jam.types.work.execution import WorkExecResult
+from tsrkit_types.null import Null
 
 
 class PsiI(InvocationProtocol):
@@ -42,9 +44,9 @@ class PsiI(InvocationProtocol):
         _, pc = self.work_package.m_c(state.delta)
 
         if pc is None:
-            return HostStatus.BAD, 0
+            return WorkExecResult(Null, key="bad_code"), 0
         elif len(pc) > MAX_AUTH_CODE_SIZE:
-            return HostStatus.BIG, 0
+            return WorkExecResult(Null, key="code_oversize"), 0
         
         u, r, _ = PsiM.execute(
             blob=pc,

@@ -1,7 +1,14 @@
 .git
+**/.git
 .build.env
 test-suites
 data
 uv.lock
 .venv
 polkajam
+**/target/
+**/node_modules/
+**/__pycache__/
+logs/
+*.swp
+.DS_Store

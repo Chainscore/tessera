@@ -43,24 +43,21 @@ def finalized_block_handler(params: list):
 def service_data_handler(params):
     hh, sid = parse_data([HeaderHash, ServiceId], params)
     state_at_hh = State.load(hh)
-    try:
-        service = state_at_hh.delta[sid].service
-        accountMetadata = AccountMetadata(
-            code_hash=service.code_hash,
-            balance=service.balance,
-            gas_limit=service.gas_limit,
-            min_gas=service.min_gas,
-            num_i=service.num_i,
-            num_o=service.num_o,
-            gratis_offset=service.gratis_offset,
-            created_at=service.created_at,
-            accumulated_at=service.accumulated_at,
-            parent_service=service.parent_service
-        )
+    service = state_at_hh.delta[sid].service
+    accountMetadata = AccountMetadata(
+        code_hash=service.code_hash,
+        balance=service.balance,
+        gas_limit=service.gas_limit,
+        min_gas=service.min_gas,
+        num_i=service.num_i,
+        num_o=service.num_o,
+        gratis_offset=service.gratis_offset,
+        created_at=service.created_at,
+        accumulated_at=service.accumulated_at,
+        parent_service=service.parent_service
+    )
 
-        return list(accountMetadata.encode())
-    except Exception as e:
-        return None
+    return list(accountMetadata.encode())
 
 def submit_preimage_handler(params):
     sid, code = parse_data([ServiceId, Bytes], params)
@@ -70,18 +67,15 @@ def submit_preimage_handler(params):
     preimg_store.store(pre_img)
 
 def state_root_handler(params: list):
-    try:
-        header_hash = parse_data([HeaderHash], params)[0]
-        from jam.settings import settings
-        block = Block.load(header_hash, settings.main_db)
-        from jam.state.state import state
-        if block.header.slot == state.tau:
-            return list(state.root)
-        new_slot = block.header.slot + 1
-        next_block = Block.load_w_ts(new_slot, settings.main_db)
-        return list(next_block.header.parent_state_root)
-    except Exception as e:
-        return None
+    header_hash = parse_data([HeaderHash], params)[0]
+    from jam.settings import settings
+    block = Block.load(header_hash, settings.main_db)
+    from jam.state.state import state
+    if block.header.slot == state.tau:
+        return list(state.root)
+    new_slot = block.header.slot + 1
+    next_block = Block.load_w_ts(new_slot, settings.main_db)
+    return list(next_block.header.parent_state_root)
 
 def beefy_root_handler(params: list):
     hh = parse_data([HeaderHash], params)[0]
@@ -96,7 +90,9 @@ def beefy_root_handler(params: list):
 def submit_work_package_handler(params: list):
     ci, encoded_wp, ext = parse_data([CoreIndex, Bytes, Extrinsics], params)
 
-    wp, _ = WorkPackage.decode_from(encoded_wp)
+    wp = WorkPackage.decode(encoded_wp)
+
+    print("Work package:", wp.to_json())
 
     # TODO: fix it later
     ext = Extrinsics([Extrinsic(b"") for _ in range(len(wp.items))])

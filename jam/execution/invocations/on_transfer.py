@@ -67,10 +67,16 @@ class PsiT(InvocationProtocol):
 
     def execute(self) -> Tuple[AccountData, Gas]:
         service = self.delta[self.service_id]
+        try:
+            code_hash = service.service.code_hash
+        except Exception as e:
+            from jam.log_setup import node_logger as logger
+            logger.error(f"Failed to decode service metadata", service_id=self.service_id, error=str(e))
+            raise
         _, pc = decode_code_hash(
             service.historical_lookup(
                 self.timeslot,
-                service.service.code_hash
+                code_hash
             )
         )
 

@@ -43,7 +43,7 @@ class Validator:
         if len(item.extrinsic) > EXTRINSIC_COUNT:
             raise ValidatorError(
                 Code.BAD_EXTRINSIC_COUNT,
-                " Extrinsic count more than 128 (W_T mentioned in GP --v=0.7.1) ",
+                "Extrinsic count more than 128 (W_T mentioned in GP --v=0.7.1) ",
             )
 
     # https://graypaper.fluffylabs.dev/#/68eaa1f/1ad6001a2401?v=0.6.4
@@ -82,13 +82,12 @@ class Validator:
         if total_refine_gas >= REFINE_GAS:
             raise ValidatorError(
                 Code.BAD_REFINEMENT_GAS,
-                "Gas allocated to invoke a WP's Refine logic more than 5,000,000,000 (G_R --v=0.7.1)",
+                f"Total refinement gas {total_refine_gas} exceeds limit {REFINE_GAS}",
             )
-
         if total_accumulate_gas >= ACCUMULATION_GAS:
             raise ValidatorError(
                 Code.BAD_ACCUMULATION_GAS,
-                "Gas allocated to invoke a WP's Accumulation logic more than 10,000,000 (G_A --v=0.7.1)",
+                f"Total accumulation gas {total_accumulate_gas} exceeds limit {ACCUMULATION_GAS}",
             )
 
     def validate_wp(self, package: WorkPackage) -> bool:

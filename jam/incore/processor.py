@@ -248,7 +248,7 @@ class Processor:
             logger.debug(f"Checking authorization..")
             o, g = PsiI(p, c).execute()
             # ------------------------------------------ -- ---- ---------- ------------------------------------------
-
+            o = o.unwrap().encode() if isinstance(o, WorkExecResult) else o
             s_result = 0
 
             def utils_i(j: int) -> Tuple[WorkExecResult, Gas, Segments]:
@@ -296,14 +296,13 @@ class Processor:
 
             for _j in range(len(p.items)):
                 _r, _u, _e = utils_i(_j)
-
                 comp = self.item_to_digest(p.items[_j], _r, _u)
                 r_list.append(comp)
                 e_list.append(_e)
 
             # Work Package Hash, h
             h = Hash.blake2b(p.encode())
-
+            
             # Accumulate all exported segments
             e_bar_cap = Segments([])
             for segments in e_list:
@@ -330,7 +329,7 @@ class Processor:
             return report
 
         except Exception as e:
-            logger.error(f"Failed to build report", error=e)
+            logger.error(f"Failed to build report", error=e.with_traceback(e.__traceback__))
             raise
 
     def availability_specifier(
@@ -463,7 +462,7 @@ class Processor:
 
             # Erasure Root
             u = self.merklizer.wb_merklize(shards_keys)
-            logger.info(
+            logger.debug(
                 f"Erasure Root calculated - {u.hex()}",
                 wp_hash=package_hash.hex()[:16] + "...",
             )
@@ -494,7 +493,7 @@ class Processor:
                 exports_count=Uint[16](n),
             )
 
-            logger.info(
+            logger.debug(
                 f"Compiled availability specification",
                 erasure_root=u.hex(),
                 exports_root=e.hex(),
@@ -528,7 +527,7 @@ class Processor:
             report = self.build_report(bundle, core, sr_lookup, store)
 
             wr_hash = WorkReportHash(Hash.blake2b(report.encode()))
-            logger.info(
+            logger.debug(
                 f"Report compiled", wp_hash=wp_hash.hex(), wr_hash=wr_hash.hex()
             )
 

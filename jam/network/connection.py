@@ -167,131 +167,136 @@ class NodeConnection(QuicConnectionProtocol):
 
     def quic_event_received(self, event: QuicEvent) -> None:
         """function that handles all the quic events"""
+        try:
+            logger.debug("Received QUIC Event", name=type(event).__name__)
 
-        logger.debug("Received QUIC Event", name=type(event).__name__)
+            # Handle TLS Handshake
+            if isinstance(event, HandshakeCompleted):
+                self.is_initialized = True
+                # Verify Certificate & fetch Peer info
+                if event.alpn_protocol and not event.alpn_protocol.startswith(NODE_ALPN):
+                    logger.error(f"Unsupported ALPN protocol: {event.alpn_protocol}")
+                    return self._quic.close()
+                
+                if not self.ed25519_public: self.verify_cert()
+                # from .start import node 
+                # # Only if we are a non-initaiting neighbor, we need to do reverse up0 handshake 
+                # if node and pk in node.neighbors and not self.is_initiating:
+                #     self.has_pending_handshake = True
+                # else: 
+                #     logger.debug("Node is not a neighbor, no pending handshake required.")
+                #     self.has_pending_handshake = False
 
-        # Handle TLS Handshake
-        if isinstance(event, HandshakeCompleted):
-            self.is_initialized = True
-            # Verify Certificate & fetch Peer info
-            if event.alpn_protocol and not event.alpn_protocol.startswith(NODE_ALPN):
-                logger.error(f"Unsupported ALPN protocol: {event.alpn_protocol}")
-                return self._quic.close()
-            
-            if not self.ed25519_public: self.verify_cert()
-            # from .start import node 
-            # # Only if we are a non-initaiting neighbor, we need to do reverse up0 handshake 
-            # if node and pk in node.neighbors and not self.is_initiating:
-            #     self.has_pending_handshake = True
-            # else: 
-            #     logger.debug("Node is not a neighbor, no pending handshake required.")
-            #     self.has_pending_handshake = False
+            # Handle Stream Reset Event
+            elif isinstance(event, (StreamReset, StopSendingReceived)):
+                stream_id = event.stream_id
+                if stream_id in self.stream_buffer:
+                    del self.stream_buffer[stream_id]
+                logger.warning(f"🔗 Stream flushed", event_=type(event).__name__)
 
-        # Handle Stream Reset Event
-        elif isinstance(event, (StreamReset, StopSendingReceived)):
-            stream_id = event.stream_id
-            if stream_id in self.stream_buffer:
-                del self.stream_buffer[stream_id]
-            logger.warning(f"🔗 Stream flushed", event_=type(event).__name__)
+            # Handle Received Data Event
+            elif isinstance(event, StreamDataReceived):
+                from jam.network.base.protocol_map import ProtocolMap
 
-        # Handle Received Data Event
-        elif isinstance(event, StreamDataReceived):
-            from jam.network.base.protocol_map import ProtocolMap
+                if not self.ed25519_public:
+                    self.verify_cert()
 
-            if not self.ed25519_public:
-                self.verify_cert()
+                # Fetch peer & data
+                stream_id = event.stream_id
+                data = event.data
 
-            # Fetch peer & data
-            stream_id = event.stream_id
-            data = event.data
-
-            if not self.ed25519_public:
-                raise NetworkingError(Code.NO_PEER)
-
-
-            # -------------------- FIRST HANDLE THE BUFFER --------------------
-            # If we don't know stream, we receive prefix
-            # i.e. whenever client initiates connection or starts new protocol.
-            # Add prefix to the buffer
-            prefix = U8.decode(data)
-            logger.debug(
-                f"📥 Received data",
-                stream_id=stream_id,
-                prefix=prefix,
-                data_len=len(data)
-            )
-
-            from jam.network.start import node
-            assert node, "Node must be initialized before handling streams."
-
-            if self.up0_stream is None and self.ed25519_public in node.neighbors and prefix == PrefixType.UP0:
-                # Send UP0 Handshake 
-                from jam.network.protocols.up_0 import BlockAnnouncement 
-
-                BlockAnnouncement().handshake(stream_id, self)
-                self.up0_stream = stream_id
-                if len(data) == 1:
+                if not self.ed25519_public:
+                    logger.warning("Received data before TLS handshake completed, ignoring", stream_id=stream_id)
                     return
-                data = data[1:]
 
-            
-            if self.up0_stream == event.stream_id:
-                from jam.network.protocols.up_0 import BlockAnnouncement 
-                BlockAnnouncement().req_intercept(stream_id, self, data)
-                return
-            
-            if stream_id not in self.stream_buffer:
-                self.stream_buffer[stream_id] = b""
-                self.stream_prefix[stream_id] = prefix
-            self.stream_buffer[stream_id] += data
 
-            if not event.end_stream:
-                return           
-            try:
-                prefix = U8(self.stream_prefix[stream_id])
-
-                # Map the request to its corresponding CE protocol function
-                ce_protocol = ProtocolMap.get_protocol(prefix)()
-                logger.debug(f"CE PROTOCOL TRIGGERED", p=type(ce_protocol).__name__)
-                if (stream_id in self.waiter) and (self.waiter[stream_id] is not None):
-                    logger.debug(
-                        "Intercepting Response.",
-                        protocol=prefix,
-                        stream_id=stream_id,
-                    )
-                    res = ce_protocol.res_intercept(stream_id, self)
-
-                    # Wait for acknowledgment
-                    waiter = self.waiter[stream_id]
-                    del self.waiter[stream_id]
-                    waiter.set_result(res)
-
-                else:
-                    logger.debug(
-                        "Intercepting Request.",
-                        protocol=prefix,
-                        stream_id=stream_id,
-                    )
-                    ce_protocol.req_intercept(stream_id, self)
-
-                # Clear buffer
-                self.stream_buffer.pop(stream_id, None)
-
-            except Exception as e:
-                # Clear waiter
-                logger.exception(
-                    f"Error retrieving data from CE stream.",
-                    error=str(e),
+                # -------------------- FIRST HANDLE THE BUFFER --------------------
+                # If we don't know stream, we receive prefix
+                # i.e. whenever client initiates connection or starts new protocol.
+                # Add prefix to the buffer
+                prefix = U8.decode(data)
+                logger.debug(
+                    f"📥 Received data",
+                    stream_id=stream_id,
                     prefix=prefix,
+                    data_len=len(data)
                 )
 
-                if self.waiter[stream_id] is not None:
-                    waiter = self.waiter[stream_id]
-                    del self.waiter[stream_id]
-                    waiter.set_result("failed to retrieve data")
+                from jam.network.start import node
+                if not node:
+                    logger.warning("Node not initialized, ignoring stream data", stream_id=stream_id)
+                    return
 
-                # Clear buffer
-                self.stream_buffer.pop(stream_id, None)
+                if self.up0_stream is None and self.ed25519_public in node.neighbors and prefix == PrefixType.UP0:
+                    # Send UP0 Handshake 
+                    from jam.network.protocols.up_0 import BlockAnnouncement 
+
+                    BlockAnnouncement().handshake(stream_id, self)
+                    self.up0_stream = stream_id
+                    if len(data) == 1:
+                        return
+                    data = data[1:]
+
+                
+                if self.up0_stream == event.stream_id:
+                    from jam.network.protocols.up_0 import BlockAnnouncement 
+                    BlockAnnouncement().req_intercept(stream_id, self, data)
+                    return
+                
+                if stream_id not in self.stream_buffer:
+                    self.stream_buffer[stream_id] = b""
+                    self.stream_prefix[stream_id] = prefix
+                self.stream_buffer[stream_id] += data
+
+                if not event.end_stream:
+                    return           
+                try:
+                    prefix = U8(self.stream_prefix[stream_id])
+
+                    # Map the request to its corresponding CE protocol function
+                    ce_protocol = ProtocolMap.get_protocol(prefix)()
+                    logger.debug(f"CE PROTOCOL TRIGGERED", p=type(ce_protocol).__name__)
+                    if (stream_id in self.waiter) and (self.waiter[stream_id] is not None):
+                        logger.debug(
+                            "Intercepting Response.",
+                            protocol=prefix,
+                            stream_id=stream_id,
+                        )
+                        res = ce_protocol.res_intercept(stream_id, self)
+
+                        # Wait for acknowledgment
+                        waiter = self.waiter[stream_id]
+                        del self.waiter[stream_id]
+                        waiter.set_result(res)
+
+                    else:
+                        logger.debug(
+                            "Intercepting Request.",
+                            protocol=prefix,
+                            stream_id=stream_id,
+                        )
+                        ce_protocol.req_intercept(stream_id, self)
+
+                    # Clear buffer
+                    self.stream_buffer.pop(stream_id, None)
+
+                except Exception as e:
+                    # Clear waiter
+                    logger.exception(
+                        f"Error retrieving data from CE stream.",
+                        error=str(e),
+                        prefix=prefix,
+                    )
+
+                    if self.waiter.get(stream_id) is not None:
+                        waiter = self.waiter[stream_id]
+                        del self.waiter[stream_id]
+                        waiter.set_result("failed to retrieve data")
+
+                    # Clear buffer
+                    self.stream_buffer.pop(stream_id, None)
+        except Exception as e:
+            logger.error("Unhandled exception in quic_event_received", error=str(e), error_type=type(e).__name__, event_type=type(event).__name__)
 
     @property
     def validator_index(self):

@@ -76,7 +76,7 @@ class SafroleTicketDistribution(NetworkProtocol):
 
             stream_data = data.epoch_ticket_len.encode() + data.epoch_ticket.encode()
             tasks = []
-            logger.info(f"Transmitting ticket to proxy validators", ticket=data.epoch_ticket.ticket.signature.hex()[:16])
+            logger.info(f"Transmitting ticket ({data.epoch_ticket.ticket.signature.hex()[:6]+".."}) to proxy")
             for client in node.all_connected:
                 logger.debug("Transmitting ticket", client=str(client.port))
 

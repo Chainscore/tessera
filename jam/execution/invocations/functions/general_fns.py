@@ -57,6 +57,7 @@ from jam.utils.constants import (
     W_T,
     W_X,
     Y,
+    PARAMS_ENCODED
 )
 
 class GeneralFunctions(INVF):
@@ -91,41 +92,7 @@ class GeneralFunctions(INVF):
         w12 = registers[12]
         v = None
         if w10 == 0:
-            v = (
-                U64(B_I).encode()
-                + U64(B_L).encode()
-                + U64(B_S).encode()
-                + U16(C).encode()
-                + U32(D).encode()
-                + U32(E).encode()
-                + U64(G_A).encode()
-                + U64(G_I).encode()
-                + U64(G_R).encode()
-                + U64(G_T).encode()
-                + U16(H).encode()
-                + U16(I).encode()
-                + U16(J).encode()
-                + U16(K).encode()
-                + U32(L).encode()
-                + U16(N).encode()
-                + U16(O).encode()
-                + U16(P).encode()
-                + U16(Q).encode()
-                + U16(R).encode()
-                + U16(T).encode()
-                + U16(U).encode()
-                + U16(V).encode()
-                + U32(W_A).encode()
-                + U32(W_B).encode()
-                + U32(W_C).encode()
-                + U32(W_E).encode()
-                + U32(W_M).encode()
-                + U32(W_P).encode()
-                + U32(W_R).encode()
-                + U32(W_T).encode()
-                + U32(W_X).encode()
-                + U32(Y).encode()
-            )
+            v = PARAMS_ENCODED
         elif w10 == 1 and entropy is not None:
             v = entropy
         elif w10 == 2 and trace is not None:
