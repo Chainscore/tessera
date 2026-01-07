@@ -759,7 +759,7 @@ class Accumulation:
 
         xi[EPOCH_LENGTH - 1] = cls.mapping_fn(star_work_reports)
 
-        timeslot_difference = int(block.header.slot) - int(state.tau)
+        timeslot_difference = int(state.tau) - int(pre_state.tau)
 
         # Update Ready Queue, Omega
         omega = state.omega
