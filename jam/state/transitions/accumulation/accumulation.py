@@ -551,7 +551,7 @@ class Accumulation:
                 )
             key_hash = Hash.blake2b(blobs)
             lookup = LookupTable(hash=key_hash,length= len(blobs))
-            if len(service.lookup[lookup]) == 0:
+            if service.lookup[lookup] is not None and len(service.lookup[lookup]) == 0:
                 service.lookup[lookup] = Timestamps([timeslot])
                 service.preimages[key_hash] = blobs
 

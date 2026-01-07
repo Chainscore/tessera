@@ -1,5 +1,4 @@
 from copy import copy
-from typing import List
 from jam.types.protocol.ticket import TicketBody
 from .errors import SafroleError, SafroleErrorCode
 from jam.log_setup import logger
@@ -72,9 +71,14 @@ class Safrole:
             vrf_ids = []
             for i, t in enumerate(tickets):
                 Safrole.ensure_valid_attempt(t)
-
-                ring_proof = RingVRF[Bandersnatch].from_bytes(t.signature, skip_pedersen=False)
-                vrf_op = OpaqueHash(ring_proof.proof_to_hash(ring_proof.pedersen_proof.output_point)[:32])
+                try:
+                    ring_proof = RingVRF[Bandersnatch].from_bytes(bytes(t.signature), skip_pedersen=False)
+                    vrf_op = OpaqueHash(ring_proof.proof_to_hash(ring_proof.pedersen_proof.output_point)[:32])
+                except Exception as e:
+                    raise SafroleError(
+                        SafroleErrorCode.BAD_TICKET_PROOF,
+                        f"Ticket {t} VRF Proof is invalid",
+                    )
                 vrf_ids.append(vrf_op)
                 if i > 0:
                     Safrole.ensure_tickets_order(vrf_ids[i-1], vrf_op)
@@ -151,20 +155,28 @@ class Safrole:
 
             # 4. 4. Update ring root using gamma p
             # Note: Removing the if condition allows this trace 1758621879/00000348 to pass
-            if pre_state.gamma.p != state.gamma.p:
-                pubkeys = [bytes(k.bandersnatch) for k in gamma.p]
-                ring_root = RingVRF[Bandersnatch].construct_ring_root(pubkeys)
-                gamma.z = GammaZ(ring_root.to_bytes())
+            # if pre_state.gamma.p != pre_state.kappa:
+            # if pre_state.gamma.p != state.gamma.p:
+            pubkeys = [bytes(k.bandersnatch) for k in gamma.p]
+            ring_root = RingVRF[Bandersnatch].construct_ring_root(pubkeys)
+            gamma.z = GammaZ(ring_root.to_bytes())
 
         # Get ring root for ticket validation (may be from state if no epoch transition)
         ring_root = RingRoot.from_bytes(gamma.z)
 
         for ticket in tickets:
-            if not RingVRF[Bandersnatch].from_bytes(ticket.signature).verify(
-                X.TICKET.value + eta[2] + bytes([ticket.attempt]),
-                b"",
-                ring_root,
-            ):
+            try:
+                vrf = RingVRF[Bandersnatch].from_bytes(ticket.signature)
+                if not vrf.verify(
+                    X.TICKET.value + eta[2] + bytes([ticket.attempt]),
+                    b"",
+                    ring_root,
+                ):
+                    raise SafroleError(
+                        SafroleErrorCode.BAD_TICKET_PROOF,
+                        f"Ticket {ticket} VRF Proof is invalid",
+                    )
+            except Exception:
                 raise SafroleError(
                     SafroleErrorCode.BAD_TICKET_PROOF,
                     f"Ticket {ticket} VRF Proof is invalid",
