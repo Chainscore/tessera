@@ -268,6 +268,9 @@ class State:
             vrf_output = OpaqueHash(entropy_proof.proof_to_hash(entropy_proof.output_point)[:32])
             Safrole.transition(pre_state, self, block, vrf_output)
 
+            # Block Validation
+            block_valid = block.validate(self, pre_state)
+
             # Assurances
             _, newly_avail_wrs = Assurances.transition(pre_state, self, block)
             if len(newly_avail_wrs) > 0:
@@ -304,7 +307,7 @@ class State:
             # Statistics
             Statistics.transition(pre_state, self, block, newly_avail_wrs)
 
-            if block.validate(self, pre_state):
+            if block_valid:
                 # Set local chain head to produced block
                 # Save block in db, update ll create ghost block.
                 block.save(_set.main_db)

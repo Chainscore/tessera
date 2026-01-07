@@ -14,10 +14,10 @@ from jam.types import (
     StateRoot,
     OpaqueHash,
     TimeSlot,
-    ValidatorIndex,
+    ValidatorIndex, Entropy,
 )
 
-from .epoch_mark import EpochMark
+from .epoch_mark import EpochMark, EpochMarkData, ValidatorArray, MinValidatorData
 from .offenders_mark import OffendersMark
 from .tickets_mark import TicketsMark
 from dot_ring import IETF_VRF, Bandersnatch
@@ -177,10 +177,29 @@ class Header:
         # Marker checks
         is_new_epoch = (self.slot // EPOCH_LENGTH) > (pre_state.tau // EPOCH_LENGTH)
         # Epoch marker
-        if is_new_epoch and self.epoch_mark.unwrap() == Null:
-            raise BlockError(BlockErrorCode.EPOCH_MARKER_EMPTY)
-        elif not is_new_epoch and self.epoch_mark.unwrap() != Null:
-            raise BlockError(BlockErrorCode.EPOCH_MARKER_NOT_EMPTY)
+        if is_new_epoch:
+            valid_epoch_mark = EpochMark(
+                EpochMarkData(
+                    entropy=Entropy(pre_state.eta[0]),
+                    tickets_entropy=Entropy(pre_state.eta[1]),
+                    validators=ValidatorArray(
+                        [
+                            MinValidatorData(bandersnatch=val.bandersnatch, ed25519=val.ed25519)
+                            for val in state.gamma.p
+                        ]
+                    ),
+                )
+            )
+
+            if self.epoch_mark.unwrap() == Null:
+                raise BlockError(BlockErrorCode.EPOCH_MARKER_EMPTY)
+
+            if self.epoch_mark != valid_epoch_mark:
+                raise BlockError(BlockErrorCode.INVALID_EPOCH_MARK)
+
+        else:
+            if self.epoch_mark.unwrap() != Null:
+                raise BlockError(BlockErrorCode.EPOCH_MARKER_NOT_EMPTY)
 
         # If we're in ticket mode
         is_ticket_mode = len(state.gamma.a) >= EPOCH_LENGTH
