@@ -19,8 +19,11 @@ from jam.types import (
 
 from .epoch_mark import EpochMark, EpochMarkData, ValidatorArray, MinValidatorData
 from .offenders_mark import OffendersMark
-from .tickets_mark import TicketsMark
+from .tickets_mark import TicketsMark, TicketsMarkData
 from dot_ring import IETF_VRF, Bandersnatch
+
+from ...utils.util_fns import outside_in
+
 
 @structure
 class Header:
@@ -204,8 +207,14 @@ class Header:
         # If we're in ticket mode
         is_ticket_mode = len(state.gamma.a) >= EPOCH_LENGTH
         is_last_ticket_slot = pre_state.tau % EPOCH_LENGTH < TICKET_SUBMISSION_END and self.slot % EPOCH_LENGTH >= TICKET_SUBMISSION_END
-        if is_last_ticket_slot and is_ticket_mode and not is_new_epoch and self.tickets_mark.unwrap() == Null:
-            raise BlockError(BlockErrorCode.TICKETS_MARK_EMPTY)
+        valid_ticket_mark = TicketsMark(TicketsMarkData(outside_in(pre_state.gamma.a)))
+
+        if is_last_ticket_slot and is_ticket_mode and not is_new_epoch:
+            if self.tickets_mark.unwrap() == Null:
+                raise BlockError(BlockErrorCode.TICKETS_MARK_EMPTY)
+            elif self.tickets_mark != valid_ticket_mark:
+                raise BlockError(BlockErrorCode.INVALID_TICKET_MARK)
+
         if not (is_last_ticket_slot or is_ticket_mode or is_new_epoch) and self.tickets_mark.unwrap() != Null:
             raise BlockError(BlockErrorCode.TICKETS_MARK_NOT_EMPTY)
 
