@@ -37,15 +37,19 @@ class PsiA(InvocationProtocol):
             if isinstance(_t, DeferredTransfer):
                 bal += _t.amount
 
-        # TODO: Check this later
-        cloned_state.service_accounts[s].service.balance = (cloned_state.service_accounts[s].service.balance or Balance(0)) + bal
+        # Credit transfer amounts to receiver's balance
+        old_bal = cloned_state.service_accounts[s].service.balance or Balance(0)
+        cloned_state.service_accounts[s].service.balance = old_bal + bal
         self.partial_state = cloned_state
         self.timeslot = t
         self.service_id = s
         self.gas = g
         self.operandTuples = i
         self.entropy = entropy
-        self.context = AccumulationContext(x=self.initializer_fn(s, cloned_state, t, entropy), y=self.initializer_fn(s, cloned_state, t, entropy))
+        self.context = AccumulationContext(
+            x=self.initializer_fn(s, cloned_state.clone(True, reset_inherited=False), t, entropy),
+            y=self.initializer_fn(s, cloned_state.clone(True, reset_inherited=False), t, entropy)
+        )
         self.table = self.build_table(s, self.context.x.partial_state.service_accounts)
 
     def build_table(self, 
@@ -132,6 +136,7 @@ class PsiA(InvocationProtocol):
         if meta_n_code is None or len(meta_n_code[1]) > MAX_SERVICE_CODE_SIZE:
             return self.partial_state, DeferredTransfers([]), None, Gas(0), set()
         else:
+            print("\n", "=" * 25, f"Accumulating {int(self.service_id).to_bytes(4, 'little').hex()}", "=" * 25)
             gas, status, context = PsiM.execute(
                 meta_n_code[1],
                 5,
@@ -142,6 +147,7 @@ class PsiA(InvocationProtocol):
                 self.dispatch,
                 self.context,
             )
+            print("=" * 25, f"Accumulated | Gas {gas}", "=" * 25, "\n")
             return self.collapse(status, gas, context)
 
     @staticmethod
