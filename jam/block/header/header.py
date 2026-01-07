@@ -207,9 +207,9 @@ class Header:
         # If we're in ticket mode
         is_ticket_mode = len(state.gamma.a) >= EPOCH_LENGTH
         is_last_ticket_slot = pre_state.tau % EPOCH_LENGTH < TICKET_SUBMISSION_END and self.slot % EPOCH_LENGTH >= TICKET_SUBMISSION_END
-        valid_ticket_mark = TicketsMark(TicketsMarkData(outside_in(pre_state.gamma.a)))
 
         if is_last_ticket_slot and is_ticket_mode and not is_new_epoch:
+            valid_ticket_mark = TicketsMark(TicketsMarkData(outside_in(state.gamma.a)))
             if self.tickets_mark.unwrap() == Null:
                 raise BlockError(BlockErrorCode.TICKETS_MARK_EMPTY)
             elif self.tickets_mark != valid_ticket_mark:

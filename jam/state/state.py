@@ -236,11 +236,6 @@ class State:
                 assurances=len(block.extrinsic.assurances),
             )
 
-            # TODO: Validate block headers
-            # Epoch markers - make sure eta0_1 are the same as current etas
-            # Tickets mark - make sure ticket.py are valid, present in gamma_a and outside in sequenced
-            # Offenders mark - make sure offenders are present in psi.offenders
-
             if block.header.slot == 0:
                 logger.debug("Found genesis block, skipping", hh=header_hash.hex())
                 self._lock = False
