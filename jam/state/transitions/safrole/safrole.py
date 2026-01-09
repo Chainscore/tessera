@@ -1,4 +1,6 @@
 from copy import copy
+from typing import List
+
 from jam.types.protocol.ticket import TicketBody
 from .errors import SafroleError, SafroleErrorCode
 from jam.log_setup import logger
@@ -34,6 +36,11 @@ from dot_ring.vrf.ring.ring_root import RingRoot
 
 
 class Safrole:
+    @staticmethod
+    def compute_ring_root(keys: List[BandersnatchPublic]) -> GammaZ:
+        ring_root = RingVRF[Bandersnatch].construct_ring_root(keys)
+        return GammaZ(ring_root.to_bytes())
+
     @staticmethod
     def transition(pre_state: Sigma, state: Sigma, block: Block, entropy: OpaqueHash) -> Sigma:
         pre_tau = pre_state.tau
