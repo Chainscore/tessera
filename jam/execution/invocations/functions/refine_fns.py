@@ -247,7 +247,6 @@ class RefineFunctions(INVF):
         program, _ = Program.decode_from(context.m[n].program_code)
         skip_cntr = program.skip(i_dash)
 
-        print("Program decoded < INVOKE < ", type(program), skip_cntr)
         memory.write(o, g_dash.encode() + w_dash.encode())
         context.m[n].memory = u_dash
         if c == ExecutionStatus.HOST:

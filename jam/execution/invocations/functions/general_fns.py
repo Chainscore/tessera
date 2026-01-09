@@ -360,7 +360,6 @@ class GeneralFunctions(INVF):
             a[k] = Bytes(memory.read(vo, vz))
             if service_data.service.t > service_data.service.balance:
                 registers[7] = HostStatus.FULL.value
-                # print("Storing FULL val on r[7]", registers[7])
                 if pre_data is None:
                     del a[k]
                 else:
@@ -375,7 +374,6 @@ class GeneralFunctions(INVF):
             )
             raise PvmError(PANIC)
 
-        # print("Storing s_len val on r[7]", storage_len)
         registers[7] = storage_len
         return CONTINUE, gas, registers, memory, context
 
@@ -407,7 +405,6 @@ class GeneralFunctions(INVF):
             registers[7] = HostStatus.NONE.value
             return CONTINUE, gas, registers, memory, context
 
-        # print("TYPE OF SERVICE", target_service, type(target_service))
         acc: AccountData = accounts[target_service]
 
         v = (
@@ -431,7 +428,6 @@ class GeneralFunctions(INVF):
             raise PvmError(PANIC)
         
         registers[7] = len(v)
-        # print(f"INFO: {v[f:f+l].hex()}")
         memory.write(output_offset, v[f:f+l])
 
         return CONTINUE, gas, registers, memory, context

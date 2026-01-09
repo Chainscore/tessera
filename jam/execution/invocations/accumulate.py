@@ -136,7 +136,6 @@ class PsiA(InvocationProtocol):
         if meta_n_code is None or len(meta_n_code[1]) > MAX_SERVICE_CODE_SIZE:
             return self.partial_state, DeferredTransfers([]), None, Gas(0), set()
         else:
-            print("\n", "=" * 25, f"Accumulating {int(self.service_id).to_bytes(4, 'little').hex()}", "=" * 25)
             gas, status, context = PsiM.execute(
                 meta_n_code[1],
                 5,
@@ -147,7 +146,6 @@ class PsiA(InvocationProtocol):
                 self.dispatch,
                 self.context,
             )
-            print("=" * 25, f"Accumulated | Gas {gas}", "=" * 25, "\n")
             return self.collapse(status, gas, context)
 
     @staticmethod

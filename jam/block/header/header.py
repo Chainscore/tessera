@@ -138,7 +138,7 @@ class Header:
         full_val_set = state.kappa
 
         # Author check
-        if self.author_index > len(full_val_set):
+        if self.author_index >= len(full_val_set):
             raise BlockError(BlockErrorCode.INVALID_AUTHOR)
         author = full_val_set[self.author_index]
 

@@ -504,6 +504,11 @@ class Accumulation:
         if service_id in services:
             g = services[service_id]
 
+        for t in deferred_transfers:
+            if t.receiver == service_id:
+                g += t.gas
+                i.append(AccumulationInput(t))
+
         for w in work_reports:
             for r in w.digests:
                 if r.service_id == service_id:
@@ -521,10 +526,6 @@ class Accumulation:
                             )
                         )
                     )
-        for t in deferred_transfers:
-            if t.receiver == service_id:
-                g += t.gas
-                i.append(AccumulationInput(t))
 
         return PsiA(u=initial_state, t=timeslot, s=service_id, entropy=entropy, g=g, i=i).execute()
 
