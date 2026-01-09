@@ -46,6 +46,7 @@ dependencies = [
     "safe-pysha3>=1.0.5",
     "dot-ring>=0.1.4",
     "py-ark-vrf",
+    "gmpy2>=2.2.2",
 ]
 
 [tool.hatch.build.targets.wheel]

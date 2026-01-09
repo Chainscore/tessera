@@ -157,21 +157,13 @@ jobs:
           rustc --version
           cargo --version
 
-      - name: Install Python native deps
-        run: |
-          uv pip install gmpy2
-          python3 - <<'EOF'
-          import gmpy2
-          print("gmpy2 OK:", gmpy2.version())
-          EOF
-
       - name: Setup project
         run: |
           ./scripts/setup.sh
 
       - name: Install maturin for PyO3 builds
         run: |
-          uv add maturin
+          uv add maturin gmpy2
           echo "[INFO] Maturin installed for PyO3 Rust-Python projects"
 
       - name: Configure Cargo for low disk usage
