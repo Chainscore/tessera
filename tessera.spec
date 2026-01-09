@@ -1,4 +1,4 @@
-import os, sys, pathlib, glob, importlib, platform
+import os, sys, pathlib, glob, importlib, platform, site
 from PyInstaller.building.build_main import Analysis, PYZ, EXE, COLLECT
 from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules
 
@@ -47,6 +47,13 @@ print(f">> RocksDB library found and added: {rocksdb_path}")
 # bitarray - manual inclusion since PyInstaller has trouble finding it
 bitarray_venv_path = project_root / '.venv/lib/python3.12/site-packages/bitarray'
 essential_files = []
+
+# ------------------------------------------------------------------ #
+# Include py_ecc .dist-info so importlib.metadata.version() works
+py_ecc_site = pathlib.Path(site.getsitepackages()[0])
+for dist_info in py_ecc_site.glob('py_ecc-*.dist-info'):
+    print(f">> Adding py_ecc metadata: {dist_info}")
+    essential_files.append((str(dist_info), 'py_ecc-*.dist-info'))
 
 if bitarray_venv_path.exists():
     # Include the entire bitarray package
@@ -107,6 +114,7 @@ hidden = (
     + collect_submodules('rockstore')
     + collect_submodules('py_ark_vrf')
     + collect_submodules('bitarray')
+    + collect_submodules('py_ecc')
 )
 
 # Extremely aggressive exclusions to minimize binary size
