@@ -1,3 +1,4 @@
+from jam.block import OffendersMark
 from tsrkit_types.integers import U32
 
 from jam.state.transitions import Disputes
@@ -45,6 +46,7 @@ class TestProofOnlyTransitions:
         )
 
         block = create_test_block(disputes_extrinsic)
+        block.header.offenders_mark = OffendersMark.produce(disputes_extrinsic)
 
         initial_counts = get_state_counts(initial_state)
 
@@ -72,6 +74,7 @@ class TestProofOnlyTransitions:
         )
 
         block = create_test_block(disputes_extrinsic)
+        block.header.offenders_mark = OffendersMark.produce(disputes_extrinsic)
 
         initial_counts = get_state_counts(initial_state)
 

@@ -1,5 +1,7 @@
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+from jam.block import OffendersMark
 from tsrkit_types.integers import U32
 from tsrkit_types.bool import Bool
 
@@ -39,6 +41,7 @@ class TestDisputesValidationErrors:
         )
 
         block = create_test_block(disputes_extrinsic)
+        block.header.offenders_mark = OffendersMark.produce(disputes_extrinsic)
 
         # Mock signature verification to return False
         with pytest.raises(DisputesError) as exc_info:
@@ -73,6 +76,7 @@ class TestDisputesValidationErrors:
         )
 
         block = create_test_block(disputes_extrinsic)
+        block.header.offenders_mark = OffendersMark.produce(disputes_extrinsic)
 
         with pytest.raises(DisputesError) as exc_info:
             Disputes.transition(deepcopy(initial_state), initial_state, block)
@@ -97,6 +101,7 @@ class TestDisputesValidationErrors:
         )
 
         block = create_test_block(disputes_extrinsic)
+        block.header.offenders_mark = OffendersMark.produce(disputes_extrinsic)
 
         with pytest.raises(DisputesError) as exc_info:
             Disputes.transition(deepcopy(initial_state), initial_state, block)
@@ -121,6 +126,7 @@ class TestDisputesValidationErrors:
         )
 
         block = create_test_block(disputes_extrinsic)
+        block.header.offenders_mark = OffendersMark.produce(disputes_extrinsic)
 
         with pytest.raises(DisputesError) as exc_info:
             Disputes.transition(deepcopy(initial_state), initial_state, block)
@@ -144,6 +150,7 @@ class TestDisputesValidationErrors:
         )
 
         block = create_test_block(disputes_extrinsic)
+        block.header.offenders_mark = OffendersMark.produce(disputes_extrinsic)
 
         with pytest.raises(DisputesError) as exc_info:
             Disputes.transition(deepcopy(initial_state), initial_state, block)
@@ -180,6 +187,7 @@ class TestDisputesValidationErrors:
         )
 
         block = create_test_block(disputes_extrinsic)
+        block.header.offenders_mark = OffendersMark.produce(disputes_extrinsic)
 
         with pytest.raises(DisputesError) as exc_info:
             Disputes.transition(deepcopy(initial_state), initial_state, block)
@@ -217,6 +225,7 @@ class TestDisputesValidationErrors:
         )
 
         block = create_test_block(disputes_extrinsic)
+        block.header.offenders_mark = OffendersMark.produce(disputes_extrinsic)
 
         with pytest.raises(DisputesError) as exc_info:
             Disputes.transition(deepcopy(initial_state), initial_state, block)
