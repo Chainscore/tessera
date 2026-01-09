@@ -21,3 +21,4 @@
 [submodule "deps/rockstore"]
 	path = deps/rockstore
 	url = https://github.com/Chainscore/rockstore/
+	branch = feat/flush
