@@ -4,7 +4,7 @@ from tsrkit_types import Bytes, TypedVector, Dictionary
 
 from jam.log_setup import network_logger as logger
 from jam.network.connection import NodeConnection
-from jam.state.state import state
+
 from jam.types import HeaderHash
 
 if TYPE_CHECKING:
@@ -90,6 +90,7 @@ class StateRequest(NetworkProtocol):
     def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept & Process Work Package on Guarantor (server)"""
         from jam.settings import settings
+        from jam.state.state import state
 
         buffer = server.stream_buffer[stream_id]
 

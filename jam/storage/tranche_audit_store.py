@@ -30,6 +30,9 @@ class TrancheStore:
         self._tranche_store = {}
         self._lock = asyncio.Lock()
 
+    def clear(self):
+        self._tranche_store = {}
+
     # ---------------------- Get whole tranche store -------------
     async def get_store(self) -> Dict[Tranche, TrancheState]:
         """Return the entire tranche store safely."""

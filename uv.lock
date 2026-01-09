@@ -1802,7 +1802,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "tsrkit-types"
-version = "0.1.8"
+version = "1.0.1"
 source = { editable = "deps/tsrkit-types" }
 
 [package.optional-dependencies]

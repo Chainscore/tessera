@@ -13,7 +13,7 @@ from jam.utils.gather import gather_with_exceptions
 from jam.types.work.report import WorkReportHash
 from jam.utils.constants import EPOCH_LENGTH
 from jam.types.audit.audit_tranche import Tranche
-from jam.state.state import state
+
 
 logger = network_logger
 
@@ -249,6 +249,8 @@ class JudgmentPublication(NetworkProtocol):
 
         audit = Audit()
         utils = Utils()
+
+        from jam.state.state import state
 
         validator_index = settings.validator_index
         wr_hash = judgment.work_report_hash

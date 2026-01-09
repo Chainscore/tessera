@@ -87,19 +87,21 @@ class Settings:
             self._state_db = RockStore(data_path + "/state")
             self._data_path = data_path
 
-        if seed is not None:
-            self._seed = seed
-            self.seed = Bytes32(b"".join([U32(seed).encode()] * 8))
-            self.ed25519_private = Bytes32(Hash.blake2b(Bytes(b"jam_val_key_ed25519") + self.seed))
-            self.ed25519_public = Bytes32(
-                Ed25519PrivateKey.from_private_bytes(self.ed25519_private)
-                .public_key()
-                .public_bytes_raw()
-            )
-            self.bandersnatch_seed = Bytes32(Hash.blake2b(Bytes(b"jam_val_key_bandersnatch") + self.seed))
-            pub, ss = secret_from_seed(self.bandersnatch_seed)
-            self.bandersnatch_public = Bytes32(pub)
-            self.bandersnatch_private = Bytes32(ss)
+        if seed is None:
+            seed = 0
+
+        self._seed = seed
+        self.seed = Bytes32(b"".join([U32(seed).encode()] * 8))
+        self.ed25519_private = Bytes32(Hash.blake2b(Bytes(b"jam_val_key_ed25519") + self.seed))
+        self.ed25519_public = Bytes32(
+            Ed25519PrivateKey.from_private_bytes(self.ed25519_private)
+            .public_key()
+            .public_bytes_raw()
+        )
+        self.bandersnatch_seed = Bytes32(Hash.blake2b(Bytes(b"jam_val_key_bandersnatch") + self.seed))
+        pub, ss = secret_from_seed(self.bandersnatch_seed)
+        self.bandersnatch_public = Bytes32(pub)
+        self.bandersnatch_private = Bytes32(ss)
 
 
     def update(self, state: Optional["State"] = None):
