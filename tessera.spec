@@ -63,6 +63,9 @@ else:
 # tsrkit-pvm compiled extensions - discover dynamically from multiple locations
 binaries += collect_dynamic_libs('tsrkit_pvm')
 
+# gmpy2 compiled extension + shared libs
+binaries += collect_dynamic_libs('gmpy2')
+
 # Collect from build directory (standard build output)
 pvm_build_glob = project_root.glob('deps/tsrkit-pvm/build/**/*.so')
 for so_file in pvm_build_glob:
@@ -97,7 +100,7 @@ if dev_spec.exists():
 
 # ------------------------------------------------------------------ #
 hidden = (
-    ['jam']
+    ['jam', 'gmpy2']
     + collect_submodules('tsrkit_pvm')
     + collect_submodules('tsrkit_asm')
     + collect_submodules('tsrkit_types')
