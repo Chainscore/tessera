@@ -38,9 +38,10 @@ jobs:
       - name: 📥 Checkout code with submodules
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           submodules: 'recursive'  # Checkout all submodules recursively
+          submodules-depth: 1
 
       - name: � Verify submodules are present
         run: |
