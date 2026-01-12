@@ -5,7 +5,7 @@ from typing import List
 
 from tsrkit_types import TypedArray, Enum
 
-from jam.log_setup import network_logger as logger
+from jam.log_setup import network_logger as logger, TRACE_LEVEL
 from jam.network.base.error import NetworkingErrorCode
 from jam.network.connection import NodeConnection
 from jam.types import HeaderHash 
@@ -57,10 +57,10 @@ class BlockRequest(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE128
 
-    async def transmit(self, data: CE128Data, peers: List[NodeConnection]|None = None):
+    async def transmit(self, data: CE128Data, peers: List[NodeConnection]|None = None, node=None):
         """Transmit Block Request"""
-        from jam.network.start import node 
-        if not node: return
+        # from jam.network.start import node (removed)
+        if not node: return # We need the node to check connections, or maybe we can derive from peers if present? No, we need local node for all_connected fallback.
 
         stream_data = U32(len(data.encode())).encode() + data.encode()
         logger.debug("Transmitting block request to node", num=len(node.connection_ids), max_blocks=data.max_blocks)
@@ -101,7 +101,7 @@ class BlockRequest(NetworkProtocol):
                 # Emit BlockRequestSent event
                 emit_event(BlockRequestSent(event_id=U64(event_id)))
 
-                logger.debug(
+                logger.log(TRACE_LEVEL,
                     "Block request transmitted",
                     stream_id=stream_id,
                     header_hash=header_hash,
@@ -124,7 +124,11 @@ class BlockRequest(NetworkProtocol):
         """Process Block Request"""
         buffer = server.stream_buffer[stream_id][1:]
 
-        from jam.settings import settings
+        try:
+             settings = server.node.settings
+        except:
+             from jam.settings import settings
+
         from jam.block.block import Block
 
         # Get peer_id for telemetry
@@ -247,7 +251,7 @@ class BlockRequest(NetworkProtocol):
 
         buffer = client.stream_buffer[stream_id]
 
-        logger.debug("Block request ack received", stream_id=stream_id, buffer_size=len(buffer))
+        logger.log(TRACE_LEVEL, "Block request ack received", stream_id=stream_id, buffer_size=len(buffer))
 
         # try:
         b_len = U32.decode(buffer)

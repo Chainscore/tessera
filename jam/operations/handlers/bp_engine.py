@@ -30,15 +30,13 @@ class BlockProducer(NodeDispatcher):
     """
 
     @classmethod
-    async def run(cls, time_slot: int):
+    async def run(cls, time_slot: int, state, settings, node, finality_service):
         """
         Starts the block producer engine in asyncio loop.
         Assumes that the node is initialized and the latest synchronized state is stored in the db.
         """
-        from jam.network.start import node
-        from jam.settings import settings
         from jam.network.protocols.up_0 import BlockAnnouncement
-        from jam.state.state import state 
+        # removed inline imports for state, node, settings
 
         up0 = BlockAnnouncement()
 
@@ -46,7 +44,7 @@ class BlockProducer(NodeDispatcher):
             logger.debug("Network not initialized - skipping block production")
             return
 
-        latest = Finality.load_latest(settings.main_db)
+        latest = finality_service.load_latest()
         if not latest:
             logger.error("Latest not found, node is not configrued", ts=time_slot)
             return
@@ -91,12 +89,12 @@ class BlockProducer(NodeDispatcher):
         
         emit_event(Authoring(slot=U32(time_slot), parent_hash=Bytes32(latest.header.hash().encode())))
 
-        block = latest.produce(TimeSlot(time_slot), state, ticket)
+        block = latest.produce(TimeSlot(time_slot), state, settings, ticket)
 
         is_valid = state._force_transition(block)
 
         if is_valid:
-            logger.info(f"⛏ Produced block ({'T' if ticket else 'F'}) {block.header.hash().hex()[:8]+".."}|{time_slot}")
+            logger.info(f"⛏ Produced block ({'T' if ticket else 'F'}) {block.header.hash().hex()[:8]}..|{time_slot}")
             
             # Telemetry: Authored
             # Construct BlockOutline
@@ -116,6 +114,6 @@ class BlockProducer(NodeDispatcher):
             )
             emit_event(Authored(event_id=U64(0), block=outline))
             
-            create_safe_task(up0.transmit(BlockAnnouncement.block_to_announcement(block)), name="block_announce")
+            create_safe_task(up0.transmit(BlockAnnouncement.block_to_announcement(block, settings), node), name="block_announce")
         else:
             logger.info("😓 Failed to produce a valid block", slot=time_slot, block=block.to_json())

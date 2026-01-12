@@ -168,8 +168,9 @@ async def test_1_pjam():
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_5_tsr():
+async def test_6_tsr():
     CLIENTS = [
+        Client(Role.VAL, 40000 + 0),
         Client(Role.VAL, 40000 + 1),
         Client(Role.VAL, 40000 + 2),
         Client(Role.VAL, 40000 + 3),

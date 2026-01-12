@@ -61,10 +61,9 @@ class Block:
         return cls.decode(data)
 
     @classmethod
-    def load_w_ts(cls, ts: TimeSlot, db: RockStore) -> "Block" | List["Block"]:
-
-        from jam.block.block_view import viewer
-        final = viewer.final
+    def load_w_ts(cls, ts: TimeSlot, db: RockStore, block_view) -> "Block" | List["Block"]:
+        
+        final = block_view.final
 
         ts_key = cls.get_storage_key_slot(ts)
 
@@ -77,7 +76,7 @@ class Block:
 
         # otherwise load using block viewer
         else:
-            blocks = viewer.load_block_w_ts(ts, db)
+            blocks = block_view.load_block_w_ts(ts, db)
             if len(blocks) == 0:
                 raise ValueError("No block found with given slot!")
 
@@ -118,14 +117,14 @@ class Block:
         # Return the HeaderHash
         return HeaderHash(hh)
 
-    def validate(self, state, prestate) -> bool:
-        return self.header.validate(state, prestate) and self.extrinsic.validate(self.header)
+    def validate(self, state, prestate, settings) -> bool:
+        return self.header.validate(state, prestate, settings) and self.extrinsic.validate(self.header)
 
-    def produce(self, time_slot: TimeSlot, state, ticket: TicketBody | None = None) -> "Block":
+    def produce(self, time_slot: TimeSlot, state, settings, ticket: TicketBody | None = None) -> "Block":
         extrinsic = Extrinsic.from_collected(time_slot)
 
         # Produce a new header from previous header
-        header = self.header.produce(time_slot, extrinsic, ticket, state)
+        header = self.header.produce(time_slot, extrinsic, ticket, state, settings)
 
         block = Block(header=header, extrinsic=extrinsic)
 

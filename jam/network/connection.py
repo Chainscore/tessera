@@ -15,7 +15,7 @@ from aioquic.quic.events import (
     StopSendingReceived,
 )
 from tsrkit_types import U8
-from jam.log_setup import network_logger as logger
+from jam.log_setup import network_logger as logger, TRACE_LEVEL
 from jam.network.base.certificate import verify_certificate, generate_san
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import PrefixType
@@ -58,9 +58,11 @@ class NodeConnection(QuicConnectionProtocol):
         quic: QuicConnection, 
         is_initiating: bool,
         port: int,
+        node = None, 
         stream_handler: QuicStreamHandler|None = None
     ) -> None:
         super().__init__(quic=quic, stream_handler=stream_handler)
+        self.node = node
         self._id = _id
         self.waiter = {}
         self.stream_buffer = {}
@@ -113,7 +115,7 @@ class NodeConnection(QuicConnectionProtocol):
             if stream_id == self.up0_stream or (self.up0_stream is None and stream_id == 0):
                 stream_id += 4
 
-        logger.debug(
+        logger.log(TRACE_LEVEL,
             f"📤 Sending message of size {len(message)} bytes",
             stream_id=stream_id,
         )
@@ -128,7 +130,7 @@ class NodeConnection(QuicConnectionProtocol):
         if self._close_pending:
             raise ConnectionError("Connection is closing.")
 
-        logger.debug(f"📤 Sending message of size {len(message)} bytes.", stream_id=stream_id)
+        logger.log(TRACE_LEVEL, f"📤 Sending message of size {len(message)} bytes.", stream_id=stream_id)
 
         self._quic.send_stream_data(stream_id, message, end_stream=True)
         self.transmit()
@@ -138,7 +140,7 @@ class NodeConnection(QuicConnectionProtocol):
         if self._close_pending:
             raise ConnectionError("Connection is closing.")
 
-        logger.debug(f"📤 Sending message of size {len(message)} bytes.", stream_id=stream_id)
+        logger.log(TRACE_LEVEL, f"📤 Sending message of size {len(message)} bytes.", stream_id=stream_id)
         self._quic.send_stream_data(stream_id, message, end_stream=True)
 
         try:
@@ -146,7 +148,7 @@ class NodeConnection(QuicConnectionProtocol):
             self.waiter[stream_id] = waiter
             self.transmit()
 
-            logger.debug("Message transmitted, waiting for response", stream_id=stream_id)
+            logger.log(TRACE_LEVEL, "Message transmitted, waiting for response", stream_id=stream_id)
             return await asyncio.shield(waiter)
 
         except Exception as e:
@@ -168,7 +170,7 @@ class NodeConnection(QuicConnectionProtocol):
     def quic_event_received(self, event: QuicEvent) -> None:
         """function that handles all the quic events"""
         try:
-            logger.debug("Received QUIC Event", name=type(event).__name__)
+            logger.log(TRACE_LEVEL, "Received QUIC Event", name=type(event).__name__)
 
             # Handle TLS Handshake
             if isinstance(event, HandshakeCompleted):
@@ -215,14 +217,14 @@ class NodeConnection(QuicConnectionProtocol):
                 # i.e. whenever client initiates connection or starts new protocol.
                 # Add prefix to the buffer
                 prefix = U8.decode(data)
-                logger.debug(
+                logger.log(TRACE_LEVEL,
                     f"📥 Received data",
                     stream_id=stream_id,
                     prefix=prefix,
                     data_len=len(data)
                 )
 
-                from jam.network.start import node
+                node = self.node
                 if not node:
                     logger.warning("Node not initialized, ignoring stream data", stream_id=stream_id)
                     return
@@ -255,9 +257,9 @@ class NodeConnection(QuicConnectionProtocol):
 
                     # Map the request to its corresponding CE protocol function
                     ce_protocol = ProtocolMap.get_protocol(prefix)()
-                    logger.debug(f"CE PROTOCOL TRIGGERED", p=type(ce_protocol).__name__)
+                    logger.log(TRACE_LEVEL, f"CE PROTOCOL TRIGGERED", p=type(ce_protocol).__name__)
                     if (stream_id in self.waiter) and (self.waiter[stream_id] is not None):
-                        logger.debug(
+                        logger.log(TRACE_LEVEL,
                             "Intercepting Response.",
                             protocol=prefix,
                             stream_id=stream_id,
@@ -270,7 +272,7 @@ class NodeConnection(QuicConnectionProtocol):
                         waiter.set_result(res)
 
                     else:
-                        logger.debug(
+                        logger.log(TRACE_LEVEL,
                             "Intercepting Request.",
                             protocol=prefix,
                             stream_id=stream_id,
@@ -300,7 +302,7 @@ class NodeConnection(QuicConnectionProtocol):
 
     @property
     def validator_index(self):
-        from jam.state.state import state
+        state = self.node.state
         for i, val in enumerate(state.kappa):
             if val.ed25519 == self.ed25519_public:
                 return ValidatorIndex(i)
@@ -309,7 +311,7 @@ class NodeConnection(QuicConnectionProtocol):
 
     @property
     def val(self):
-        from jam.state.state import state
+        state = self.node.state
         validator_index = self.validator_index
         return state.kappa[validator_index]
 

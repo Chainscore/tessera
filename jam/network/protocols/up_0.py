@@ -5,7 +5,7 @@ from tsrkit_types import Uint, U32, U8, U64, Bool
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
-from jam.log_setup import network_logger as logger
+from jam.log_setup import network_logger as logger, TRACE_LEVEL
 
 from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
@@ -82,11 +82,16 @@ class BlockAnnouncement(NetworkProtocol):
 
     @staticmethod
     def handshake(stream_id: int, conn: NodeConnection, prefix = False):
-        from jam.settings import settings
+        try:
+            settings = conn.node.settings
+            db = settings.main_db
+        except:
+             from jam.settings import settings
+             db = settings.main_db
+
         from jam.finality.finality import Finality
         from jam.types.protocol.crypto import Hash
 
-        db = settings.main_db
         finality = Finality()
         
         data = b""
@@ -121,13 +126,14 @@ class BlockAnnouncement(NetworkProtocol):
         conn.stream_and_keep_open(data, stream_id)
     
     @classmethod
-    def block_to_announcement(cls, block: Block) -> Announcement:
+    def block_to_announcement(cls, block: Block, settings=None) -> Announcement:
         """
         Convert a Block to an Announcement.
         """
         from jam.finality.finality import Finality
         from jam.types.protocol.crypto import Hash
-        from jam.settings import settings
+        if not settings:
+             from jam.settings import settings
 
         finality = Finality()
         final_block = finality.load_final(settings.main_db)
@@ -142,9 +148,9 @@ class BlockAnnouncement(NetworkProtocol):
         return Announcement(header=block.header, final=final)
 
 
-    async def transmit(self, announcement: Announcement):
+    async def transmit(self, announcement: Announcement, node=None):
         """Announce Block to Peers (servers)"""
-        from jam.network.start import node
+        # from jam.network.start import node (removed)
         if not node:
             logger.error("Node not found to transmit")
             return
@@ -182,7 +188,7 @@ class BlockAnnouncement(NetworkProtocol):
 
     def req_intercept(self, stream_id: int, conn: NodeConnection, data: bytes):
         """Intercepting & Process new blocks from peers."""
-        logger.debug("Intercepting UP0 stream", len=len(data), stream_id=stream_id)
+        logger.log(TRACE_LEVEL, "Intercepting UP0 stream", len=len(data), stream_id=stream_id)
 
         # conn = node._protocols[peer.metadata.port]
         # if node.is_builder and not server.peer_handshake:
@@ -221,7 +227,7 @@ class BlockAnnouncement(NetworkProtocol):
                 conn.up0_stream = stream_id
 
             # Start synchornization
-            create_safe_task(self.synchronise(h), name="up0_sync")
+            create_safe_task(self.synchronise(h, node=conn.node), name="up0_sync")
 
         # Handle announcement
         else:
@@ -242,7 +248,7 @@ class BlockAnnouncement(NetworkProtocol):
             if hh not in self._processed_headers:
                 self._processed_headers.add(hh)
                 # Process goes here
-                create_safe_task(self._process_header(anc=anc, node=conn), name="up0_process_header")
+                create_safe_task(self._process_header(anc=anc, node=conn, local_node=conn.node), name="up0_process_header")
             logger.debug(
                 "Block announcement 📣 processed successfully", stream_id=stream_id,
                 block_slot=int(anc.final.time_slot),
@@ -253,8 +259,12 @@ class BlockAnnouncement(NetworkProtocol):
     def res_intercept(self, stream_id: int, client):
         raise NotImplementedError("Client Intercept not available for UP protocols")
 
-    async def _process_header(self, anc: Announcement, node: NodeConnection|None = None):
-        from jam.state.state import state
+    async def _process_header(self, anc: Announcement, node: NodeConnection|None = None, local_node=None):
+        try:
+            state = local_node.state
+        except:
+            from jam.state.state import state
+
         header = anc.header
 
         logger.debug("Fetching block to import", slot=header.slot)
@@ -265,22 +275,26 @@ class BlockAnnouncement(NetworkProtocol):
                 dir=Direction.DesInc,
                 max_blocks=U32(1),
             ),
-            peers=[node] if node else None
+            peers=[node] if node else None,
+            node=local_node
         )
         if not blocks or len(blocks) == 0 or blocks[0] is None or len(blocks[0]) == 0 or blocks[0][0] is None:
             if node is None:
                 logger.error("No blocks received for header", header=header.hash().hex()[:16] + "...")
                 return None
-            return await self._process_header(anc, None)
+            return await self._process_header(anc, None, local_node)
 
         _valid = state._force_transition(blocks[0][0])
         if _valid:
-            create_safe_task(self.transmit(anc), name="up0_transmit")
+            create_safe_task(self.transmit(anc, local_node), name="up0_transmit")
             create_safe_task(subscribe_sync_status("Completed"), name="sync_status")
 
-    @classmethod
-    async def synchronise(cls, h: Handshake):
-        from jam.state.state import state
+    async def synchronise(self, h: Handshake, node=None):
+        try:
+            state = node.state
+        except:
+             from jam.state.state import state
+
         create_safe_task(subscribe_sync_status( "InProgress"), name="sync_status")
 
         # To know how many blocks to fetch
@@ -296,7 +310,7 @@ class BlockAnnouncement(NetworkProtocol):
         )
 
         logger.debug("Requesting Blocks to Sync", num=data_req.max_blocks)
-        blocks_to_import = (await BlockRequest().transmit(data_req))[0]
+        blocks_to_import = (await BlockRequest().transmit(data_req, node=node))[0]
         logger.debug(f"Received {len(blocks_to_import)} blocks. Importing...")
 
         for block in reversed(blocks_to_import):

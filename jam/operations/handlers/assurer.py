@@ -29,16 +29,14 @@ class Assurer:
         self._collected[core_index] = True
         logger.debug("Recorded shard for core", core_index=core_index)
 
-    async def run(self, time_slot: int):
-        from jam.settings import settings
-        settings.update()
+    async def run(self, time_slot: int, state, settings):
+        settings.update(state)
         pref = Bytes("jam_available", "utf-8")
 
         from jam.network.protocols.ce_141 import CE141Data, AssuranceDistribution
         from jam.finality.finality import Finality
         from jam.network.protocols.ce_141 import Assurance
-        from jam.state.state import state
-
+        
         from jam.block.extrinsics.assurances import AvailBitField
         from jam.types.protocol.crypto import Ed25519Signature, HeaderHash, Hash
 

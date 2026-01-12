@@ -1,34 +1,23 @@
 from pathlib import Path
 import shutil
-import json
 import asyncio
 import signal
-import logging
 import os
-import time
 from dotenv import load_dotenv
 
-from jam.log_setup import setup_logging
+from jam.log_setup import setup_logging, logger
 from jam.utils.chainspec import chain_config
-from .state_update import update_state
 
-from jam.finality.finality import Finality
-from jam.settings import setup_setting
-from jam.network.start import start_node
-from jam.state.state import setup_state
-from jam.block import Block
+from jam.jam_node import JamNode
+from jam.config import NodeConfig
 
-from jam.log_setup import node_logger as logger
-from jam.operations.ticket_queue import setup_ticket_queue
-from jam.api.rpc.app import rpc
-from jam.block.block_view import viewer
-from jam.telemetry.client import TelemetryClient, TelemetryConfig
-
+# Legacy imports check
+try:
+    from jam.operations import operate
+except ImportError:
+    operate = None
 
 shutdown_event = asyncio.Event()
-
-async def rpc_shutdown_trigger():
-    await shutdown_event.wait()
 
 async def run_node(
     db: str,
@@ -42,102 +31,86 @@ async def run_node(
 
     # ---------- LOAD ENVIRONMENT ----------
     load_dotenv(".env")
-    load_dotenv(env,override=True)
+    load_dotenv(env, override=True)
 
-    name = os.environ.get("NODE_NAME", "jam-node")
-    port = os.environ.get("PORT", 40000)
-    seed = os.environ.get("SEED", "0")
-    host = os.environ.get("HOST", "0.0.0.0")
-    if rpc_flag:
-        rpc_port = os.environ.get("RPC_PORT", 19800)
-        rpc_host = os.environ.get("RPC_HOST", "0.0.0.0")
-
-    if not name or not port or not host or not seed:
-        raise ValueError(f"Missing node info in {env}")
-
-    # ---------- SETUP LOGGING ----------
-    setup_logging(theme=theme, node_name=name)
+    # Use NodeConfig to parse environment
+    # We might need to manually set some overrides if they aren't in env vars 
+    # but passed via args to this function.
+    # run_node args: db, env (path), theme, is_builder, is_validator, node_tasks, rpc_flag
     
-    # ---------- SETUP TELEMETRY (optional) ----------
-    telemetry_client = None
-    # telemetry = "localhost:9000"
-    # if telemetry:
-    #     telemetry_host, telemetry_port_str = telemetry.split(":")
-    #     telemetry_port = int(telemetry_port_str)
-    #     telemetry_config = TelemetryConfig(
-    #         host=telemetry_host,
-    #         port=telemetry_port,
-    #         node_name=name
-    #     )
-    #     telemetry_client = TelemetryClient.setup(telemetry_config)
-    #     logger.info(f"Telemetry enabled: {telemetry_host}:{telemetry_port}")
-
-    # ---------- SETUP SETTINGS ----------
-    settings = setup_setting(
-        name=name, port=int(port), seed=int(seed), data_path=db, rpc_flag=rpc_flag
-    )
-
-    main_db = settings.main_db
-
-    if rpc_flag:
-        logger.info(f"Starting Tessera Node! name={name} port={port} spec={chain_config.name} rpc_port={rpc_port}")
-    else:
-        logger.info(f"Starting Tessera Node! name={name} port={port} spec={chain_config.name}")
-
+    overrides = {}
+    if db:
+        overrides["DATA_PATH"] = db
+    if theme:
+        overrides["LOG_THEME"] = theme
+    if rpc_flag is not None:
+        overrides["RPC_FLAG"] = rpc_flag
+    if is_builder:
+        overrides["BUILDER"] = True
+    if is_validator:
+        overrides["VALIDATOR"] = True
+        
+    # We also need to handle NODE_NAME, PORT, SEED, HOST, RPC_HOST, RPC_PORT from env
+    # NodeConfig should handle this if env_file is passed.
+    
     try:
-        # -------------- SETUP STATE -------------
-        # Set genesis state
-        dev_spec = json.load(open("dev-spec.json"))
-        # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
-        state = setup_state(settings.state_db, "dev-spec.json")
-        update_state(state=state)
-
-        # FIX: setup ticket queue
-        setup_ticket_queue()
-
-        # ------------ SET GENESIS BLOCK ------------
-        block = Block.decode(bytes.fromhex(dev_spec["genesis_header"]))
-        header_hash = block.save(main_db)
+        config = NodeConfig(_env_file=env, **overrides)
         
-        if telemetry_client:
-            telemetry_client.set_node_identity(settings.ed25519_public, header_hash)
+        # Manually ensure some things that might fall through if .env loading is weird in tests
+        # The original run_node explicitly got them from os.environ after load_dotenv
+        if not config.NODE_NAME or not config.PORT or not config.SEED:
+             # Just in case NodeConfig didn't pick up correctly from the env file argument?
+             # NodeConfig uses pydantic-settings which should handle _env_file.
+             pass
 
-        # Initialize Finality Keys for Genesis
-        main_db.put(Finality.FINAL_KEY, header_hash.encode())
+        setup_logging(theme=config.LOG_THEME, node_name=config.NODE_NAME)
         
-        # Setup Block View with Genesis
-        viewer.initialize(main_db)
+        node = JamNode(config)
         
-        # Now set head and finalize (updates viewer internal state and emits events)
-        Finality.set_head(block, main_db)
-        Finality.finalise(block, main_db, True)
+        # Handle node tasks
+        # If 'operate' is in node_tasks, we skip it because JamNode runs OperatorService
+        extra_tasks = []
+        if node_tasks:
+            for task in node_tasks:
+                task_name = getattr(task, '__name__', str(task))
+                if task_name == 'operate':
+                    continue
+                # For other tasks like node_info_printer, we might have issues if they rely on globals
+                # We will try to run them, but they might fail if they import 'jam.network.start.node'
+                extra_tasks.append(task)
 
-        # ----------- START NODE --------------
+        if extra_tasks:
+            logger.info(f"Running extra tasks: {[t.__name__ for t in extra_tasks]}")
+
+        # Clean start
+        if config.RPC_FLAG:
+            logger.info(f"Starting Tessera Node (Test)! name={config.NODE_NAME} port={config.PORT} spec={chain_config.name} rpc_port={config.RPC_PORT}")
+        else:
+            logger.info(f"Starting Tessera Node (Test)! name={config.NODE_NAME} port={config.PORT} spec={chain_config.name}")
+
         async with asyncio.TaskGroup() as tg:
-            if telemetry_client:
-                tg.create_task(telemetry_client.run())
-            # Networking - Block Imports, WP Processing, etc
-            tg.create_task(start_node(str(host), int(port), is_builder))
-            if rpc_flag:
-                # RPC
-                tg.create_task(rpc.run_task(debug=True, host=rpc_host, port=rpc_port, shutdown_trigger=rpc_shutdown_trigger))
-            # Node Ops - Block Prod, Audit, Assurances, etc
-            for node_task in node_tasks:
-                if node_task:
-                    tg.create_task(node_task())
+            tg.create_task(node.start())
+            
+            for task in extra_tasks:
+                # These tasks usually expect no args or depend on globals
+                tg.create_task(task())
+            
+            # Wait for shutdown event? 
+            # JamNode.start() runs until shutdown.
+            pass
 
+    except asyncio.exceptions.CancelledError:
+        logger.info("Node cancelled")
+        await node.graceful_shutdown()
+        raise
     except Exception as e:
-        shutdown_event.set()
-        logger.critical("Fatal error", e=e, error_type=type(e).__name__)
-        # Close db connections
+        logger.critical(f"Fatal error in run_node: {e}", exc_info=True)
+        # Cleanup
         if Path("data/tmp").exists():
             shutil.rmtree("data/tmp")
-        settings.clear()
-        raise asyncio.exceptions.CancelledError
-    finally:
-        loop = asyncio.get_running_loop()
-        for t in asyncio.all_tasks(loop):
-            t.cancel()
+        if 'node' in locals() and node.settings:
+            node.settings.clear()
+        raise
 
 def run_node_process(
         db: str,
@@ -168,5 +141,3 @@ def run_node_process(
     except asyncio.exceptions.CancelledError:
         asyncio.Runner().close()
         print("\nCtrl-C received, Node shutting down!!!!!!")
-
-

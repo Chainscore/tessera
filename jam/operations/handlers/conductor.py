@@ -14,14 +14,13 @@ from jam.network.protocols.ce_131 import SafroleTicketProxyDistribution, CE131Da
 class Conductor(NodeDispatcher):
     
     @classmethod 
-    async def run(cls, time_slot: TimeSlot, finality_time_slot: TimeSlot):
+    async def run(cls, time_slot: TimeSlot, finality_time_slot: TimeSlot, state, node):
         try:
-            from jam.network.start import node
+            # from jam.network.start import node # Removed
             CE131 = SafroleTicketProxyDistribution()
             tasks = []
             # generating & transmitting all the tickets allowed per validator
             for i in range(TICKET_ENTRIES_PER_VALIDATOR):
-                from jam.state.state import state
                 ticket_envelope = cls.generate_ticket(state, i)
                 epoch_index = U32(finality_time_slot // EPOCH_LENGTH)
 
@@ -31,7 +30,7 @@ class Conductor(NodeDispatcher):
 
                     data = CE131Data(epoch_ticket_len=epoch_ticket_len, epoch_ticket=epoch_ticket)
 
-                    task = CE131.transmit(data)
+                    task = CE131.transmit(data, node, state)
                     tasks.append(task)
                 else:
                     raise ValueError("Ticket generation failed")

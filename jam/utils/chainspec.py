@@ -67,7 +67,7 @@ class JamConfig:
             max_block_gas=20000000,
             max_refine_gas=1000000000,
             audit_report_assign=2,
-            lookup_anchor_max_age=24
+            lookup_anchor_max_age=24,
         )
 
     @classmethod
@@ -84,7 +84,7 @@ class JamConfig:
             contest_duration=30,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
-            rotation_period=None,  # TODO
+            rotation_period=6,
             erasure_coding_original_shards=8,
             erasure_coding_recovery_shards=16,
             recovery_threshold=8,
@@ -92,7 +92,8 @@ class JamConfig:
             num_ec_pieces_per_segment=513,
             max_block_gas=20000000,
             max_refine_gas=1000000000,
-            lookup_anchor_max_age=14400
+            audit_report_assign=4,
+            lookup_anchor_max_age=14400,
         )
 
     @classmethod
@@ -109,7 +110,7 @@ class JamConfig:
             contest_duration=50,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
-            rotation_period=None,  # TODO
+            rotation_period=8,
             erasure_coding_original_shards=16,
             erasure_coding_recovery_shards=32,
             recovery_threshold=16,
@@ -117,7 +118,8 @@ class JamConfig:
             num_ec_pieces_per_segment=342,
             max_block_gas=20000000,
             max_refine_gas=1000000000,
-            lookup_anchor_max_age=14400
+            audit_report_assign=5,
+            lookup_anchor_max_age=14400,
         )
 
     @classmethod
@@ -134,7 +136,7 @@ class JamConfig:
             contest_duration=100,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
-            rotation_period=None,  # TODO
+            rotation_period=10,
             erasure_coding_original_shards=32,
             erasure_coding_recovery_shards=64,
             recovery_threshold=32,
@@ -142,7 +144,8 @@ class JamConfig:
             num_ec_pieces_per_segment=171,
             max_block_gas=20000000,
             max_refine_gas=1000000000,
-            lookup_anchor_max_age=14400
+            audit_report_assign=6,
+            lookup_anchor_max_age=14400,
         )
 
     @classmethod
@@ -159,7 +162,7 @@ class JamConfig:
             contest_duration=200,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
-            rotation_period=None,  # TODO
+            rotation_period=10,
             erasure_coding_original_shards=64,
             erasure_coding_recovery_shards=128,
             recovery_threshold=64,
@@ -167,7 +170,8 @@ class JamConfig:
             num_ec_pieces_per_segment=57,
             max_block_gas=20000000,
             max_refine_gas=1000000000,
-            lookup_anchor_max_age=14400
+            audit_report_assign=8,
+            lookup_anchor_max_age=14400,
         )
 
     @classmethod
@@ -184,7 +188,7 @@ class JamConfig:
             contest_duration=250,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=16,
-            rotation_period=None,  # TODO
+            rotation_period=10,
             erasure_coding_original_shards=128,
             erasure_coding_recovery_shards=256,
             recovery_threshold=128,
@@ -192,6 +196,7 @@ class JamConfig:
             num_ec_pieces_per_segment=18,
             max_block_gas=20000000,
             max_refine_gas=1000000000,
+            audit_report_assign=10,
             lookup_anchor_max_age=14400
         )
 
@@ -209,7 +214,7 @@ class JamConfig:
             contest_duration=500,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=16,
-            rotation_period=None,  # TODO
+            rotation_period=10,
             erasure_coding_original_shards=205,
             erasure_coding_recovery_shards=371,
             recovery_threshold=205,
@@ -217,6 +222,7 @@ class JamConfig:
             num_ec_pieces_per_segment=9,
             max_block_gas=20000000,
             max_refine_gas=1000000000,
+            audit_report_assign=10,
             lookup_anchor_max_age=14400
         )
 
@@ -270,12 +276,14 @@ DEFAULT_CHAIN = "tiny"
 # Internal cache for singleton-style lazy initialization
 _chain_config_instance: Optional[JamConfig] = None
 
+
 def get_chain_config() -> JamConfig:
     global _chain_config_instance
     chain = os.environ.get("JAM_CHAIN_SPEC", DEFAULT_CHAIN)
     if _chain_config_instance is None or _chain_config_instance.name != chain:
         _chain_config_instance = JamConfig.from_chain(chain)
     return _chain_config_instance
+
 
 # ✅ chain_config acts like a JamConfig but loads lazily at runtime
 class _ChainConfigProxy:
@@ -284,6 +292,7 @@ class _ChainConfigProxy:
 
     def __repr__(self):
         return repr(get_chain_config())
+
 
 # ✅ Exported name, compatible with existing imports
 chain_config = _ChainConfigProxy()

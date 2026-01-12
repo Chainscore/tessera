@@ -181,24 +181,43 @@ def main():
         return
     
     # Import main function
-    from jam.__main__ import main as node_main
+    from jam.jam_node import JamNode
+    from jam.config import NodeConfig
     
     # Run the node
     try:
-        asyncio.run(
-            node_main(
-                args.db,
-                args.env, 
-                args.theme,
-                False,
-                True,
-                args.no_rpc
-            )
-        )
+        # Create config with overrides from CLI args
+        overrides = {}
+        
+        # Map CLI args to Config fields
+        if args.db:
+            overrides["DATA_PATH"] = args.db
+        if args.theme:
+            overrides["LOG_THEME"] = args.theme
+        if hasattr(args, 'telemetry') and args.telemetry:
+            overrides["TELEMETRY"] = args.telemetry
+            
+        # Boolean flags
+        overrides["RPC_FLAG"] = args.no_rpc  # args.no_rpc is True by default, False if --no-rpc passed
+        
+        if args.builder:
+            overrides["BUILDER"] = True
+        if args.validator:
+            overrides["VALIDATOR"] = True
+            
+        # Initialize config (loads from env file + overrides)
+        config = NodeConfig(_env_file=args.env, **overrides)
+        
+        # Initialize and run node
+        node = JamNode(config)
+        asyncio.run(node.start())
+
     except KeyboardInterrupt:
         print("\n🛑 Tessera node stopped by user")
         sys.exit(0)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"❌ Fatal error: {e}")
         sys.exit(1)
 

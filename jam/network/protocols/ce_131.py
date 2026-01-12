@@ -48,10 +48,10 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE131
 
-    async def transmit(self, data: CE131Data):
+    async def transmit(self, data: CE131Data, node, state):
         """Transmit Safrole ticket from Validator to Proxy validator"""
 
-        from jam.network.start import node
+        # from jam.network.start import node
         if not node: return
 
         stream_data = data.epoch_ticket_len.encode() + data.epoch_ticket.encode()
@@ -63,7 +63,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
         proxy_validator_index = Uint.from_bytes(vrf[-4:], 'big') % VALIDATOR_COUNT
 
         # select validator from next epochs validator list using index
-        from jam.state.state import state
+        # from jam.state.state import state
         proxy_validator = state.gamma.p[proxy_validator_index]
 
         logger.info(f"Transmitting ticket ({signature.hex()[:6]}..) to proxy")
@@ -122,7 +122,11 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
                 raise NetworkingError(Code.INVALID_DATA)
 
             # finality check using epoch index
-            from jam.settings import settings
+            try:
+                settings = server.node.settings
+            except:
+                from jam.settings import settings
+
             main_db = settings.main_db
             finality_block = Finality.load_final(main_db)
             finality_time_slot = finality_block.header.slot
@@ -140,7 +144,8 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
             vrf = ring_proof.proof_to_hash(ring_proof.pedersen_proof.output_point)[:32]
             proxy_validator_index = Uint.from_bytes(vrf[-4:], 'big') % VALIDATOR_COUNT
 
-            from jam.state.state import state
+            # from jam.state.state import state
+            state = server.node.state
             proxy_validator = state.gamma.p[proxy_validator_index]
 
             # verifying the received ticket using dot_ring

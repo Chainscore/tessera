@@ -77,7 +77,8 @@ class Settings:
         if data_path:
             import os
 
-            data_path = data_path + str(port)
+            if not data_path.endswith(str(port)):
+                data_path = data_path + str(port)
             # Create a folder for this node
             os.makedirs(data_path, exist_ok=True)
             # Setup DB
@@ -110,7 +111,7 @@ class Settings:
         TBD: Can be trigger via state transitions or keep checking while
         """
         if not state:
-            from jam.state.state import state
+            raise ValueError("State must be provided to update settings")
 
         curr_epoch = int(time() // 6 // EPOCH_LENGTH)
 
@@ -183,8 +184,9 @@ class Settings:
     def validator_index(self):
         if time()//(6)//EPOCH_LENGTH != self._last_recorded_epoch:
             logger.warning("Validator index is not updated, call update() first.")
-            from jam.state.state import state
-            self._validator_index, _ = state.kappa.find(self.bandersnatch_public)
+        if time()//(6)//EPOCH_LENGTH != self._last_recorded_epoch:
+            logger.warning("Validator index is not updated, call update() first.")
+            raise ValueError("Validator index not updated and State not available for fallback")
         if isinstance(self._validator_index, NoneType):
             raise ValueError("Validator index is not set, check if the node is registered in the state.")
         return ValidatorIndex(self._validator_index)
@@ -210,8 +212,7 @@ def setup_setting(*args, **kwargs) -> Settings:
     global settings
     settings = Settings(*args, **kwargs)
 
-    from jam.block.block_view import viewer
-    viewer.initialize(settings.main_db)
+
 
     return settings
 

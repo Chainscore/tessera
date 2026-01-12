@@ -31,6 +31,7 @@ dependencies = [
     "python-dotenv>=1.1.0",
     "pycryptodome>=3.23.0",
     "pydantic>=2.11.7",
+    "pydantic-settings>=2.0.0",
     "gprof2dot>=2025.4.14",
     "numba>=0.61.2",
     "numpy>=2.2.6",

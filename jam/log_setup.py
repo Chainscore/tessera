@@ -21,6 +21,19 @@ class LogModule(Enum):
     PVM = "pvm"
 
 
+# Custom TRACE level (below DEBUG)
+TRACE_LEVEL = 5
+logging.addLevelName(TRACE_LEVEL, "TRACE")
+
+def trace(self, message, *args, **kwargs):
+    """Log at TRACE level (below DEBUG)"""
+    if self.isEnabledFor(TRACE_LEVEL):
+        self._log(TRACE_LEVEL, message, args, **kwargs)
+
+# Add trace method to Logger class
+logging.Logger.trace = trace
+
+
 # Global settings
 _theme_colors = get_theme_colors("default")
 _node_name: Optional[str] = None
@@ -93,7 +106,7 @@ class ColoredRenderer:
             parts.append(f"[{logger_name}]")
 
         # Add message
-        parts.append(event_dict.get("event", ""))
+        parts.append(str(event_dict.get("event", "")))
 
         # Add structured fields in compact format: key=value|key2=value2
         extras = {k: v for k, v in event_dict.items() if k not in ["event", "level", "timestamp", "logger"]}
@@ -119,7 +132,10 @@ def setup_logging(theme: str = "default", node_name: Optional[str] = None):
     
     # Get root log level from env
     root_level_name = os.environ.get("JAM_LOG_LEVEL", "CRITICAL").upper()
-    root_level = getattr(logging, root_level_name, logging.CRITICAL)
+    if root_level_name == "TRACE":
+        root_level = TRACE_LEVEL
+    else:
+        root_level = getattr(logging, root_level_name, logging.CRITICAL)
     
     # Collect module levels
     module_levels = {}
@@ -128,7 +144,11 @@ def setup_logging(theme: str = "default", node_name: Optional[str] = None):
             module_name = key[14:]
             try:
                 module = LogModule[module_name.upper()]
-                level = getattr(logging, value.upper(), logging.CRITICAL)
+                level_name = value.upper()
+                if level_name == "TRACE":
+                    level = TRACE_LEVEL
+                else:
+                    level = getattr(logging, level_name, logging.CRITICAL)
                 module_levels[module.value] = level
             except (KeyError, AttributeError):
                 # Invalid module or level, ignore

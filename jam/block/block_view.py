@@ -147,10 +147,23 @@ class BlockView:
             #     raise ValueError("Block View not setup!")
 
             ghost_parent = self._index_map.get(parent, None)
+            
+            # Lazy load parent if missing
+            if ghost_parent is None:
+                # Avoid infinite recursion if parent is missing from DB or we are at genesis logic
+                # Try to load from DB
+                from jam.block import Block
+                parent_block = Block.load(parent, kv)
+                if parent_block:
+                    self.record_block(parent_block, kv)
+                    ghost_parent = self._index_map.get(parent, None)
+            
             if parent in self.heads:
                 self.heads.remove(parent)
 
-            self.heads.append(bh)
+            if bh not in self.heads:
+                 self.heads.append(bh)
+            
             ghost_block = GhostBlock(block, ghost_parent)
             self._index_map[bh] = ghost_block
 
@@ -199,9 +212,23 @@ class BlockView:
         if pre_final.header == bh:
             return
 
-        if ghost_block.parent is None or ghost_block.parent.header != pre_final.header:
-            # print("pre-final must be direct parent of the block being finalized")
-            raise ValueError("pre-final must be direct parent of the block being finalized")
+        if ghost_block.parent is None:
+             raise ValueError(f"Orphan block cannot be finalized {bh.hex()}")
+        
+        if ghost_block.parent.header != pre_final.header:
+            # Try recursive finalization
+            if ghost_block.parent.header in self._index_map:
+                from jam.block import Block
+                parent_block = Block.load(ghost_block.parent.header, kv)
+                if parent_block:
+                    self.finalize(parent_block, kv)
+                    # Refresh pre_final after recursion
+                    pre_final = self.final
+                else:
+                    raise ValueError(f"Parent block not found in DB {ghost_block.parent.header.hex()}")
+            
+            if ghost_block.parent.header != pre_final.header:
+                 raise ValueError("pre-final must be direct parent of the block being finalized")
 
         self._index_map.pop(pre_final.header, None)
 
@@ -321,5 +348,3 @@ class BlockView:
         print(f"  #Heads:      {len(self.heads)} {[head.hex()[:8] for head in self.heads]}")
 
 
-
-viewer = BlockView()
