@@ -1,6 +1,6 @@
 import os, sys, pathlib, glob, importlib, platform, site
 from PyInstaller.building.build_main import Analysis, PYZ, EXE, COLLECT
-from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules
+from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules, collect_data_files
 
 # ------------------------------------------------------------------ #
 # Robust repo-root detection

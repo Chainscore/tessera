@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+env:
+  GIT_LFS_SKIP_SMUDGE: 1
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -17,6 +20,10 @@ jobs:
         fetch-depth: 1
         token: ${{ secrets.PRIVATE_REPO_TOKEN }}
         submodules: false
+
+    - name: Disable Git LFS smudge
+      run: |
+        git lfs install --skip-smudge
 
     - name: 🧾 Show disk usage (before)
       run: |
