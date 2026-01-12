@@ -92,6 +92,14 @@ for ext in ['*.pyd', '*.dylib']:
         binaries.append((str(so_file), rel_dest.rstrip('/')))
 
 # ------------------------------------------------------------------ #
+# SRS file (needed by py-ark-vrf) - use relative path
+srs_path = project_root / 'deps' / 'py-ark-vrf' / 'bandersnatch_ring.srs'
+if srs_path.exists():
+    essential_files.extend([
+        (str(srs_path), '.'),
+        (str(srs_path), 'py_ark_vrf')
+    ])
+
 # dot-ring files
 dot_ring_datas = collect_data_files(
     "dot_ring",
