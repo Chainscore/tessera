@@ -1,6 +1,6 @@
 """Constants for the JAM protocol as defined in the specification."""
 
-from tsrkit_types import Enum
+from tsrkit_types import Enum, U16, U32, U64
 
 from datetime import datetime, timezone
 from jam.utils.chainspec import chain_config
@@ -128,7 +128,7 @@ MAX_AUTH_CODE_SIZE = 64_000
 W_A = MAX_AUTH_CODE_SIZE
 
 # W_B — Max encoded size of a work-package (extrinsics + imports), in octets.
-MAX_ENCODED_WORK_PACKAGE_SIZE = 13_794_305
+MAX_ENCODED_WORK_PACKAGE_SIZE = 13_791_360 # = W_M * W_F + 4096 + 64 + 64
 W_B = MAX_ENCODED_WORK_PACKAGE_SIZE
 
 # W_C — Max size of service code, in octets.
@@ -142,6 +142,10 @@ W_E = BASIC_ERASURE_SIZE
 # W_G — Size of a segment in octets.
 SEGMENT_SIZE = 4104  # = W_P * W_E
 W_G = SEGMENT_SIZE
+
+# W_F — Footprint of a segment in Audits DA.
+SEGMENT_FOOTPRINT = 4488  # = W_G + 32⌈log2(W_M)⌉
+W_F = SEGMENT_FOOTPRINT
 
 # W_M — Max number of imports in a work-package.
 MAX_IMPORT_ITEM = 3072
@@ -209,3 +213,8 @@ JCE_EPOCH = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
 
 # T — current seconds since JCE_EPOCH
 CURRENT_TIME = lambda: int((datetime.now(timezone.utc) - JCE_EPOCH).total_seconds())
+
+PARAMS_ENCODED = U64(B_I).encode() + U64(B_L).encode() + U64(B_S).encode() + U16(C).encode() + U32(D).encode() + U32(E).encode() + U64(G_A).encode() + U64(G_I).encode() + U64(G_R).encode() + U64(G_T).encode() + U16(H).encode() + U16(I).encode() + U16(J).encode() + U16(K).encode() + U32(L).encode() + U16(N).encode() + U16(O).encode() + U16(P).encode() + U16(Q).encode() + U16(R).encode() + U16(T).encode() + U16(U).encode() + U16(V).encode() + U32(W_A).encode() + U32(W_B).encode() + U32(W_C).encode() + U32(W_E).encode() + U32(W_M).encode() + U32(W_P).encode() + U32(W_R).encode() + U32(W_T).encode() + U32(W_X).encode() + U32(Y).encode()
+
+# S — The minimum public service index. Services of indices below these may only be created by the Registrar
+MINIMUM_SERVICE_INDEX = 2**16

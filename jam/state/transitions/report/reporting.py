@@ -13,6 +13,8 @@ from jam.state.transitions.report.guarantee_assignment import assign_fn
 from jam.types.state.pi import AllCoreStats, ServiceStat, AllServiceStats
 from jam.types.state.rho import WorkReportState, OptionalWorkReportState
 from jam.types.state.sigma import Sigma
+from jam.types.state.alpha import Alpha, AuthorizationPool
+from jam.types.state.phi import Phi, AuthorizationQueue
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.work import WorkReport
 from jam.utils.constants import ACCUMULATION_GAS, MAX_DEPENDENCIES, LOOKUP_ANCHOR_MAX_AGE, X
@@ -22,6 +24,8 @@ from jam.utils.constants import (
     EPOCH_LENGTH,
     ROTATION_PERIOD,
     MAX_WORK_REPORT_SIZE,
+    MAX_AUTH_QUEUE_ITEMS,
+    O,
 )
 
 
@@ -117,7 +121,7 @@ class Reporting:
                 ):
                     raise ReportingError(
                         ReportingErrorCode.NOT_SORTED_OR_UNIQUE_GUARANTORS,
-                        "Signature's validator index order is not sorted",
+                        "Signature's validator index order is not sorted or are not unique",
                     )
 
             # --------- not-authorized -----------------

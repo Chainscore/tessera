@@ -1,7 +1,6 @@
-from concurrent.futures import as_completed
 from copy import copy
-
 from typing import List
+
 from jam.types.protocol.ticket import TicketBody
 from .errors import SafroleError, SafroleErrorCode
 from jam.log_setup import logger
@@ -31,26 +30,16 @@ from jam.types.protocol.crypto import (
 )
 from jam.types.state.gamma import GammaP, GammaSFallback, GammaA, GammaZ
 from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
-from py_ark_vrf import verify_ring, get_ring_root, vrf_output
-
-from .worker import Worker
-from .executor import get_curr_keys, get_executor, setup_executor
+# dot_ring is used for Ring VRF operations
+from dot_ring import RingVRF, Bandersnatch, IETF_VRF
+from dot_ring.vrf.ring.ring_root import RingRoot
 
 
 class Safrole:
     @staticmethod
-    def verify_vrf(
-        message: bytes, gamma_p: list[bytes], proof: BandersnatchRingVrfSignature
-    ) -> bool:
-        return verify_ring(message, proof, gamma_p, b"")  # Input Data  # Proof  # Ring  # AD
-
-    @staticmethod
     def compute_ring_root(keys: List[BandersnatchPublic]) -> GammaZ:
-        return GammaZ(get_ring_root(keys))
-
-    @staticmethod
-    def get_vrf_output(signature: BandersnatchRingVrfSignature) -> OpaqueHash:
-        return OpaqueHash(vrf_output(signature)[:32])
+        ring_root = RingVRF[Bandersnatch].construct_ring_root(keys)
+        return GammaZ(ring_root.to_bytes())
 
     @staticmethod
     def transition(pre_state: Sigma, state: Sigma, block: Block, entropy: OpaqueHash) -> Sigma:
@@ -89,8 +78,14 @@ class Safrole:
             vrf_ids = []
             for i, t in enumerate(tickets):
                 Safrole.ensure_valid_attempt(t)
-
-                vrf_op = Safrole.get_vrf_output(t.signature)
+                try:
+                    ring_proof = RingVRF[Bandersnatch].from_bytes(bytes(t.signature), skip_pedersen=False)
+                    vrf_op = OpaqueHash(ring_proof.proof_to_hash(ring_proof.pedersen_proof.output_point)[:32])
+                except Exception as e:
+                    raise SafroleError(
+                        SafroleErrorCode.BAD_TICKET_PROOF,
+                        f"Ticket {t} VRF Proof is invalid",
+                    )
                 vrf_ids.append(vrf_op)
                 if i > 0:
                     Safrole.ensure_tickets_order(vrf_ids[i-1], vrf_op)
@@ -115,6 +110,8 @@ class Safrole:
                 SafroleErrorCode.UNEXPECTED_TICKET,
                 "Tickets are not allowed after TICKET_SUBMISSION_END",
             )
+
+        ring_root = None
 
         # 4. Epoch transition
         if new_epoch > old_epoch:
@@ -143,9 +140,6 @@ class Safrole:
 
             gamma.p = GammaP(filtered_validators)
 
-            # Reinit Executor
-            setup_executor(pubkeys)
-
             # 4.2 . Shift entropy
             eta = Eta([eta[0], eta[0], eta[1], eta[2]])
 
@@ -162,43 +156,38 @@ class Safrole:
                 gamma.s = GammaS(GammaSTickets(outside_in(pre_state.gamma.a)))
             # Else use the fallback mechanism
             else:
-                logger.warning("Falling to Fallback mode", tickets_collected=len(state.gamma.a))
+                logger.warning("Fallback mode", t=len(pre_state.gamma.a))
                 # Else fallback: use bandersnatch keys
                 gamma.s = Safrole.arrange_fallback(eta[2], state.kappa)
 
             # 4. 4. Update ring root using gamma p
             # Note: Removing the if condition allows this trace 1758621879/00000348 to pass
             # if pre_state.gamma.p != pre_state.kappa:
-            gamma.z = Safrole.compute_ring_root(pubkeys)
+            # if pre_state.gamma.p != state.gamma.p:
+            pubkeys = [bytes(k.bandersnatch) for k in gamma.p]
+            ring_root = RingVRF[Bandersnatch].construct_ring_root(pubkeys)
+            gamma.z = GammaZ(ring_root.to_bytes())
 
-        if count == 1:
-            # Signature must be valid Ring-VRF proof
-            if not Safrole.verify_vrf(
-                X.TICKET.value + eta[2] + bytes([tickets[0].attempt]),
-                get_curr_keys(),
-                tickets[0].signature,
-            ):
+        # Get ring root for ticket validation (may be from state if no epoch transition)
+        ring_root = RingRoot.from_bytes(gamma.z)
+
+        for ticket in tickets:
+            try:
+                vrf = RingVRF[Bandersnatch].from_bytes(ticket.signature)
+                if not vrf.verify(
+                    X.TICKET.value + eta[2] + bytes([ticket.attempt]),
+                    b"",
+                    ring_root,
+                ):
+                    raise SafroleError(
+                        SafroleErrorCode.BAD_TICKET_PROOF,
+                        f"Ticket {ticket} VRF Proof is invalid",
+                    )
+            except Exception:
                 raise SafroleError(
                     SafroleErrorCode.BAD_TICKET_PROOF,
-                    f"Ticket {tickets[0]} VRF Proof is invalid",
+                    f"Ticket {ticket} VRF Proof is invalid",
                 )
-
-        elif count > 1:
-            executor = get_executor()
-            futures = []
-            for ticket in tickets:
-                fut = executor.submit(Worker.verify_ticket, ticket, bytes(eta[2]))
-                futures.append(fut)
-
-            try:
-                for fut in as_completed(futures):
-                    fut.result()
-
-            except Exception as e:
-                for fut in futures:
-                    fut.cancel()
-
-                raise
 
         # 2. Accumulate entropy
         # Use entropy coming from vrf output of Hv once we have valid seals generated

@@ -1,3 +1,4 @@
+from jam.block import OffendersMark
 from jam.settings import Settings
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -98,6 +99,7 @@ class TestBasicDisputesTransitions:
         )
 
         block = create_test_block(disputes_extrinsic)
+        block.header.offenders_mark = OffendersMark.produce(disputes_extrinsic)
 
         new_state = Disputes.transition(deepcopy(initial_state), initial_state, block)
 
@@ -129,6 +131,7 @@ class TestBasicDisputesTransitions:
         )
 
         block = create_test_block(disputes_extrinsic)
+        block.header.offenders_mark = OffendersMark.produce(disputes_extrinsic)
 
         new_state = Disputes.transition(deepcopy(initial_state), initial_state, block)
 
@@ -153,6 +156,7 @@ class TestBasicDisputesTransitions:
         )
 
         block = create_test_block(disputes_extrinsic)
+        block.header.offenders_mark = OffendersMark.produce(disputes_extrinsic)
 
         initial_counts = get_state_counts(initial_state)
 

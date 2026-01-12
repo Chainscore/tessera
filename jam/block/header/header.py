@@ -14,13 +14,15 @@ from jam.types import (
     StateRoot,
     OpaqueHash,
     TimeSlot,
-    ValidatorIndex,
+    ValidatorIndex, Entropy,
 )
 
-from .epoch_mark import EpochMark
+from .epoch_mark import EpochMark, EpochMarkData, ValidatorArray, MinValidatorData
 from .offenders_mark import OffendersMark
-from .tickets_mark import TicketsMark
-from py_ark_vrf import prove_ietf, vrf_output, verify_ietf
+from .tickets_mark import TicketsMark, TicketsMarkData
+from dot_ring import IETF_VRF, Bandersnatch
+
+from ...utils.util_fns import outside_in
 
 
 @structure
@@ -96,23 +98,25 @@ class Header:
             else X.FALLBACK.value + eta.encode()
         )
 
-        seal_output = vrf_output(
-            prove_ietf(
-                settings.bandersnatch_private, 
-                context, b""
-            )
+        seal_proof = IETF_VRF[Bandersnatch].prove(
+            context,
+            settings.bandersnatch_private,
+            b""
         )
+        seal_output = seal_proof.proof_to_hash(seal_proof.output_point)[:32]
         header.entropy_source = BandersnatchVrfSignature(
-            prove_ietf(
+            IETF_VRF[Bandersnatch].prove(
+                X.ENTROPY.value + seal_output, 
                 settings.bandersnatch_private,
-                X.ENTROPY.value + seal_output, b"",
-            )
+                b""
+            ).to_bytes()
         )
         header.seal = BandersnatchVrfSignature(
-            prove_ietf(
+            IETF_VRF[Bandersnatch].prove(
+                context, 
                 settings.bandersnatch_private,
-                context, header.encode_unsigned(),
-            )
+                header.encode_unsigned(),
+            ).to_bytes()
         )
         
         return header
@@ -134,12 +138,16 @@ class Header:
         full_val_set = state.kappa
 
         # Author check
-        if self.author_index > len(full_val_set):
+        if self.author_index >= len(full_val_set):
             raise BlockError(BlockErrorCode.INVALID_AUTHOR)
         author = full_val_set[self.author_index]
 
         s_vals = state.gamma.s.unwrap()
         entry = s_vals[slot_entry]
+
+        seal = IETF_VRF[Bandersnatch].from_bytes(self.seal)
+        seal_output = seal.proof_to_hash(seal.output_point)[:32]
+        entropy = IETF_VRF[Bandersnatch].from_bytes(self.entropy_source)
 
         # Authorized sealer
         if isinstance(s_vals, GammaSFallback):
@@ -148,7 +156,7 @@ class Header:
                     BlockErrorCode.INVALID_AUTHOR, f"Expected: {s_vals[slot_entry].hex()}, Actual: {author.bandersnatch.hex()}",
                 )
         else:
-            if s_vals[slot_entry].id != vrf_output(self.seal):
+            if s_vals[slot_entry].id != seal_output:
                 raise BlockError(BlockErrorCode.INVALID_AUTHOR)
 
         eta = state.eta[3]
@@ -158,13 +166,11 @@ class Header:
             else X.FALLBACK.value + eta.encode()
         )
         # Verify seal
-        if not verify_ietf(author.bandersnatch, self.seal, context, self.encode_unsigned()):
+        if not seal.verify(author.bandersnatch, context, self.encode_unsigned()):
             raise BlockError(BlockErrorCode.INVALID_SEAL)
 
         # Verify entropy
-        if not verify_ietf(
-            author.bandersnatch, self.entropy_source, X.ENTROPY.value + vrf_output(self.seal), b""
-        ):
+        if not entropy.verify(author.bandersnatch, X.ENTROPY.value + seal_output, b""):
             raise BlockError(BlockErrorCode.INVALID_ENTROPY)
 
         # State root check
@@ -174,16 +180,41 @@ class Header:
         # Marker checks
         is_new_epoch = (self.slot // EPOCH_LENGTH) > (pre_state.tau // EPOCH_LENGTH)
         # Epoch marker
-        if is_new_epoch and self.epoch_mark.unwrap() == Null:
-            raise BlockError(BlockErrorCode.EPOCH_MARKER_EMPTY)
-        elif not is_new_epoch and self.epoch_mark.unwrap() != Null:
-            raise BlockError(BlockErrorCode.EPOCH_MARKER_NOT_EMPTY)
+        if is_new_epoch:
+            valid_epoch_mark = EpochMark(
+                EpochMarkData(
+                    entropy=Entropy(pre_state.eta[0]),
+                    tickets_entropy=Entropy(pre_state.eta[1]),
+                    validators=ValidatorArray(
+                        [
+                            MinValidatorData(bandersnatch=val.bandersnatch, ed25519=val.ed25519)
+                            for val in state.gamma.p
+                        ]
+                    ),
+                )
+            )
+
+            if self.epoch_mark.unwrap() == Null:
+                raise BlockError(BlockErrorCode.EPOCH_MARKER_EMPTY)
+
+            if self.epoch_mark != valid_epoch_mark:
+                raise BlockError(BlockErrorCode.INVALID_EPOCH_MARK)
+
+        else:
+            if self.epoch_mark.unwrap() != Null:
+                raise BlockError(BlockErrorCode.EPOCH_MARKER_NOT_EMPTY)
 
         # If we're in ticket mode
         is_ticket_mode = len(state.gamma.a) >= EPOCH_LENGTH
         is_last_ticket_slot = pre_state.tau % EPOCH_LENGTH < TICKET_SUBMISSION_END and self.slot % EPOCH_LENGTH >= TICKET_SUBMISSION_END
-        if is_last_ticket_slot and is_ticket_mode and not is_new_epoch and self.tickets_mark.unwrap() == Null:
-            raise BlockError(BlockErrorCode.TICKETS_MARK_EMPTY)
+
+        if is_last_ticket_slot and is_ticket_mode and not is_new_epoch:
+            valid_ticket_mark = TicketsMark(TicketsMarkData(outside_in(state.gamma.a)))
+            if self.tickets_mark.unwrap() == Null:
+                raise BlockError(BlockErrorCode.TICKETS_MARK_EMPTY)
+            elif self.tickets_mark != valid_ticket_mark:
+                raise BlockError(BlockErrorCode.INVALID_TICKET_MARK)
+
         if not (is_last_ticket_slot or is_ticket_mode or is_new_epoch) and self.tickets_mark.unwrap() != Null:
             raise BlockError(BlockErrorCode.TICKETS_MARK_NOT_EMPTY)
 

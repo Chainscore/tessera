@@ -1,13 +1,15 @@
-from typing import Any, Dict, Tuple
+from typing import Dict, Tuple
+
+from jam.types import Balance
 from tsrkit_types import U32
 from jam.state.accounts import DeltaView
 from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
     DeferredTransfers,
-    OperandTuples,
+    AccumulationInputs,
     AccuContextX,
     AccumulationContext,
-    PreimageDict,
+    PreimageDict, DeferredTransfer,
 )
 from jam.execution.invocations.arg_invoke import PsiM
 from jam.execution.invocations.functions.general_fns import GeneralFunctions
@@ -22,18 +24,32 @@ from jam.execution.invocations.functions.accumulate_fns import (
     check,
 )
 from tsrkit_pvm import ExecutionStatus
-from jam.utils.constants import MAX_SERVICE_CODE_SIZE
+from jam.utils.constants import MAX_SERVICE_CODE_SIZE, MINIMUM_SERVICE_INDEX
 
 
 class PsiA(InvocationProtocol):
-    def __init__(self, u: GhostPartial, t: TimeSlot, s: ServiceId, g: Gas, o: OperandTuples, entropy: OpaqueHash):
-        self.partial_state = u
+    def __init__(self, u: GhostPartial, t: TimeSlot, s: ServiceId, g: Gas, i: AccumulationInputs, entropy: OpaqueHash):
+        cloned_state = u.clone(True)
+
+        bal = Balance(0)
+        for _i in i:
+            _t = _i.unwrap()
+            if isinstance(_t, DeferredTransfer):
+                bal += _t.amount
+
+        # Credit transfer amounts to receiver's balance
+        old_bal = cloned_state.service_accounts[s].service.balance or Balance(0)
+        cloned_state.service_accounts[s].service.balance = old_bal + bal
+        self.partial_state = cloned_state
         self.timeslot = t
         self.service_id = s
         self.gas = g
-        self.operandTuples = o
+        self.operandTuples = i
         self.entropy = entropy
-        self.context = AccumulationContext(x=self.initializer_fn(s, u.clone(True), t, entropy), y=self.initializer_fn(s, u.clone(True), t, entropy))
+        self.context = AccumulationContext(
+            x=self.initializer_fn(s, cloned_state.clone(True, reset_inherited=False), t, entropy),
+            y=self.initializer_fn(s, cloned_state.clone(True, reset_inherited=False), t, entropy)
+        )
         self.table = self.build_table(s, self.context.x.partial_state.service_accounts)
 
     def build_table(self, 
@@ -52,7 +68,6 @@ class PsiA(InvocationProtocol):
                     "import_segments": None,
                     "extrinsics": None,
                     "o": self.operandTuples,
-                    "t": None,
                 },
             ),
             # gas (Returns the gas remaining)
@@ -73,7 +88,7 @@ class PsiA(InvocationProtocol):
                 {"service_data": delta[xs], "service_index": xs},
             ),
             5: (GeneralFunctions, {"service_index": xs, "accounts": delta}),  # info
-            # bless (Updates previlaged accounts)
+            # bless (Updates privileged accounts)
             14: (AccumulateFunctions, {}),
             # assign (Updates authorizer_keys/Phi)
             15: (AccumulateFunctions, {}),
@@ -107,7 +122,7 @@ class PsiA(InvocationProtocol):
             # yield_ (Updates context[x]_hash)
             25: (AccumulateFunctions, {}),  
             # provide (Updates preimage)
-            26: (AccumulateFunctions, {"service_id": xs}),  
+            26: (AccumulateFunctions, {}),
             # log
             # TODO: Add core_index
             100: (
@@ -151,8 +166,8 @@ class PsiA(InvocationProtocol):
                 Hash.blake2b(
                     Uint(s).encode() + entropy.encode() + Uint(timeslot).encode()
                 )
-            ) % (2**32 - 2**9)
-        ) + 2**8
+            ) % (2**32 - MINIMUM_SERVICE_INDEX - 2**8)
+        ) + MINIMUM_SERVICE_INDEX
         i = check(state_context, value)
         context = AccuContextX(
             s_index=s,

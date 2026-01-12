@@ -1,4 +1,3 @@
-from jam.state.transitions.safrole.executor import setup_executor
 from py_ark_vrf import vrf_output
 import pytest
 import os
@@ -135,7 +134,6 @@ async def test_safrole_ticket_accumulation(db_path):
     )
 
     pubkeys = [val.bandersnatch for val in initial_state.kappa]
-    setup_executor(pubkeys)
 
     setup_setting(db_path, 1)
 

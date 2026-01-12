@@ -27,8 +27,9 @@ At = Balance
 
 @structure
 class AccountMetadata:
+    version: Uint[8] = field(metadata={"default": Uint[8](0)})
     code_hash: ServiceCodeHash  # code_hash, c
-    balance: Balance  # balance, b
+    balance: Balance = field(metadata={"default": Balance(0)}) # b
     gas_limit: Gas = field(metadata={"name": "min_item_gas"}) # g
     min_gas: Gas = field(metadata={"name": "min_memo_gas"}) # m
     num_o: Ao = field(metadata={"name": "bytes"}) # o

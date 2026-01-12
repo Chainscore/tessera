@@ -1,4 +1,4 @@
-import asyncio
+from jam.utils.task_utils import create_safe_task
 from typing import cast
 from tsrkit_types import Uint, U8
 from tsrkit_types.struct import structure
@@ -100,7 +100,7 @@ class PreImageAnnouncement(NetworkProtocol):
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            asyncio.create_task(self._process_preimage(data.announcement, server))
+            create_safe_task(self._process_preimage(data.announcement, server), name="process_preimage")
 
             logger.debug("Preimage announcement 📣 processed successfully", stream_id=stream_id)
         except Exception as e:

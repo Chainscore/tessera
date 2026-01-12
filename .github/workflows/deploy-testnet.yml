@@ -1,0 +1,92 @@
+name: Deploy Testnet
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      telemetry_host:
+        description: 'Telemetry host (e.g., jamtart-32255.eastus.azurecontainer.io:9000)'
+        required: false
+        default: ''
+
+env:
+  RESOURCE_GROUP: tessera-testnet-rg
+  ACR_NAME: tesseratestnetacr
+  ACI_NAME: tessera-testnet
+  DNS_LABEL: tessera-testnet
+  LOCATION: eastus
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          submodules: false
+
+      - name: Init submodules
+        run: |
+          git submodule init deps/tsrkit-pvm deps/py-ark-vrf deps/rockstore deps/tsrkit-asm deps/tsrkit-types
+          git -c "url.https://x-access-token:${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/.insteadOf=https://github.com/" \
+            submodule update --recursive --depth 1 \
+            deps/tsrkit-pvm deps/py-ark-vrf deps/rockstore deps/tsrkit-asm deps/tsrkit-types
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build image (Azure Cloud Build)
+        run: |
+          az acr build \
+            --registry ${{ env.ACR_NAME }} \
+            --platform linux/amd64 \
+            --image tessera:${{ github.ref_name }} \
+            --image tessera:latest \
+            .
+
+      - name: Deploy to ACI
+        run: |
+          # Get ACR credentials
+          ACR_LOGIN_SERVER=$(az acr show --name ${{ env.ACR_NAME }} --query loginServer -o tsv)
+          ACR_USERNAME=$(az acr credential show --name ${{ env.ACR_NAME }} --query username -o tsv)
+          ACR_PASSWORD=$(az acr credential show --name ${{ env.ACR_NAME }} --query "passwords[0].value" -o tsv)
+          
+          # Delete existing
+          az container delete --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.ACI_NAME }} --yes 2>/dev/null || true
+          
+          # Deploy
+          az container create \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.ACI_NAME }} \
+            --image $ACR_LOGIN_SERVER/tessera:latest \
+            --registry-login-server $ACR_LOGIN_SERVER \
+            --registry-username $ACR_USERNAME \
+            --registry-password "$ACR_PASSWORD" \
+            --cpu 4 --memory 8 \
+            --ports 19800 \
+            --ip-address Public \
+            --dns-name-label ${{ env.DNS_LABEL }} \
+            --environment-variables TELEMETRY_HOST="${{ github.event.inputs.telemetry_host }}" \
+            --restart-policy Always \
+            --location ${{ env.LOCATION }}
+
+      - name: Verify deployment
+        run: |
+          sleep 30
+          FQDN=$(az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.ACI_NAME }} --query ipAddress.fqdn -o tsv)
+          echo "Deployed to: http://$FQDN:19800"
+          
+          # Check container is running
+          STATE=$(az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.ACI_NAME }} --query instanceView.state -o tsv)
+          if [ "$STATE" != "Running" ]; then
+            echo "Container state: $STATE"
+            az container logs --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.ACI_NAME }} || true
+            exit 1
+          fi
+          echo "Container is running!"

@@ -1,4 +1,6 @@
 import pytest
+
+from jam.block import OffendersMark
 from tsrkit_types.integers import U32
 
 from jam.settings import Settings
@@ -58,6 +60,7 @@ class TestMixedDisputesScenarios:
         )
 
         block = create_test_block(disputes_extrinsic)
+        block.header.offenders_mark = OffendersMark.produce(disputes_extrinsic)
 
         initial_counts = get_state_counts(initial_state)
 
@@ -94,6 +97,7 @@ class TestMixedDisputesScenarios:
         )
 
         block = create_test_block(disputes_extrinsic)
+        block.header.offenders_mark = OffendersMark.produce(disputes_extrinsic)
 
         with pytest.raises(DisputesError) as exc_info:
             Disputes.transition(deepcopy(initial_state), initial_state, block)
@@ -123,6 +127,7 @@ class TestMixedDisputesScenarios:
         )
 
         block = create_test_block(disputes_extrinsic)
+        block.header.offenders_mark = OffendersMark.produce(disputes_extrinsic)
 
         with pytest.raises(DisputesError) as exc_info:
             Disputes.transition(deepcopy(initial_state), initial_state, block)

@@ -39,16 +39,15 @@ async def setup_processes(clients: list[Client], node_tasks: list[Optional[Calla
             is_validator = client.role == Role.VAL
             is_builder = client.role == Role.BUILDER
 
-            dir_path = f"/data/{client.idx}"
+            dir_path = os.path.abspath(f"data/{client.idx}")
 
             if os.path.exists(dir_path):
                 shutil.rmtree(dir_path)
-                print(f"REMOVED DIR: {dir_path}")
 
             p = Process(
                 target=run_node_process,
                 args=(
-                    "data/tmp",
+                    f"data/{client.idx}",
                     env_path,
                     client.genesis,
                     client.theme,
@@ -66,14 +65,15 @@ async def setup_processes(clients: list[Client], node_tasks: list[Optional[Calla
 
     print("ALL PROCESSES STARTED")
 
-    # KEEP TEST ALIVE FOR SOME TIME
-    await asyncio.sleep(max_time)
-
-    print("TERMINATING PROCESSES")
-    for p in processes:
-        p.terminate()
-    for p in processes:
-        p.join()
+    try:
+        # KEEP TEST ALIVE FOR SOME TIME
+        await asyncio.sleep(max_time)
+    finally:
+        print("TERMINATING PROCESSES")
+        for p in processes:
+            p.terminate()
+        for p in processes:
+            p.join()
 
 
     print("END OF TEST")

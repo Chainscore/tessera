@@ -7,6 +7,9 @@ from rockstore import RockStore
 from jam.types.protocol.crypto import Hash
 from jam.block import Block
 from jam.api.rpc.subscription_handlers import subscribe_finalized_block
+from jam.telemetry import emit_event
+from jam.telemetry.events import FinalizedBlockChanged
+from tsrkit_types import U32, Bytes32
 
 
 
@@ -38,6 +41,8 @@ class Finality:
             logger.info(f"Finalized {header_hash.encode().hex()[0:16]}...")
             kv.put(cls.FINAL_KEY, header_hash.encode())
 
+        emit_event(FinalizedBlockChanged(slot=U32(block.header.slot), hash=Bytes32(header_hash.encode())))
+        
         # publish updates of the latest finalized block
         asyncio.create_task(subscribe_finalized_block(header_hash))
 

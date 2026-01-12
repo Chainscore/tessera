@@ -21,13 +21,19 @@ class PartialState:
     def __init__(self, _store: StateStorage):
         self.store = _store
         
-    def clone(self, copy_cache = False) -> "PartialState":
+    def clone(self, copy_cache = False, reset_inherited = True) -> "PartialState":
+        # When copying cache, track which keys were inherited so merge can filter them out
+        if copy_cache:
+            inherited = set(self.store._updates.keys()) if reset_inherited else self.store._inherited_keys.copy()
+        else:
+            inherited = set()
         return PartialState(
             StateStorage(
                 self.store._TRIE, 
                 self.store._DB, 
                 {} if not copy_cache else self.store._updates.copy(),
-                True
+                True,
+                inherited_keys=inherited
             )
         )
 
@@ -40,7 +46,7 @@ class GhostPartial:
     validator_keys: Iota
     # q
     authorizer_keys: Phi
-    # m, a, v, z
+    # m, a, v, r, z
     privileges: Chi
 
     def clone(self) -> "GhostPartial":

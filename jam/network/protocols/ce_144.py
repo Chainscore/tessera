@@ -1,6 +1,8 @@
 import asyncio
-from typing import cast
 from tsrkit_types import TypedVector, Uint, structure, Choice, U8
+from jam.utils.task_utils import create_safe_task
+from typing import TYPE_CHECKING, cast
+from tsrkit_types import TypedVector, Uint, structure, Choice
 
 from jam.utils.gather import gather_with_exceptions
 
@@ -215,10 +217,11 @@ class AuditAnnouncement(NetworkProtocol):
             tranche = Tranche(tranche_index=tranche_idx, header_hash=header_hash)
 
             # SAVE ANNOUNCEMENT RECORDS
-            asyncio.create_task(
+            create_safe_task(
                 tranche_store.records_announcement(
                     tranche=tranche, validator_index=v_index, announce=announcements
-                )
+                ),
+                name="record_announcement"
             )
 
             if not data.is_valid:

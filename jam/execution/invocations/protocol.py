@@ -31,7 +31,8 @@ class InvocationProtocol(Protocol):
         if table_entry is None:
             registers[7] = HostStatus.WHAT.value
             return ExecutionStatus.CONTINUE, gas - 10, registers, memory, x
-        
+
+        # print("-" * 20, f"HOST({host_call})", "-" * 20)
         # Direct unpacking and execution
         dispatch_fn_calls, args = table_entry
         
