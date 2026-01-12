@@ -92,13 +92,21 @@ for ext in ['*.pyd', '*.dylib']:
         binaries.append((str(so_file), rel_dest.rstrip('/')))
 
 # ------------------------------------------------------------------ #
-# SRS file (needed by py-ark-vrf) - use relative path
-srs_path = project_root / 'deps' / 'py-ark-vrf' / 'bandersnatch_ring.srs'
-if srs_path.exists():
-    essential_files.extend([
-        (str(srs_path), '.'),
-        (str(srs_path), 'py_ark_vrf')
-    ])
+# dot-ring files
+dot_ring_datas = collect_data_files(
+    "dot_ring",
+    includes=["vrf/data/*.bin"]
+)
+
+if not dot_ring_datas:
+    raise RuntimeError(
+        "Failed to collect dot_ring SRS data files. "
+        "Is 'dot-ring' installed in this environment?"
+    )
+
+essential_files.extend(dot_ring_datas)
+
+print(f">> Added dot-ring data files: {dot_ring_datas}")
 
 # Add dev-spec.json in project root to the bundle root (meipass)
 dev_spec = project_root / "dev-spec.json"
