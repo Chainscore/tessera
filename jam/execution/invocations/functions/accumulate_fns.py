@@ -1,4 +1,3 @@
-import asyncio
 from jam.state.accounts import AccountDataView, DeltaView
 from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
@@ -24,7 +23,7 @@ from tsrkit_pvm import (
 from jam.types import Timestamps, ChiZ
 from jam.types.protocol.crypto import Hash, OpaqueHash
 from jam.types.protocol.merkle import OptionHash
-from jam.types.state.chi import Chi, ChiM, ChiV, ChiA
+from jam.types.state.chi import Chi, ChiM, ChiV, ChiA, ChiR
 from jam.types.state.delta import (
     AccountData,
     AccountLookup,
@@ -47,6 +46,7 @@ from jam.utils.constants import (
     PREIMAGE_EVICTION_TIMESLOTS,
     TRANSFER_MEMO_SIZE,
     VALIDATOR_COUNT,
+    MINIMUM_SERVICE_INDEX
 )
 
 
@@ -54,14 +54,14 @@ def check(u: GhostPartial, i: ServiceId):
     if i not in u.service_accounts:
         return i
     else:
-        return check(u, ServiceId((i - 2**8 + 1) % (2**32 - 2**9) + 2**8))
+        return check(u, ServiceId((i - MINIMUM_SERVICE_INDEX + 1) % (2**32 - 2**8 - MINIMUM_SERVICE_INDEX) + MINIMUM_SERVICE_INDEX))
 
 
 class AccumulateFunctions(INVF):
     @staticmethod
     @INVF.register(14, gas_cost=10)
     def bless(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
-        [m, a, v, o, n] = registers[7:7 + 5]
+        [m, a, v, r, o, n] = registers[7:7 + 6]
 
         if not memory.is_accessible(a, 4 * CORE_COUNT):
             logger.warning("Memory access violation in bless function: inaccessible chi_a memory region")
@@ -84,17 +84,13 @@ class AccumulateFunctions(INVF):
             g = U64.decode(chunk[4:12], offset=0)  # next   8 bytes
             z_dict[s] = g
 
-        if context.x.s_index != context.x.partial_state.privileges.chi_m:
-            logger.warning("Privilege mismatch in bless function: chi_m does not match s_index")
-            registers[7] = HostStatus.HUH.value
-            return CONTINUE, gas, registers, memory, context
-        if not all(0 <= x < 2**32 - 1 for x in (m, v)):
+        if not all(0 <= x < 2**32 - 1 for x in (m, v, r)):
             logger.warning(f"Invalid values for m or v in bless function: m={m}, v={v}")
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
 
         registers[7] = HostStatus.OK.value
-        context.x.partial_state.privileges = Chi(chi_m=ChiM(m), chi_a=chi_a, chi_v=ChiV(v), chi_z=z_dict)
+        context.x.partial_state.privileges = Chi(chi_m=ChiM(m), chi_a=chi_a, chi_v=ChiV(v), chi_z=z_dict, chi_r=ChiR(r))
         return CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -114,6 +110,10 @@ class AccumulateFunctions(INVF):
         if context.x.partial_state.privileges.chi_a[c] != context.x.s_index:
             logger.warning("Assign: Privilege mismatch in assign function: chi_a does not match s_index for given c")
             registers[7] = HostStatus.HUH.value
+            return CONTINUE, gas, registers, memory, context
+
+        if not a in context.x.partial_state.service_accounts:
+            registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
 
         buf: bytes = memory.read(o, 32 * MAX_AUTH_QUEUE_ITEMS)
@@ -158,7 +158,7 @@ class AccumulateFunctions(INVF):
     def checkpoint(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         context.y.i_index = context.x.i_index
         context.y.s_index = context.x.s_index
-        context.y.partial_state.store._updates.update(context.x.partial_state.store._updates)
+        context.y.partial_state = context.x.partial_state.clone(True, reset_inherited=False)
         context.y.deferred_transfers = context.x.deferred_transfers.copy()
         context.y.hash = context.x.hash
         context.y.preimage = context.x.preimage.copy()
@@ -169,7 +169,7 @@ class AccumulateFunctions(INVF):
     @staticmethod
     @INVF.register(18, gas_cost=10)
     def new(gas: Gas, registers: list, memory: Memory, context: AccumulationContext, block_timeslot: TimeSlot):
-        [o, l, g, m, f] = registers[7 : 7 + 5]
+        [o, l, g, m, f, i] = registers[7 : 7 + 6]
 
         if not (memory.is_accessible(o, 32) and l < 2**32 - 1):
             logger.warning("Memory access violation in new function: inaccessible code_hash memory region or invalid length type")
@@ -186,9 +186,10 @@ class AccumulateFunctions(INVF):
         new_service = AccountData(
             service=AccountMetadata(
                 code_hash=ServiceCodeHash(c),
-                balance=Balance(BASIC_MINIMUM_BALANCE
+                balance=Balance(
+                    BASIC_MINIMUM_BALANCE
                     + ADDITIONAL_BALANCE_PER_ITEM * 2
-                    + ADDITIONAL_BALANCE_PER_OCTET * (81+l) - f
+                    + ADDITIONAL_BALANCE_PER_OCTET * (81 + l) - f
                 ),
                 gas_limit=Gas(g),
                 min_gas=Gas(m),
@@ -206,8 +207,18 @@ class AccumulateFunctions(INVF):
             })
         )
 
+
         if accounts[ServiceId(context.x.s_index)].service.balance < new_service.service.balance:
             registers[7] = HostStatus.CASH.value
+            return CONTINUE, gas, registers, memory, context
+
+        if context.x.s_index == context.x.partial_state.privileges.chi_r and i < MINIMUM_SERVICE_INDEX and i in context.x.partial_state.service_accounts:
+            registers[7] = HostStatus.FULL.value
+            return CONTINUE, gas, registers, memory, context
+
+        if context.x.s_index == context.x.partial_state.privileges.chi_r and i < MINIMUM_SERVICE_INDEX:
+            accounts[i] = new_service
+            accounts[context.x.s_index].service.balance -= new_service.service.balance
             return CONTINUE, gas, registers, memory, context
 
         registers[7] = context.x.i_index
@@ -215,7 +226,7 @@ class AccumulateFunctions(INVF):
         accounts[ServiceId(context.x.s_index)].service.balance -= new_service.service.balance
         context.x.i_index = check(
             u=context.x.partial_state,
-            i=ServiceId(2**8 + (context.x.i_index - 2**8 + 42) % (2**32 - 2**9)),
+            i=ServiceId(MINIMUM_SERVICE_INDEX + (context.x.i_index - MINIMUM_SERVICE_INDEX + 42) % (2**32 - MINIMUM_SERVICE_INDEX - 2**8)),
         )
         return CONTINUE, gas, registers, memory, context
 
@@ -237,7 +248,6 @@ class AccumulateFunctions(INVF):
     @INVF.register(20, gas_cost=10)
     def transfer(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         [d, a, l, o] = registers[7 : 7 + 4]
-        gas = gas - l
 
         delta: DeltaView = context.x.partial_state.service_accounts
 
@@ -263,11 +273,11 @@ class AccumulateFunctions(INVF):
             gas=Gas(l),
         )
 
-        new_balance_sender = delta[context.x.s_index].service.balance - Balance(a)
-
         if l < delta[d].service.min_gas:
             registers[7] = HostStatus.LOW.value
             return CONTINUE, gas, registers, memory, context
+
+        new_balance_sender = int(delta[context.x.s_index].service.balance) - int(a)
 
         if new_balance_sender < delta[context.x.s_index].service.t:
             registers[7] = HostStatus.CASH.value
@@ -275,7 +285,8 @@ class AccumulateFunctions(INVF):
         else:
             registers[7] = HostStatus.OK.value
             context.x.deferred_transfers.append(t)
-            delta[context.x.s_index].service.balance = new_balance_sender
+            delta[context.x.s_index].service.balance = Balance(new_balance_sender)
+            gas = gas - l
             return CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -299,13 +310,14 @@ class AccumulateFunctions(INVF):
         if d in delta and d != context.x.s_index:
             account = delta[d]
 
-        l = BlobLength(max(81, account.service.num_o) - 81)
-        lookup_key = LookupTable(hash=ServiceCodeHash(code_hash), length=BlobLength(l))
-        if account == None or account.service.code_hash != ServiceCodeHash(list(context.x.s_index.encode()) + [0] * 28):
+        if account is None or account.service.code_hash != ServiceCodeHash(list(context.x.s_index.encode()) + [0] * 28):
             logger.warning("Eject function called with mismatched code hash for service account")
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
-        elif account.service.num_i != 2 or account.lookup[lookup_key] is None:
+        l = BlobLength(max(81, account.service.num_o) - 81)
+        lookup_key = LookupTable(hash=ServiceCodeHash(code_hash), length=BlobLength(l))
+
+        if account.service.num_i != 2 or account.lookup[lookup_key] is None:
             logger.warning("Eject function called with invalid number of items or missing lookup entry for service account")
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
@@ -346,14 +358,14 @@ class AccumulateFunctions(INVF):
             registers[7] = 0
             registers[8] = 0
         elif len(lookup_value) == 1:
-            registers[7] = 1 + 2**32 * lookup_value[0]
+            registers[7] = 1 + 2**32 * U64(lookup_value[0])
             registers[8] = 0
         elif len(lookup_value) == 2:
-            registers[7] = 2 + 2**32 * lookup_value[0]
+            registers[7] = 2 + 2**32 * U64(lookup_value[0])
             registers[8] = lookup_value[1]
         elif len(lookup_value) == 3:
-            registers[7] = 3 + 2**32 * lookup_value[0]
-            registers[8] = lookup_value[1] + 2**32 * lookup_value[2]
+            registers[7] = 3 + 2**32 * U64(lookup_value[0])
+            registers[8] = U64(lookup_value[1]) + 2**32 * U64(lookup_value[2])
         else:
             logger.critical(
                 "Unexpected metadata",
@@ -390,30 +402,22 @@ class AccumulateFunctions(INVF):
         # storing the initial lookup value
         lookup_val: Timestamps | None = account.lookup[lookup_key]
         # TODO: check updated t > balance
-        at = account.service.t
 
         if not lookup_val:
             account.lookup[lookup_key] = Timestamps([])
-            # at = (
-            #     at
-            #     + (2 * ADDITIONAL_BALANCE_PER_ITEM)
-            #     + (preimage_len * ADDITIONAL_BALANCE_PER_OCTET)
-            # )
         elif len(lookup_val) == 2:
-            lookup_val.append(U32(block_timeslot)) # It should be updating the account data
+            lookup_val.append(U32(block_timeslot))
+            account.lookup[lookup_key] = lookup_val
         else:
             registers[7] = HostStatus.HUH.value
             return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
         if account.service.balance < account.service.t:
-            # state.store.clear()
-            registers[7] = HostStatus.FULL.value
-            return ExecutionStatus.CONTINUE, gas, registers, memory, context
+             registers[7] = HostStatus.FULL.value
+             return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
-        # account.lookup[lookup_key] = lookup_val
         registers[7] = HostStatus.OK.value
-
-        return ExecutionStatus.CONTINUE, gas, registers, memory, context
+        return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(24, gas_cost=10)
@@ -448,12 +452,9 @@ class AccumulateFunctions(INVF):
             del a.preimages[preimage_hash]
         elif (
             len(a.lookup[lookup_key]) == 3
-            and a.lookup[lookup_key][1] < block_timeslot - PREIMAGE_EVICTION_TIMESLOTS
+            and int(block_timeslot) - int(a.lookup[lookup_key][1]) >= PREIMAGE_EVICTION_TIMESLOTS
         ):
-            lookup_value[0] = lookup_value[2]
-            lookup_value[1] = block_timeslot
-            lookup_value = lookup_value.pop()
-            a.lookup[lookup_key] = Timestamps([lookup_value])
+            a.lookup[lookup_key] = Timestamps([a.lookup[lookup_key][2], U32(block_timeslot)])
         else:
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
@@ -479,29 +480,28 @@ class AccumulateFunctions(INVF):
         registers: list,
         memory: Memory,
         context: AccumulationContext,
-        service_id: ServiceId,
     ):
         [o, z] = registers[8: 10]
         d = context.x.partial_state.service_accounts
 
-        s_star = registers[7]
+        s = registers[7]
         if registers[7] == 2**64 - 1:
-            s_star = service_id
+            s = context.x.s_index
 
         if not memory.is_accessible(o, z):
             raise PvmError(PANIC)
         i = Bytes(memory.read(o, z))
 
-        if d[s_star] is None:
+        if d[s] is None:
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
-        a = d[s_star]
+        a = d[s]
 
         lookup = a.lookup[LookupTable(hash=Hash.blake2b(i), length=BlobLength(z))]
-        if (lookup is not None and len(lookup) != 0) or (ServiceId(s_star), i) in context.x.preimage:
+        if (lookup is not None and len(lookup) != 0) or (ServiceId(s), i) in context.x.preimage:
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
 
-        context.x.preimage.add((s_star, i))
+        context.x.preimage.add((s, i))
         registers[7] = HostStatus.OK.value
         return CONTINUE, gas, registers, memory, context

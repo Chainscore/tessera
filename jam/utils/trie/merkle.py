@@ -1,4 +1,5 @@
 from typing import Dict, List, Tuple, Optional
+from copy import deepcopy
 
 from tsrkit_types import TypedVector
 
@@ -33,6 +34,36 @@ class StateTrie:
     def __init__(self):
         self.nodes = {}
         self.root_hash = Bytes[32](32)
+
+    def __deepcopy__(self, memo):
+        """Custom deepcopy to avoid UTF-8 decoding issues with Bytes objects."""
+        new_trie = StateTrie.__new__(StateTrie)
+        memo[id(self)] = new_trie
+        
+        # Copy root_hash - create new Bytes from raw bytes
+        new_trie.root_hash = Bytes[32](bytes(self.root_hash))
+        
+        # Copy nodes dictionary with proper Bytes handling
+        new_nodes = {}
+        for key, node in self.nodes.items():
+            # Create new Bytes key from raw bytes
+            new_key = Bytes[32](bytes(key))
+            
+            # Create new Node with copied Bytes
+            new_encoded = Bytes[64](bytes(node.encoded))
+            new_left = Bytes[32](bytes(node.left)) if node.left is not None else None
+            new_right = Bytes[32](bytes(node.right)) if node.right is not None else None
+            
+            new_node = Node(
+                encoded=new_encoded,
+                bit_index=node.bit_index,
+                left=new_left,
+                right=new_right,
+            )
+            new_nodes[new_key] = new_node
+        
+        new_trie.nodes = new_nodes
+        return new_trie
 
     def _merkelize_recursive(
         self, leaves: List[Bytes[64]], bit_index: int

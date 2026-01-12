@@ -48,19 +48,9 @@ class Disputes:
 
         val_keys = {v.ed25519 for v in pre_lambda} | {v.ed25519 for v in pre_kappa}
 
-        # 4. Verifying signatures
-        # Verifying fault signatures
-        for fault in disputes.faults:
-            try:
-                message_bytes = (X.VALID if fault.vote else X.INVALID).value
-                Ed25519PublicKey.from_public_bytes(fault.key).verify(
-                    fault.signature, message_bytes + fault.target
-                )
-            except InvalidSignature:
-                raise DisputesError(DisputesErrorCode.BAD_SIGNATURE)
-            if fault.key not in val_keys:
-                raise DisputesError(DisputesErrorCode.BAD_AUDITOR_KEY)
+        new_offenders = set(block.header.offenders_mark)
 
+        # 4. Verifying signatures
         # Verifying culprit signatures
         for culprit in disputes.culprits:
             try:
@@ -72,6 +62,30 @@ class Disputes:
                 raise DisputesError(DisputesErrorCode.BAD_SIGNATURE)
             if culprit.key not in val_keys:
                 raise DisputesError(DisputesErrorCode.BAD_GUARANTOR_KEY)
+            if culprit.key not in new_offenders:
+                raise DisputesError(DisputesErrorCode.BAD_OFFENDERS_MARK)
+            else:
+                new_offenders.remove(culprit.key)
+
+        # Verifying fault signatures
+        for fault in disputes.faults:
+            try:
+                message_bytes = (X.VALID if fault.vote else X.INVALID).value
+                Ed25519PublicKey.from_public_bytes(fault.key).verify(
+                    fault.signature, message_bytes + fault.target
+                )
+            except InvalidSignature:
+                raise DisputesError(DisputesErrorCode.BAD_SIGNATURE)
+            if fault.key not in val_keys:
+                raise DisputesError(DisputesErrorCode.BAD_AUDITOR_KEY)
+            if fault.key not in new_offenders:
+                raise DisputesError(DisputesErrorCode.BAD_OFFENDERS_MARK)
+            else:
+                new_offenders.remove(fault.key)
+
+        # validate offender's mark
+        if len(new_offenders):
+            raise DisputesError(DisputesErrorCode.BAD_OFFENDERS_MARK)
 
         # Verifying verdicts are sorted by target
         for verdict in disputes.verdicts:

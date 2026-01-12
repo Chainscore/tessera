@@ -1,11 +1,11 @@
 from typing import Any, Optional, List
 
-from jam.log_setup import pvm_logger as logger, logger as jam_logger
+from jam.log_setup import logger as logger, logger as jam_logger
 from jam.execution.invocations.functions.protocol import (
     InvocationFunctions as INVF,
 )
 from jam.execution.invocations.protocol import Context, DispatchReturn
-from jam.types.state.accumulation.types import DeferredTransfers, OperandTuples
+from jam.types.state.accumulation.types import AccumulationInputs
 from jam.types.work.manifest import Extrinsics
 from tsrkit_pvm import (
     Memory,
@@ -17,7 +17,7 @@ from tsrkit_pvm import (
     Accessibility
 )
 from tsrkit_types import U64, U32, U16, Bytes, Uint
-from jam.types.protocol.crypto import Hash, OpaqueHash
+from jam.types.protocol.crypto import OpaqueHash
 from jam.types.state.delta import AccountData
 from jam.types.protocol.core import Gas, ServiceId, Register
 from jam.types.state.delta import Delta
@@ -57,6 +57,7 @@ from jam.utils.constants import (
     W_T,
     W_X,
     Y,
+    PARAMS_ENCODED
 )
 
 class GeneralFunctions(INVF):
@@ -80,8 +81,7 @@ class GeneralFunctions(INVF):
         item_index: int,
         import_segments: Optional[List],
         extrinsics: Optional[Extrinsics],
-        o: Optional[OperandTuples],
-        t: Optional[DeferredTransfers],
+        o: Optional[AccumulationInputs]  # bold i
     ):
         fetch_type = registers[10]
 
@@ -92,62 +92,40 @@ class GeneralFunctions(INVF):
         w12 = registers[12]
         v = None
         if w10 == 0:
-            v = (
-                U64(B_I).encode()
-                + U64(B_L).encode()
-                + U64(B_S).encode()
-                + U16(C).encode()
-                + U32(D).encode()
-                + U32(E).encode()
-                + U64(G_A).encode()
-                + U64(G_I).encode()
-                + U64(G_R).encode()
-                + U64(G_T).encode()
-                + U16(H).encode()
-                + U16(I).encode()
-                + U16(J).encode()
-                + U16(K).encode()
-                + U32(L).encode()
-                + U16(N).encode()
-                + U16(O).encode()
-                + U16(P).encode()
-                + U16(Q).encode()
-                + U16(R).encode()
-                + U16(T).encode()
-                + U16(U).encode()
-                + U16(V).encode()
-                + U32(W_A).encode()
-                + U32(W_B).encode()
-                + U32(W_C).encode()
-                + U32(W_E).encode()
-                + U32(W_M).encode()
-                + U32(W_P).encode()
-                + U32(W_R).encode()
-                + U32(W_T).encode()
-                + U32(W_X).encode()
-                + U32(Y).encode()
-            )
+            v = PARAMS_ENCODED
         elif w10 == 1 and entropy is not None:
             v = entropy
         elif w10 == 2 and trace is not None:
             v = trace
         elif (
             w10 == 3
-            and item_index is not None
+            and extrinsics is not None
             and w11 < len(extrinsics)
             and w12 < len(extrinsics[int(w11)])
         ):
             v = extrinsics[w11][int(w12)]
-        elif w10 == 4 and item_index is not None and w11 < len(extrinsics[item_index]):
+        elif (
+                w10 == 4
+                and extrinsics is not None
+                and item_index is not None
+                and item_index < len(extrinsics)
+                and w11 < len(extrinsics[item_index])
+        ):
             v = extrinsics[item_index][w11]
         elif (
             w10 == 5
-            and item_index is not None
+            and import_segments is not None
             and w11 < len(import_segments)
             and w12 < len(import_segments[w11])
         ):
             v = import_segments[w11][w12]
-        elif w10 == 6 and item_index is not None and w11 < len(import_segments[item_index]):
+        elif (
+                w10 == 6
+                and import_segments is not None
+                and item_index is not None
+                and item_index < len(import_segments)
+                and w11 < len(import_segments[item_index])
+        ):
             v = import_segments[item_index][w11]
         elif package is not None:
 
@@ -166,7 +144,7 @@ class GeneralFunctions(INVF):
             if w10 == 7:
                 v = package.encode()
             elif w10 == 8:
-                v = package.authorizer.code_hash + package.authorizer.params.encode()
+                v = package.authorizer.params
             elif w10 == 9:
                 v = package.authorization
             elif w10 == 10:
@@ -184,11 +162,6 @@ class GeneralFunctions(INVF):
                 v = o.encode()
             elif w10 == 15 and w11 < len(o):
                 v = o[w11].encode()
-        elif t is not None:
-            if w10 == 16:
-                v = t.encode()
-            elif w10 == 17 and w11 < len(t):
-                v = t[w11].encode()
 
         if v is None:
             registers[7] = HostStatus.NONE.value
@@ -353,7 +326,7 @@ class GeneralFunctions(INVF):
         service_data: AccountData,
         service_index: ServiceId,
     ):
-        # Get key,value start,end
+        # Get key, value offset & size
         [ko, kz, vo, vz] = registers[7 : 7 + 4]
 
         logger.debug(
@@ -373,24 +346,19 @@ class GeneralFunctions(INVF):
             )
             raise PvmError(PANIC)
 
-    
-        # TODO: Handle out of balance using temp caches
-        # from jam.state.state import state
-        # state.store.save_n_clear_cache()
-
         k = Bytes(memory.read(ko, kz))
         
         a = service_data.storage
 
         curr_value = a.get(k)
         storage_len = len(curr_value) if curr_value else HostStatus.NONE.value
+
         if vz == 0:
-            a.__delitem__(k)
-        elif memory.is_accessible(vo, vz, Accessibility.WRITE):
+            del a[k]
+        elif memory.is_accessible(vo, vz):
             pre_data = a[k]
             a[k] = Bytes(memory.read(vo, vz))
             if service_data.service.t > service_data.service.balance:
-                # state.store.clear()
                 registers[7] = HostStatus.FULL.value
                 if pre_data is None:
                     del a[k]
@@ -432,15 +400,13 @@ class GeneralFunctions(INVF):
         if target_service == 2**64 - 1:
             target_service = service_index
 
-        if target_service > 2**32-1:
-            registers[7] = HostStatus.NONE.value
-            return CONTINUE, gas, registers, memory, context
 
-        if target_service not in accounts:
+        if target_service > 2**32-1 or target_service not in accounts:
             registers[7] = HostStatus.NONE.value
             return CONTINUE, gas, registers, memory, context
 
         acc: AccountData = accounts[target_service]
+
         v = (
             bytes(acc.service.code_hash)
             + U64(acc.service.balance).encode()
@@ -462,13 +428,12 @@ class GeneralFunctions(INVF):
             raise PvmError(PANIC)
         
         registers[7] = len(v)
-        # print(f"INFO: {v[f:f+l].hex()}")
         memory.write(output_offset, v[f:f+l])
 
         return CONTINUE, gas, registers, memory, context
 
     @staticmethod
-    @INVF.register(host_call=100, gas_cost=0)
+    @INVF.register(host_call=100, gas_cost=10)
     def log(
         gas: Gas,
         registers: list,

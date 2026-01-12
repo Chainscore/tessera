@@ -1,5 +1,5 @@
-from typing import Tuple, List, Set
-from tsrkit_types import structure, TypedVector, Bytes, Uint
+from typing import Tuple, List, Set, Union
+from tsrkit_types import structure, TypedVector, Bytes, Uint, Choice
 from jam.state.partial import GhostPartial, PartialState
 from jam.types.protocol.merkle import OptionHash
 from jam.types.state.phi import Phi, AuthorizerHash
@@ -26,11 +26,6 @@ class OperandTuple:
     l: WorkExecResult
     t: Bytes # auth_output of work report
 
-
-class OperandTuples(TypedVector[OperandTuple]):
-    ...
-
-
 @structure
 class DeferredTransfer:
     sender: ServiceId # s
@@ -39,6 +34,17 @@ class DeferredTransfer:
     memo: Bytes[W_T] # m
     gas: Gas # g
 
+class AccumulationInput(Choice):
+    """
+    Set I = U U X
+
+    Source: https://graypaper.fluffylabs.dev/#/1c979cb/179400179400?v=0.7.1
+    """
+    tuple: OperandTuple
+    transfer: DeferredTransfer
+
+class AccumulationInputs(TypedVector[AccumulationInput]):
+    ...
 
 class DeferredTransfers(TypedVector[DeferredTransfer]):
     ...

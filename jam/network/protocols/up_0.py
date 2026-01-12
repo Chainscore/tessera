@@ -1,7 +1,7 @@
-import asyncio
+from jam.utils.task_utils import create_safe_task
 from typing import cast, TYPE_CHECKING
 
-from tsrkit_types import Uint, U32
+from tsrkit_types import Uint, U32, U8, U64, Bool
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
@@ -17,6 +17,13 @@ from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import HeaderHash
 from jam.types.protocol.validators import ValidatorData
 from jam.api.rpc.subscription_handlers import subscribe_sync_status
+from jam.telemetry import emit_event
+from jam.telemetry.events import (
+    BlockAnnouncementStreamOpened, BlockAnnounced, Importing,
+    BlockVerified, BlockVerificationFailed, SyncStatusChanged,
+    BlockOutline, Bytes32
+)
+from tsrkit_types import Bytes, Bytes32
 
 @structure
 class Leaf:
@@ -144,18 +151,24 @@ class BlockAnnouncement(NetworkProtocol):
 
         message = announcement.encode()
         if announcement.header.hash() not in self._processed_headers: 
-            logger.info("Announcing new block to peers",
-                bs=int(announcement.header.slot),
-                parent_hash=announcement.header.parent.hex()[:16] + "...", message_size=len(message), 
-            )
+            logger.info(f"Announcing new block ({announcement.header.hash().hex()[:8]+".."}) to peers")
 
         announced_count = 0
         chunk = U32(len(message)).encode() + message
         
+        # I think we're supposed to emit for each peer seperately, but that's too many events;
+        # Maybe once we optimise frontend, we can emit for each peer seperately
+        emit_event(BlockAnnounced(
+            peer_id=Bytes32(bytes(32)),
+            announcer=U8(0),  # 0 = Local
+            slot=announcement.header.slot,
+            header_hash=Bytes32(announcement.header.hash())
+        ))
+
         for conn in node.active_peers:
             conn.stream_and_keep_open(chunk, conn.up0_stream)
             announced_count += 1
-
+            
             logger.debug(
                 "📣 Block announced to peer",
                 block_slot=int(announcement.header.slot),
@@ -208,7 +221,7 @@ class BlockAnnouncement(NetworkProtocol):
                 conn.up0_stream = stream_id
 
             # Start synchornization
-            asyncio.create_task(self.synchronise(h))
+            create_safe_task(self.synchronise(h), name="up0_sync")
 
         # Handle announcement
         else:
@@ -224,11 +237,12 @@ class BlockAnnouncement(NetworkProtocol):
             
             anc = Announcement.decode(data[4:])
             hh = anc.header.hash()
+            
             # if we have not already processed this header, announce it 
             if hh not in self._processed_headers:
                 self._processed_headers.add(hh)
                 # Process goes here
-                asyncio.create_task(self._process_header(anc=anc, node=conn))
+                create_safe_task(self._process_header(anc=anc, node=conn), name="up0_process_header")
             logger.debug(
                 "Block announcement 📣 processed successfully", stream_id=stream_id,
                 block_slot=int(anc.final.time_slot),
@@ -244,7 +258,7 @@ class BlockAnnouncement(NetworkProtocol):
         header = anc.header
 
         logger.debug("Fetching block to import", slot=header.slot)
-        asyncio.create_task(subscribe_sync_status("InProgress"))
+        create_safe_task(subscribe_sync_status("InProgress"), name="sync_status")
         blocks = await BlockRequest().transmit(
             CE128Data(
                 header=HeaderHash(header.hash()),
@@ -261,18 +275,18 @@ class BlockAnnouncement(NetworkProtocol):
 
         _valid = state._force_transition(blocks[0][0])
         if _valid:
-            asyncio.create_task(self.transmit(anc))
-            asyncio.create_task(subscribe_sync_status("Completed"))
+            create_safe_task(self.transmit(anc), name="up0_transmit")
+            create_safe_task(subscribe_sync_status("Completed"), name="sync_status")
 
     @classmethod
     async def synchronise(cls, h: Handshake):
         from jam.state.state import state
-        asyncio.create_task(subscribe_sync_status( "InProgress"))
+        create_safe_task(subscribe_sync_status( "InProgress"), name="sync_status")
 
         # To know how many blocks to fetch
         # (h.final.slot - state.tau)
         if h.final.time_slot <= state.tau:
-            asyncio.create_task(subscribe_sync_status("Completed"))
+            create_safe_task(subscribe_sync_status("Completed"), name="sync_status")
             return
 
         data_req = CE128Data(
@@ -289,5 +303,5 @@ class BlockAnnouncement(NetworkProtocol):
             state._force_transition(block)
 
         logger.info("Sync complete!", state_root=state.root)
-        asyncio.create_task(subscribe_sync_status("Completed"))
+        create_safe_task(subscribe_sync_status("Completed"), name="sync_status")
         return

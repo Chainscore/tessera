@@ -16,6 +16,7 @@ from aioquic.tls import SessionTicketFetcher
 from aioquic.quic.configuration import QuicConfiguration
 import asyncio
 import os
+from jam.utils.task_utils import create_safe_task
 from functools import partial
 from typing import Callable, Optional, Text, Union, cast
 from jam.log_setup import network_logger as logger
@@ -246,7 +247,10 @@ class QuicNode(asyncio.DatagramProtocol):
 
         if protocol is not None:
             logger.debug("🌸Processing datagram", data_len=len(data), connection_id=protocol._quic.host_cid.hex())
-            protocol.datagram_received(data, addr)
+            try:
+                protocol.datagram_received(data, addr)
+            except Exception as e:
+                logger.error("Error processing datagram", error=str(e), error_type=type(e).__name__, cid=protocol._quic.host_cid.hex())
 
     def _connection_id_issued(self, cid: bytes, protocol: NodeConnection):
         logger.debug(f"Connection ID issued", cid=cid.hex())
@@ -286,19 +290,22 @@ class QuicNode(asyncio.DatagramProtocol):
         ])
 
     def _connection_terminated(self, protocol: NodeConnection):
-        for cid, proto in list(self.connection_ids.items()):
-            if proto == protocol:
-                del self.connection_ids[cid]
+        try:
+            for cid, proto in list(self.connection_ids.items()):
+                if proto == protocol:
+                    del self.connection_ids[cid]
 
-        if not protocol.ed25519_public:
-            logger.warning("Connection terminated without public key", cid=protocol._quic.host_cid.hex())
-            return
-        from jam.state.state import state
-        val = state.kappa.find(protocol.ed25519_public)[1]
-        if not val:
-            logger.warning("Connection terminated for a non active validator", cid=protocol._quic.host_cid.hex(), ed25519=protocol.ed25519_public.hex())
-            return
-        asyncio.create_task(self.connect(val))
+            if not protocol.ed25519_public:
+                logger.warning("Connection terminated without public key", cid=protocol._quic.host_cid.hex())
+                return
+            from jam.state.state import state
+            val = state.kappa.find(protocol.ed25519_public)[1]
+            if not val:
+                logger.warning("Connection terminated for a non active validator", cid=protocol._quic.host_cid.hex(), ed25519=protocol.ed25519_public.hex())
+                return
+            create_safe_task(self.connect(val), name="reconnect")
+        except Exception as e:
+            logger.error("Error in connection termination handler", error=str(e), error_type=type(e).__name__)
 
     async def connect(self, peer: ValidatorData) -> QuicConnectionProtocol|None:
         # Only if we are the initiator
@@ -312,6 +319,17 @@ class QuicNode(asyncio.DatagramProtocol):
             (int.from_bytes(peer.ed25519) < int.from_bytes(settings.ed25519_public))
         ):
             return None
+
+        # Telemetry: ConnectingOut
+        from jam.telemetry import emit_event
+        from jam.telemetry.events import ConnectingOut, ConnectedOut, PeerAddress, PeerId, ConnectOutFailed
+        from tsrkit_types import U16, U64, Bytes, String
+
+        try:
+            p_addr = PeerAddress(ip=Bytes(16)(bytes(16)), port=U16(peer.metadata.port)) # IP placeholder
+            emit_event(ConnectingOut(peer_id=PeerId(peer.ed25519), address=p_addr))
+        except Exception:
+            pass
 
         quic = QuicConnection(configuration=self._cfg)
         protocol: NodeConnection = self._create_protocol(
@@ -331,15 +349,48 @@ class QuicNode(asyncio.DatagramProtocol):
             self._connection_terminated, protocol=protocol
         )
         # --- Connect --- #
-        protocol.connect(addr)                        # start handshake
-        protocol.transmit()                           # send initial flight
-        await protocol.wait_connected()
-        logger.debug(f"➡️ Created client connection with {addr[1]}", cid=quic.host_cid.hex())
+        try:
+            protocol.connect(addr)                        # start handshake
+            protocol.transmit()                           # send initial flight
+            # Add timeout to prevent waiting forever for unresponsive peers
+            await asyncio.wait_for(protocol.wait_connected(), timeout=30.0)
+            logger.debug(f"➡️ Created client connection with {addr[1]}", cid=quic.host_cid.hex())
+            
+            # Telemetry: ConnectedOut
+            emit_event(ConnectedOut(event_id=U64(0))) # event_id placeholder
+        except asyncio.TimeoutError:
+            logger.warning(f"Connection to {addr[1]} timed out after 30s")
+            emit_event(ConnectOutFailed(event_id=U64(0), reason=String("Connection timeout")))
+            # Clean up the failed connection
+            if quic.host_cid in self.connection_ids:
+                del self.connection_ids[quic.host_cid]
+            if peer.ed25519 in self.conns:
+                del self.conns[peer.ed25519]
+            return None
+        except ConnectionError as e:
+            logger.warning(f"Connection to {addr[1]} failed: {e}")
+            emit_event(ConnectOutFailed(event_id=U64(0), reason=String(str(e))))
+            # Clean up the failed connection
+            if quic.host_cid in self.connection_ids:
+                del self.connection_ids[quic.host_cid]
+            if peer.ed25519 in self.conns:
+                del self.conns[peer.ed25519]
+            return None
+        except Exception as e:
+            # Telemetry: ConnectOutFailed
+            logger.error(f"Unexpected error connecting to {addr[1]}: {e}")
+            emit_event(ConnectOutFailed(event_id=U64(0), reason=String(str(e))))
+            # Clean up the failed connection
+            if quic.host_cid in self.connection_ids:
+                del self.connection_ids[quic.host_cid]
+            if peer.ed25519 in self.conns:
+                del self.conns[peer.ed25519]
+            return None
 
         # FIX: Only if neighbor
         protocol.up0_stream = 0
         protocol.stream_and_keep_open(bytes(1), protocol.up0_stream)
-        asyncio.create_task(self.keep_pinging(protocol))
+        create_safe_task(self.keep_pinging(protocol), name="keep_pinging")
 
         # stream_id = protocol._quic.get_next_available_stream_id()
         # from jam.network.protocols import BlockAnnouncement
@@ -348,6 +399,15 @@ class QuicNode(asyncio.DatagramProtocol):
         return protocol
 
     async def keep_pinging(self, conn: NodeConnection, period = 10):
-        while True:
-            await conn.ping()
-            await asyncio.sleep(period)
+        try:
+            while True:
+                await conn.ping()
+                await asyncio.sleep(period)
+        except ConnectionError:
+            # Connection was terminated, this is expected
+            logger.debug("Ping loop ended - connection terminated", cid=conn._quic.host_cid.hex())
+        except asyncio.CancelledError:
+            # Task was cancelled (e.g., during shutdown)
+            pass
+        except Exception as e:
+            logger.warning("Ping loop ended unexpectedly", error=str(e), cid=conn._quic.host_cid.hex())

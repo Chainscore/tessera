@@ -14,7 +14,8 @@ jobs:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 1
+        fetch-depth: 0
+        lfs: false
         token: ${{ secrets.PRIVATE_REPO_TOKEN }}
         submodules: false
 
@@ -35,8 +36,11 @@ jobs:
     - name: 📦 Checkout submodules
       run: |
         git config --global url."https://x-access-token:${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
+        git lfs install --skip-smudge
         git submodule update --init --recursive
         git submodule status --recursive
+        
+        git lfs pull --all || echo "Some LFS files may be inaccessible, continuing..."
 
     - name: 🚀 Install uv
       run: |
@@ -57,8 +61,13 @@ jobs:
         uv python install 3.12
         uv python find 3.12
 
+    - name: 🧼 Free disk space
+      run: |
+        sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android
+        df -h
+
     - name: 🔧 Sync dependencies with uv
-      run: uv sync --all-extras
+      run: uv sync --extra test
 
     - name: 🔨 Build tsrkit-pvm
       run: |
@@ -67,25 +76,14 @@ jobs:
         uv run python setup.py build_ext --inplace
         cd ../../
 
-    - name: 🧼 Aggressive cleanup before tests (pip/cargo/uv caches)
+    - name: 🧼 Aggressive cleanup before tests
       run: |
-        # clean pip cache
         pip3 cache purge || true
         rm -rf ~/.cache/pip ~/.cache/* || true
-
-        # remove uv caches
-        rm -rf ~/.uv || true
-        rm -rf $HOME/.local/share/uv || true
-
-        # remove cargo registry & git cache
         rm -rf ~/.cargo/registry ~/.cargo/git || true
-
-        # if submodules include .git directories you don't need during tests, remove them
+        rm -rf ~/.uv ~/.local/share/uv || true
         find . -name ".git" -type d -prune -exec rm -rf {} \; || true
-
-        # final check
         df -h
-        echo "Top large files now:"
         sudo du -ah /home/runner 2>/dev/null | sort -rh | head -n 40 || true
 
 

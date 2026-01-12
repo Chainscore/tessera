@@ -1,6 +1,6 @@
-import os, sys, pathlib, glob, importlib, platform
+import os, sys, pathlib, glob, importlib, platform, site
 from PyInstaller.building.build_main import Analysis, PYZ, EXE, COLLECT
-from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules
+from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules, collect_data_files
 
 # ------------------------------------------------------------------ #
 # Robust repo-root detection
@@ -48,6 +48,13 @@ print(f">> RocksDB library found and added: {rocksdb_path}")
 bitarray_venv_path = project_root / '.venv/lib/python3.12/site-packages/bitarray'
 essential_files = []
 
+# ------------------------------------------------------------------ #
+# Include py_ecc .dist-info so importlib.metadata.version() works
+py_ecc_site = pathlib.Path(site.getsitepackages()[0])
+for dist_info in py_ecc_site.glob('py_ecc-*.dist-info'):
+    print(f">> Adding py_ecc metadata: {dist_info}")
+    essential_files.append((str(dist_info), 'py_ecc-*.dist-info'))
+
 if bitarray_venv_path.exists():
     # Include the entire bitarray package
     essential_files.append((str(bitarray_venv_path), 'bitarray'))
@@ -62,6 +69,9 @@ else:
 
 # tsrkit-pvm compiled extensions - discover dynamically from multiple locations
 binaries += collect_dynamic_libs('tsrkit_pvm')
+
+# gmpy2 compiled extension + shared libs
+binaries += collect_dynamic_libs('gmpy2')
 
 # Collect from build directory (standard build output)
 pvm_build_glob = project_root.glob('deps/tsrkit-pvm/build/**/*.so')
@@ -90,6 +100,25 @@ if srs_path.exists():
         (str(srs_path), 'py_ark_vrf')
     ])
 
+# dot-ring files
+dot_ring_datas = collect_data_files(
+    "dot_ring",
+    includes=[
+        "ring_proof/columns/*.json",
+        "vrf/data/*.bin"
+    ]
+)
+
+if not dot_ring_datas:
+    raise RuntimeError(
+        "Failed to collect dot_ring SRS data files. "
+        "Is 'dot-ring' installed in this environment?"
+    )
+
+essential_files.extend(dot_ring_datas)
+
+print(f">> Added dot-ring data files: {dot_ring_datas}")
+
 # Add dev-spec.json in project root to the bundle root (meipass)
 dev_spec = project_root / "dev-spec.json"
 if dev_spec.exists():
@@ -97,13 +126,14 @@ if dev_spec.exists():
 
 # ------------------------------------------------------------------ #
 hidden = (
-    ['jam']
+    ['jam', 'gmpy2']
     + collect_submodules('tsrkit_pvm')
     + collect_submodules('tsrkit_asm')
     + collect_submodules('tsrkit_types')
     + collect_submodules('rockstore')
     + collect_submodules('py_ark_vrf')
     + collect_submodules('bitarray')
+    + collect_submodules('py_ecc')
 )
 
 # Extremely aggressive exclusions to minimize binary size

@@ -29,6 +29,40 @@ _is_setup = False
 class ColoredRenderer:
     """Simple colored renderer for structlog"""
 
+    def _get_node_color(self, name: str) -> str:
+        """Get a consistent color for a node name based on hash"""
+        # Predefined colors for known nodes to ensure differentiation
+        known_nodes = {
+            "alice": "\033[48;5;196m\033[97m",   # Bright red bg
+            "bob": "\033[48;5;46m\033[30m",      # Bright green bg
+            "charlie": "\033[48;5;21m\033[97m",  # Bright blue bg
+            "dave": "\033[48;5;208m\033[30m",    # Orange bg
+            "eve": "\033[48;5;201m\033[97m",     # Magenta/pink bg
+            "fergie": "\033[48;5;226m\033[30m",  # Yellow bg
+        }
+        
+        # Use predefined color if node is known
+        name_lower = name.lower().strip()
+        if name_lower in known_nodes:
+            return known_nodes[name_lower]
+        
+        # For unknown nodes, use hash with more colors
+        colors = [
+            "\033[48;5;51m\033[30m",   # Cyan bg
+            "\033[48;5;129m\033[97m",  # Purple bg
+            "\033[48;5;34m\033[97m",   # Forest green bg
+            "\033[48;5;197m\033[97m",  # Hot pink bg
+            "\033[48;5;39m\033[30m",   # Sky blue bg
+            "\033[48;5;214m\033[30m",  # Gold bg
+            "\033[48;5;171m\033[97m",  # Orchid bg
+            "\033[48;5;82m\033[30m",   # Lime bg
+            "\033[48;5;160m\033[97m",  # Crimson bg
+            "\033[48;5;33m\033[97m",   # Dodger blue bg
+        ]
+        # Use built-in hash for better distribution
+        idx = hash(name) % len(colors)
+        return colors[idx]
+
     def __call__(self, logger, name, event_dict):
         # Get timestamp
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -36,13 +70,13 @@ class ColoredRenderer:
         # Get colors
         level = event_dict.get("level", "INFO").upper()
         level_color = _theme_colors.get(level, "")
-        node_color = _theme_colors.get("node", "")
 
         # Build parts
         parts = []
 
-        # Add node name if set
+        # Add node name if set - use name-seeded color for each node
         if _node_name:
+            node_color = self._get_node_color(_node_name)
             parts.append(f"{node_color}[{_node_name:9}]{RESET}")
         else:
             parts.append(" " * 11)
@@ -61,17 +95,13 @@ class ColoredRenderer:
         # Add message
         parts.append(event_dict.get("event", ""))
 
-        # Add structured fields
+        # Add structured fields in compact format: key=value|key2=value2
         extras = {k: v for k, v in event_dict.items() if k not in ["event", "level", "timestamp", "logger"]}
         if extras:
-            parts.append(f" | {extras}")
+            extra_str = "|".join(f"{k}={v}" for k, v in extras.items())
+            parts.append(f"| {extra_str}")
 
         return " ".join(parts)
-
-def add_node_name(logger, method_name, event_dict):
-    if _node_name:
-        event_dict["node"] = _node_name
-    return event_dict
 
 def setup_logging(theme: str = "default", node_name: Optional[str] = None):
     """
@@ -112,31 +142,43 @@ def setup_logging(theme: str = "default", node_name: Optional[str] = None):
     os.makedirs("logs", exist_ok=True)
 
     # Configure logging with two handlers: stream and file
+    # Configure logging with two handlers: stream and file
+    handlers = {
+        "default": {
+            "level": min_level,
+            "class": "logging.StreamHandler",
+            "formatter": "colored",
+        },
+    }
+
+    # Try to configure file handler
+    log_file = f"logs/app_{node_name}_{os.getpid()}.log" if node_name else f"logs/app_{os.getpid()}.log"
+    try:
+        # Check if we can write to the log file
+        with open(log_file, "a"):
+            pass
+        
+        handlers["file"] = {
+            "level": min_level,
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": log_file,
+            "formatter": "json",
+            "maxBytes": 10485760,  # 10MB
+            "backupCount": 7,
+        }
+    except (PermissionError, OSError) as e:
+        print(f"WARNING: Could not write to log file {log_file}: {e}. File logging disabled.")
+
     logging.config.dictConfig({
         "version": 1,
         "disable_existing_loggers": False,
-        "handlers": {
-            "default": {
-                "level": min_level,
-                "class": "logging.StreamHandler",
-                "formatter": "colored",
-            },
-            "file": {
-                "level": min_level,
-                "class": "logging.handlers.RotatingFileHandler",
-                "filename": "logs/app.log",
-                "formatter": "json",
-                "maxBytes": 10485760,  # 10MB
-                "backupCount": 7,
-            },
-        },
+        "handlers": handlers,
         "formatters": {
             "colored": {
                 "()": structlog.stdlib.ProcessorFormatter,
                 "processor": ColoredRenderer(),
                 "foreign_pre_chain": [
                     structlog.stdlib.add_log_level,
-                    add_node_name,
                     structlog.processors.TimeStamper(fmt="%H:%M:%S"),
                 ],
             },
@@ -145,14 +187,13 @@ def setup_logging(theme: str = "default", node_name: Optional[str] = None):
                 "processor": structlog.processors.JSONRenderer(),
                 "foreign_pre_chain": [
                     structlog.stdlib.add_log_level,
-                    add_node_name,
                     structlog.processors.TimeStamper(fmt="%H:%M:%S"),
                 ],
             },
         },
         "loggers": {
             "": {
-                "handlers": ["default", "file"],
+                "handlers": list(handlers.keys()),
                 "level": "DEBUG",
                 "propagate": True,
             },
@@ -168,7 +209,6 @@ def setup_logging(theme: str = "default", node_name: Optional[str] = None):
             structlog.stdlib.filter_by_level,
             structlog.stdlib.add_logger_name,
             structlog.stdlib.add_log_level,
-            add_node_name,
             structlog.stdlib.PositionalArgumentsFormatter(),
             structlog.processors.TimeStamper(fmt="%H:%M:%S"),
             structlog.processors.StackInfoRenderer(),

@@ -1,5 +1,6 @@
 import asyncio
 import math
+from jam.utils.task_utils import create_safe_task
 from typing import cast
 from tsrkit_types import structure, Uint, U8, U32
 from jam.types.protocol.core import ValidatorIndex, EpochIndex
@@ -173,8 +174,9 @@ class JudgmentPublication(NetworkProtocol):
                     raise KeyError("Judgment age is not valid; work report is too old.")
 
             # Handling received judgment
-            asyncio.create_task(
-                self.handle_judgment(judgment=data.judgment, ed25519_key=ed25519_key)
+            create_safe_task(
+                self.handle_judgment(judgment=data.judgment, ed25519_key=ed25519_key),
+                name="handle_judgment"
             )
 
             if not data.is_valid:
@@ -220,7 +222,10 @@ class JudgmentPublication(NetworkProtocol):
                 raise ValueError(f"Tranche not found for report {judgment.work_report_hash.hex()}")
 
             if judgment.validity == U8(0):
-                asyncio.create_task(self.negative_judgments(judgment=judgment, tranche=tranche))
+                create_safe_task(
+                    self.negative_judgments(judgment=judgment, tranche=tranche),
+                    name="handle_judgment"
+                )
 
             await tranche_store.update_judgment(
                 tranche=tranche, judgment=judgment, ed25519_public=ed25519_key

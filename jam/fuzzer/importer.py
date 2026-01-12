@@ -1,71 +1,96 @@
 """
 JAM Test Vector Importer
 """
-import json
 import os
 import shutil
 import time
 from pathlib import Path
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, NamedTuple
 
 from jam.block.block import Block
-from tsrkit_types import Bytes
+from jam.log_setup import logger
+from jam.state.state import setup_state
+from tsrkit_types import Bytes, structure, TypedVector
 
 
-def load_test_vector(file_path: str) -> Dict[str, Any]:
-    with open(file_path, 'r') as f:
-        return json.load(f)
+@structure
+class KeyVal:
+    key: Bytes[31]
+    value: Bytes
 
 
-def get_test_vector_files(import_path: str) -> List[str]:
+@structure
+class StateKeyVals:
+    state_root: Bytes[32]
+    keyvals: TypedVector[KeyVal]
+
+
+@structure
+class Trace:
+    pre_state: StateKeyVals
+    block: Block
+    post_state: StateKeyVals
+
+class TraceCase(NamedTuple):
+    """Normalized trace test case data."""
+    id: str  # e.g., "1766243315_8065_00000035"
+    file_path: Path
+    pre_state: Dict[bytes, bytes]
+    pre_root: str
+    block: Block
+    post_state: Dict[bytes, bytes]
+    expected_root: str  # Hex string without 0x
+
+def load_test_vector(file_path: Path) -> TraceCase:
+    trace = Trace.decode(file_path.read_bytes())
+    case_id = f"{file_path.parent.name}_{file_path.stem}"
+
+    case =  TraceCase(
+        id=case_id,
+        file_path=file_path,
+        pre_state={item.key: item.value for item in trace.pre_state.keyvals},
+        pre_root = trace.pre_state.state_root.hex(),
+        block=trace.block,
+        post_state={item.key: item.value for item in trace.post_state.keyvals},
+        expected_root=trace.post_state.state_root.hex()
+    )
+
+    return case
+
+def get_test_vector_files(import_path: str) -> List[Path]:
     path = Path(import_path)
-    
+
     if path.is_file():
-        if path.suffix.lower() == '.json':
-            return [str(path)]
-        raise ValueError(f"Must be JSON file: {import_path}")
+        if path.suffix.lower() == '.bin':
+            return [path]
+        raise ValueError(f"Must be BIN file: {import_path}")
     
     elif path.is_dir():
-        json_files = [str(f) for f in path.glob("*.json")]
-        json_files.sort()
-        return json_files
+        files = [f for f in path.glob("*.bin")]
+        # files.sort()
+        return files
     
     raise ValueError(f"Path not found: {import_path}")
 
 
-def setup_state_from_keyvals(state_db, keyvals: List[Dict[str, str]]):
-    from jam.state.state import setup_state
-    
-    state_dict = {}
-    for kv in keyvals:
-        key = Bytes.from_json(kv["key"])
-        value = Bytes.from_json(kv["value"])
-        state_dict[key] = value
-    
-    return setup_state(state_db, state_dict)
-
-
-def process_test_vector(test_vector: Dict[str, Any], state, settings) -> Tuple[Any, float]:
-    pre_state = test_vector.get("pre_state", {})
-    expected_pre_root = pre_state.get("state_root", "0x" + "00" * 32)
+def process_test_vector(test_vector: TraceCase, state, settings) -> Tuple[Any, float]:
+    pre_state = test_vector.pre_state
+    expected_pre_root = test_vector.pre_root
     if expected_pre_root.startswith("0x"):
         expected_pre_root = expected_pre_root[2:]
     
     # Update state only if root doesn't match
     if state.root.hex() != expected_pre_root:
-        keyvals = pre_state.get("keyvals", [])
-        if keyvals:
-            state = setup_state_from_keyvals(settings.state_db, keyvals)
+        logger.warning("Pre State doesn't match, recomputing Pre State")
+        state = setup_state(settings.state_db, pre_state)
     
     # Process block if present
     transition_time = 0.0
-    block_data = test_vector.get("block")
-    if block_data:
-        block = Block.from_json(block_data)
-        start_time = time.time()
-        state._force_transition(block)
-        transition_time = time.time() - start_time
-    
+    block = test_vector.block
+    start_time = time.time()
+    state._force_transition(block, False)
+    transition_time = time.time() - start_time
+
     return state, transition_time
 
 
@@ -82,7 +107,7 @@ async def run_import(db_path: str, import_path: str) -> None:
     # Get files
     test_files = get_test_vector_files(import_path)
     if not test_files:
-        print("No JSON files found")
+        print("No BIN files found")
         return
     
     print(f"Found {len(test_files)} test vector(s)")
@@ -99,9 +124,7 @@ async def run_import(db_path: str, import_path: str) -> None:
             
             # Initialize state on first vector
             if state is None:
-                pre_state = test_vector.get("pre_state", {})
-                keyvals = pre_state.get("keyvals", [])
-                state = setup_state_from_keyvals(settings.state_db, keyvals)
+                state = setup_state(settings.state_db, test_vector.pre_state)
 
             # Process vector
             state, transition_time = process_test_vector(test_vector, state, settings)
@@ -111,7 +134,7 @@ async def run_import(db_path: str, import_path: str) -> None:
             if transition_time > 0:
                 transition_data.append((filename, transition_time))
 
-            post_root = test_vector.get("post_state", {}).get("state_root")
+            post_root = test_vector.expected_root
             if post_root:
                 assert state.root.hex() == post_root[2:] if post_root.startswith("0x") else post_root, \
                 f"State root mismatch after processing {filename}"
