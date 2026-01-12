@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: [ main, develop ]
 
-env:
-  GIT_LFS_SKIP_SMUDGE: 1
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -17,13 +14,10 @@ jobs:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 1
+        fetch-depth: 0
+        lfs: true
         token: ${{ secrets.PRIVATE_REPO_TOKEN }}
         submodules: false
-
-    - name: Disable Git LFS smudge
-      run: |
-        git lfs install --skip-smudge
 
     - name: 🧾 Show disk usage (before)
       run: |
@@ -74,25 +68,14 @@ jobs:
         uv run python setup.py build_ext --inplace
         cd ../../
 
-    - name: 🧼 Aggressive cleanup before tests (pip/cargo/uv caches)
+    - name: 🧼 Aggressive cleanup before tests
       run: |
-        # clean pip cache
         pip3 cache purge || true
         rm -rf ~/.cache/pip ~/.cache/* || true
-
-        # remove uv caches
-        rm -rf ~/.uv || true
-        rm -rf $HOME/.local/share/uv || true
-
-        # remove cargo registry & git cache
         rm -rf ~/.cargo/registry ~/.cargo/git || true
-
-        # if submodules include .git directories you don't need during tests, remove them
+        rm -rf ~/.uv ~/.local/share/uv || true
         find . -name ".git" -type d -prune -exec rm -rf {} \; || true
-
-        # final check
         df -h
-        echo "Top large files now:"
         sudo du -ah /home/runner 2>/dev/null | sort -rh | head -n 40 || true
 
 

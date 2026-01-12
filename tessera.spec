@@ -103,7 +103,10 @@ if srs_path.exists():
 # dot-ring files
 dot_ring_datas = collect_data_files(
     "dot_ring",
-    includes=["vrf/data/*.bin"]
+    includes=[
+        "ring_proof/columns/*.json",
+        "vrf/data/*.bin"
+    ]
 )
 
 if not dot_ring_datas:
