@@ -88,7 +88,7 @@ def process_test_vector(test_vector: TraceCase, state, settings) -> Tuple[Any, f
     transition_time = 0.0
     block = test_vector.block
     start_time = time.time()
-    state._force_transition(block)
+    state._force_transition(block, False)
     transition_time = time.time() - start_time
 
     return state, transition_time
