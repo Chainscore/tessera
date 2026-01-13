@@ -29,7 +29,8 @@ jobs:
             runner: macos-14
           - os: linux
             arch: x64
-            runner: ubuntu-22.04-16core
+            runner: ubuntu-24.04
+            timeout-minutes: 15
           - os: darwin
             arch: x64
             runner: macos-15
