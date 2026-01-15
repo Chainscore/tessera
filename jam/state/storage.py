@@ -1,6 +1,8 @@
 from typing import Self
 from collections import OrderedDict
 
+from docutils.utils import split_escaped_whitespace
+
 from rockstore import RockStore
 from tsrkit_types import Bytes, structure, Dictionary
 
@@ -199,7 +201,7 @@ class StateStorage:
             hh (HeaderHash): block whose cache needs to be stashed
             kv (RockStore): main DB, where we store blocks
         """
-
+        # print("CURRENT STASHING ROOT 0", self._TRIE.root_hash.hex())
         if self._read_only:
             raise PermissionError("State storage is not writable")
 
@@ -208,12 +210,14 @@ class StateStorage:
         prior_root = StateRoot(self._TRIE.root_hash)
         trie_updates = {}
         trie_deletes = []
+#         print("CURRENT STASHING ROOT 1", self._TRIE.root_hash.hex())
 
         if hh:
             block = Block.load(hh, kv)
             previous_updates, _ = self.load_cache(block.header.parent, False)
         else:
             previous_updates = {}
+#         print("CURRENT STASHING ROOT 2", self._TRIE.root_hash.hex())
 
         for k, v in self._updates.items():
             curr_val = self._DB.get(k)
@@ -234,20 +238,25 @@ class StateStorage:
                 trie_deletes.append(Bytes(k))
             else:
                 trie_updates[Bytes[32](k)] = Bytes(v)
+#         print("CURRENT STASHING ROOT 3", self._TRIE.root_hash.hex())
 
         # Batch process trie updates for better performance
+        print("UPDATES LENGTH", len(trie_updates))
         if trie_updates:
             self._TRIE.batch_update(trie_updates)
+#         print("CURRENT STASHING ROOT 4", self._TRIE.root_hash.hex())
 
         # Process deletes individually (could be optimized further if needed)
         for key in trie_deletes:
             self._TRIE.delete(key)
 
+#         print("CURRENT STASHING ROOT 5", self._TRIE.root_hash.hex())
         posterior_root = StateRoot(self._TRIE.root_hash)
         roots = Roots(
             prev=prior_root,
             curr=posterior_root
         )
+#         print("CURRENT STASHING ROOT 6", self._TRIE.root_hash.hex())
 
         record = StateRecord(updates=_state_cache, roots=roots)
         if kv and hh:
@@ -255,6 +264,8 @@ class StateStorage:
                 self.get_storage_key(hh),
                 record.encode(),
             )
+        # print("STORING RECORDS", self.get_storage_key(hh).hex(), record.to_json())
+#         print("CURRENT STASHING ROOT 7", self._TRIE.root_hash.hex())
 
     def settle_cache(self):
         """Apply cached updates to DB"""

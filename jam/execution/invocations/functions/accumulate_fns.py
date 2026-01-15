@@ -485,23 +485,26 @@ class AccumulateFunctions(INVF):
         d = context.x.partial_state.service_accounts
 
         s = registers[7]
+        print("INITIAL s", s, s==2**64 - 1)
         if registers[7] == 2**64 - 1:
             s = context.x.s_index
-
+        print("UPDATED S", s)
         if not memory.is_accessible(o, z):
             raise PvmError(PANIC)
         i = Bytes(memory.read(o, z))
-
+        print("PROVIDE DATA", i.hex())
         if d[s] is None:
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
         a = d[s]
 
         lookup = a.lookup[LookupTable(hash=Hash.blake2b(i), length=BlobLength(z))]
+        print("DIDNT ADD")
         if (lookup is not None and len(lookup) != 0) or (ServiceId(s), i) in context.x.preimage:
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
 
+        print("ADDING PREIMAGE", s, i.hex())
         context.x.preimage.add((s, i))
         registers[7] = HostStatus.OK.value
         return CONTINUE, gas, registers, memory, context
