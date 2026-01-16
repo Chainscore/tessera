@@ -159,7 +159,6 @@ class GeneralFunctions(INVF):
                 v = package.items[w11].payload
         elif o is not None:
             if w10 == 14:
-                print("TYPE OF OT", type(o), o.to_json(), len(o.encode()))
                 v = o.encode()
             elif w10 == 15 and w11 < len(o):
                 v = o[w11].encode()
@@ -171,7 +170,6 @@ class GeneralFunctions(INVF):
         memory_start = int(registers[7])
         f = min(int(registers[8]), len(v))
         l = min(int(registers[9]), len(v) - f)
-        print("LENGTH", l)
         if not memory.is_accessible(memory_start, l, Accessibility.WRITE):
             logger.error(
                 "Fetch: memory not accessible for write",
@@ -181,7 +179,6 @@ class GeneralFunctions(INVF):
             raise PvmError(PANIC)
 
         registers[7] = len(v)
-        print("FETCH DATA", v[f : f + l].hex(), "TYPE", fetch_type)
         memory.write(memory_start, v[f : f + l])
 
         return CONTINUE, gas, registers, memory, context
@@ -299,7 +296,6 @@ class GeneralFunctions(INVF):
         if a is not None:
             # Directly get data, returns None if not found
             value = a.storage[key]
-            print("VAL READ", value.hex() if value else value)
 
         if value is None or len(value) == 0:
             registers[7] = HostStatus.NONE.value
@@ -315,8 +311,6 @@ class GeneralFunctions(INVF):
                 )
                 raise PvmError(PANIC)
             registers[7] = Register(len(value))
-            print("LENGTH VALUES", len(value))
-            print("READ DATA", service_key, "VAL", value[start : start + length].hex(), "KEY", key.hex())
             memory.write(o, value[start : start + length])
 
         return CONTINUE, gas, registers, memory, context
@@ -363,13 +357,11 @@ class GeneralFunctions(INVF):
         elif memory.is_accessible(vo, vz):
             pre_data = a[k]
             a[k] = Bytes(memory.read(vo, vz))
-            print("STORAGE KEY", service_index, k.hex(), a[k].hex(), pre_data.hex() if pre_data else None)
             if service_data.service.t > service_data.service.balance:
                 registers[7] = HostStatus.FULL.value
                 if pre_data is None:
                     del a[k]
                 else:
-                    print("HERE??")
                     a[k] = pre_data
                 logger.warning("Host call write: storage full", storage_key=k.hex()[:16] + "...")
                 return CONTINUE, gas, registers, memory, context
@@ -381,7 +373,6 @@ class GeneralFunctions(INVF):
             )
             raise PvmError(PANIC)
 
-        print("NOPE HERE")
 
         registers[7] = storage_len
         return CONTINUE, gas, registers, memory, context
@@ -437,7 +428,6 @@ class GeneralFunctions(INVF):
             raise PvmError(PANIC)
         
         registers[7] = len(v)
-        print("INFO DATA", v[f:f+l].hex())
         memory.write(output_offset, v[f:f+l])
 
         return CONTINUE, gas, registers, memory, context

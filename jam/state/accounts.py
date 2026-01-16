@@ -177,6 +177,9 @@ class DeltaView:
         self.store = store
 
     def __getitem__(self, key: ServiceId):
+        data = self.store.get(bytes(construct_state_key((255, key))))
+        if data is None:
+            return None
         return Account(id=key, store=self.store)
 
     def __setitem__(self, key: ServiceId, value: AccountData):
