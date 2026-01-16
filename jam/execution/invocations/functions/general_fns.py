@@ -138,7 +138,7 @@ class GeneralFunctions(INVF):
                     + w.export_count.encode()
                     + U16(len(w.import_segments)).encode()
                     + U16(len(w.extrinsic)).encode()
-                    + U32(len(w.payload))
+                    + U32(len(w.payload)).encode()
                 )
 
             if w10 == 7:
@@ -263,6 +263,9 @@ class GeneralFunctions(INVF):
         key_size = registers[9]
         output_offset = registers[10]
 
+        if service_key == 2**64 - 1:
+            service_key = service_index
+
         logger.debug(
             "Host call: read",
             service_key=service_key,
@@ -270,9 +273,6 @@ class GeneralFunctions(INVF):
             key_size=key_size,
             output_offset=output_offset,
         )
-
-        if service_key == 2**64 - 1:
-            service_key = service_index
 
         a: None | AccountData = None
         if service_key == service_index:
@@ -310,7 +310,9 @@ class GeneralFunctions(INVF):
                     required_size=length,
                 )
                 raise PvmError(PANIC)
+
             registers[7] = Register(len(value))
+            print("READ VAL", len(value), registers[8])
             memory.write(o, value[start : start + length])
 
         return CONTINUE, gas, registers, memory, context
@@ -347,9 +349,10 @@ class GeneralFunctions(INVF):
 
         k = Bytes(memory.read(ko, kz))
 
+        print("SERVICE IS THERE?>" ,service_data, k.hex(), int.from_bytes(k))
         a = service_data.storage
 
-        curr_value = a.get(k)
+        curr_value = a[k]
         storage_len = len(curr_value) if curr_value else HostStatus.NONE.value
 
         if vz == 0:
@@ -358,6 +361,7 @@ class GeneralFunctions(INVF):
             pre_data = a[k]
             a[k] = Bytes(memory.read(vo, vz))
             if service_data.service.t > service_data.service.balance:
+                print("BALANCE ZYADA H BHAI", service_data.service.t, service_data.service.balance)
                 registers[7] = HostStatus.FULL.value
                 if pre_data is None:
                     del a[k]
@@ -373,6 +377,7 @@ class GeneralFunctions(INVF):
             )
             raise PvmError(PANIC)
 
+        print("WRITE VAL", storage_len, registers[8])
 
         registers[7] = storage_len
         return CONTINUE, gas, registers, memory, context
@@ -390,6 +395,9 @@ class GeneralFunctions(INVF):
         target_service = registers[7]
         output_offset = registers[8]
 
+        if target_service == 2**64 - 1:
+            target_service = service_index
+
         logger.debug(
             "Host call: info",
             target_service=target_service,
@@ -397,11 +405,8 @@ class GeneralFunctions(INVF):
             service_index=int(service_index),
         )
 
-        if target_service == 2**64 - 1:
-            target_service = service_index
-
-
-        if target_service > 2**32-1 or target_service not in accounts:
+        if target_service > 2**32-1 or not accounts[target_service]:
+            print("IDHAR WALA BHAI")
             registers[7] = HostStatus.NONE.value
             return CONTINUE, gas, registers, memory, context
 
@@ -430,6 +435,7 @@ class GeneralFunctions(INVF):
         registers[7] = len(v)
         memory.write(output_offset, v[f:f+l])
 
+        print("INFO VAL", len(v), registers[8])
         return CONTINUE, gas, registers, memory, context
 
     @staticmethod

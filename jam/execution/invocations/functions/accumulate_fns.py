@@ -112,7 +112,7 @@ class AccumulateFunctions(INVF):
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
 
-        if not a in context.x.partial_state.service_accounts:
+        if a > 2**32-1 or not a in context.x.partial_state.service_accounts:
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
 
@@ -315,6 +315,7 @@ class AccumulateFunctions(INVF):
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
         l = BlobLength(max(81, account.service.num_o) - 81)
+        print("EJECT LEN", l, registers[8])
         lookup_key = LookupTable(hash=ServiceCodeHash(code_hash), length=BlobLength(l))
 
         if account.service.num_i != 2 or account.lookup[lookup_key] is None:
@@ -366,6 +367,7 @@ class AccumulateFunctions(INVF):
         elif len(lookup_value) == 3:
             registers[7] = 3 + 2**32 * U64(lookup_value[0])
             registers[8] = U64(lookup_value[1]) + 2**32 * U64(lookup_value[2])
+            print("LOOKUP CHANGED", registers[8])
         else:
             logger.critical(
                 "Unexpected metadata",
@@ -387,6 +389,7 @@ class AccumulateFunctions(INVF):
         block_timeslot: TimeSlot,
     ):
         preimage_hash_addr, preimage_len = registers[7], registers[8]
+        print("PREIMAGE", preimage_hash_addr, preimage_len)
 
         # Preimage hash
         if not memory.is_accessible(preimage_hash_addr, 32):
@@ -397,6 +400,11 @@ class AccumulateFunctions(INVF):
         # state.store.save_n_clear_cache()
 
         # Account
+        # if preimage_len < 0 or preimage_len > 2**32-1:
+        #     # raise PvmError(PANIC)
+        #     registers[7] = HostStatus.NONE.value
+        #     return ExecutionStatus.CONTINUE, gas, registers, memory, context
+
         account: AccountData = context.x.partial_state.service_accounts[context.x.s_index]
         lookup_key = LookupTable(hash=preimage_hash, length=BlobLength(preimage_len))
         # storing the initial lookup value

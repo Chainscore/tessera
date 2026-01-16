@@ -1,6 +1,7 @@
 from copy import deepcopy
 from typing import Tuple, Set, List, Dict, TYPE_CHECKING
 
+from tsrkit_types import U32
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import Uint
 from tsrkit_types.null import Null
@@ -555,7 +556,7 @@ class Accumulation:
                     "[Accumulation] Unexpected: Received preimage for a service that does not exist"
                 )
             key_hash = Hash.blake2b(blobs)
-            lookup = LookupTable(hash=key_hash,length= len(blobs))
+            lookup = LookupTable(hash=key_hash,length=U32(len(blobs)))
             if service.lookup[lookup] is not None and len(service.lookup[lookup]) == 0:
                 service.lookup[lookup] = Timestamps([timeslot])
                 service.preimages[key_hash] = blobs
