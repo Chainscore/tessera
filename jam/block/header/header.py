@@ -178,7 +178,7 @@ class Header:
             raise BlockError(BlockErrorCode.INCORRECT_STATE_ROOT, f"E: {self.parent_state_root.hex()}, A: {state.root.hex()}")
 
         # Marker checks
-        is_new_epoch = (self.slot // EPOCH_LENGTH) > (pre_state.tau // EPOCH_LENGTH)
+        is_new_epoch = (state.tau // EPOCH_LENGTH) > (pre_state.tau // EPOCH_LENGTH)
         # Epoch marker
         if is_new_epoch:
             valid_epoch_mark = EpochMark(
@@ -205,17 +205,20 @@ class Header:
                 raise BlockError(BlockErrorCode.EPOCH_MARKER_NOT_EMPTY)
 
         # If we're in ticket mode
-        is_ticket_mode = len(state.gamma.a) >= EPOCH_LENGTH
-        is_last_ticket_slot = pre_state.tau % EPOCH_LENGTH < TICKET_SUBMISSION_END and self.slot % EPOCH_LENGTH >= TICKET_SUBMISSION_END
+        is_same_epoch = (state.tau // EPOCH_LENGTH) == (pre_state.tau // EPOCH_LENGTH)
+        is_ticket_mode = len(state.gamma.a) == EPOCH_LENGTH
+        is_last_ticket_slot = (pre_state.tau % EPOCH_LENGTH < TICKET_SUBMISSION_END) and (state.tau % EPOCH_LENGTH >= TICKET_SUBMISSION_END)
 
-        if is_last_ticket_slot and is_ticket_mode and not is_new_epoch:
-            valid_ticket_mark = TicketsMark(TicketsMarkData(outside_in(state.gamma.a)))
-            if self.tickets_mark.unwrap() == Null:
+        tickets_marker = self.tickets_mark.unwrap()
+        if is_last_ticket_slot and is_ticket_mode and is_same_epoch:
+            valid_ticket_mark = TicketsMark(TicketsMarkData(outside_in(pre_state.gamma.a)))
+
+            if tickets_marker == Null:
                 raise BlockError(BlockErrorCode.TICKETS_MARK_EMPTY)
             elif self.tickets_mark != valid_ticket_mark:
                 raise BlockError(BlockErrorCode.INVALID_TICKET_MARK)
 
-        if not (is_last_ticket_slot or is_ticket_mode or is_new_epoch) and self.tickets_mark.unwrap() != Null:
+        if not (is_last_ticket_slot and is_ticket_mode and  is_same_epoch) and tickets_marker != Null:
             raise BlockError(BlockErrorCode.TICKETS_MARK_NOT_EMPTY)
 
         # Parent exists
