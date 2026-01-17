@@ -307,8 +307,6 @@ class GeneralFunctions(INVF):
                 raise PvmError(PANIC)
 
             registers[7] = Register(len(value))
-            # print("LENGTH VALUES", len(value))
-            # print("READ DATA", service_key, "VAL", value[start : start + length].hex(), "KEY", key.hex())
             memory.write(o, value[start : start + length])
 
         return CONTINUE, gas, registers, memory, context

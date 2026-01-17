@@ -34,69 +34,6 @@ from .handlers import read_message, send_message, handle_handshake
 from ..block.extrinsics.extrinsic import Extrinsic
 
 
-RECORD_DIR = Path("fuzztest_session_records")
-
-@structure
-class KeyVal:
-    key: Bytes[31]
-    value: Bytes
-
-@structure
-class StateKeyVals:
-    state_root: Bytes[32]
-    keyvals: TypedVector[KeyVal]
-
-
-@structure
-class Trace:
-    pre_state: StateKeyVals
-    block: Block
-    post_state_root: Bytes[32]
-
-def prepare_record_dir():
-    if RECORD_DIR.exists():
-        for f in RECORD_DIR.iterdir():
-            f.unlink()
-    else:
-        RECORD_DIR.mkdir(parents=True)
-
-def write_record(
-    index: int,
-    kind: str,
-    suffix: str,
-    bin_data: bytes,
-    json_data: dict | None = None,
-):
-    prefix = f"{index:04d}_{kind}_{suffix}"
-
-    bin_path = RECORD_DIR / f"{prefix}.bin"
-    with open(bin_path, "wb") as f:
-        f.write(bin_data)
-
-    if json_data is not None:
-        json_path = RECORD_DIR / f"{prefix}.json"
-        with open(json_path, "w") as f:
-            json.dump(json_data, f, indent=2)
-
-def make_state_keyvals(state, state_db):
-    items = list(state_db.get_all().items())
-    # items.sort(key=lambda kv: kv[0])
-
-    keyvals = TypedVector[KeyVal]([
-        KeyVal(
-            key=Bytes[31](k[:31]),  # truncate, protocol-defined
-            value=Bytes(v),
-        )
-        for k, v in items
-    ])
-    print("STORING ROOT IN : ", state.root.hex())
-
-    return StateKeyVals(
-        state_root=Bytes[32](state.root),
-        keyvals=keyvals,
-    )
-
-
 def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optional[str] = None):
     """
     The main server loop that listens for connections and handles messages.
@@ -111,7 +48,6 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
     json_data = {"blocks": []} if record_enabled else None
     SESSION_ID = 0
     record_index = 0
-    prepare_record_dir()
 
     while True:
         print("V0.7.2")
@@ -155,38 +91,15 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                     block_count += 1
                     print(f"📦 Received Block #{block_count} ({len(payload)} bytes)")
 
-                    start_time = time.time()
                     try:
                         block = Block.decode(payload)
-                        write_record(
-                            record_index,
-                            "block",
-                            str(block_count),
-                            payload,
-                            block.to_json(),
-                        )
-                        record_index += 1
+
                         if record_enabled and json_data:
                             json_data["blocks"].append(block.to_json())
                         valid_block = state._force_transition(block, True, True)
                         if valid_block:
-                            duration = time.time() - start_time
                             post_state = state.load(block.header.hash())
-                            post_state_kv = make_state_keyvals(post_state, settings.state_db)
-                            print("STORING ROOT : ", post_state.root.hex())
-                            # if post_state.root.hex() == "54510601f9d0882e919fcf97cfb02dbd183ff371bcf816cf64523fc7f734bdf2":
-                            #     print("\n\n\n--------------STATE DATA--------------\n\n", post_state.root.hex())
-                            #     print(post_state_kv.to_json())
-                            #     print("\n\n---------------------------------------")
                             send_message(conn, TAG_STATE_ROOT, post_state.root)
-
-                            write_record(
-                                record_index,
-                                "state",
-                                str(block_count),
-                                post_state_kv.encode(),
-                                post_state_kv.to_json(),
-                            )
 
                             record_index += 1
                         else:
@@ -201,15 +114,6 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                     print(f"🔧 Received Initialize command ({len(payload)} bytes)")
                     try:
                         init_data = Initialize.decode(payload)
-                        write_record(
-                            record_index,
-                            "genesis",
-                            "0",
-                            payload,
-                            init_data.to_json(),
-                        )
-                        record_index += 1
-
                         if record_enabled and json_data:
                             json_data["pre_state"] = init_data.keyvals.to_json()
                         

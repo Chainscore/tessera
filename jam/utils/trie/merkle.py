@@ -132,7 +132,6 @@ class StateTrie:
         items = [encode_leaf(key, value) for key, value in state_dict.items()]
         root_hash, _ = self._merkelize_recursive(items, 0)
         self.root_hash = root_hash
-        # print("MERKELIZE CALLED", root_hash.hex())
         return root_hash, self.nodes
 
     def get_nodes(self) -> Dict[NodeHash, Node]:
@@ -176,7 +175,6 @@ class StateTrie:
             The new root hash after all updates
         """
         if not updates:
-            # print("IDHAR BHAAGA", print("Self root", self.root_hash.hex()))
             return self.root_hash
             
         # Group updates by common path prefixes to minimize tree reconstruction
@@ -191,7 +189,6 @@ class StateTrie:
                 bit_index=0,
             )
             self.root_hash = self._reconstruct_root(self.root_hash, node)
-            # print("CURR HASH", self.root_hash.hex())
         return self.root_hash
     
     def _extract_current_state(self) -> Dict[Bytes[32], Bytes]:

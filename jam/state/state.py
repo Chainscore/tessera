@@ -119,7 +119,6 @@ class State:
         # Use cached root if set (for snapshots loaded without trie mutations)
         # if hasattr(self, '_cached_root') and self._cached_root is not None:
         #     return self._cached_root
-        # print("ROOT HASH", self.store._TRIE.root_hash.hex())
         return self.store._TRIE.root_hash
 
     def revert(self, header_hash):
@@ -188,25 +187,23 @@ class State:
         """Force parent state transition wrapper"""
         global state
 
-        print(
-            "\n" + "=" * 72,
-            "\n🔁  TRANSITIONING BLOCK",
-            f"\n   ├─ Block Hash        : {block.header.hash().hex()}",
-            f"\n   ├─ Parent Hash       : {block.header.parent.hex()}",
-            f"\n   ├─ Parent State Root : {block.header.parent_state_root.hex()}",
-            f"\n   └─ Current State Root: {state.root.hex()}",
-            "\n" + "=" * 72,
-        )
+        # print(
+        #     "\n" + "=" * 72,
+        #     "\n🔁  TRANSITIONING BLOCK",
+        #     f"\n   ├─ Block Hash        : {block.header.hash().hex()}",
+        #     f"\n   ├─ Parent Hash       : {block.header.parent.hex()}",
+        #     f"\n   ├─ Parent State Root : {block.header.parent_state_root.hex()}",
+        #     f"\n   └─ Current State Root: {state.root.hex()}",
+        #     "\n" + "=" * 72,
+        # )
 
         parent_state = state.load(block.header.parent)
-        # print("LOADED PARENT STATE ROOT", parent_state.root.hex())
         parent_state.store.enable_cache()
         parent_state.store.enable_writes()
 
         success = parent_state.transition(block, instant_finality, skip_hooks)
         # del parent_state
         # state = parent_state
-        #         print("TRANSITIONED STATE ROOT", parent_state.root.hex())
         return success
 
     def transition(self, block: Block, instant_finality: bool = True, skip_hooks=False) -> bool:
@@ -230,7 +227,6 @@ class State:
         try:
             header_hash = HeaderHash(block.header.hash())
             event_id = id(block) & 0xFFFFFFFFFFFFFFFF
-            #             print("CURR ROOT 0", self.root.hex())
 
             # Emit Importing event
             block_outline = BlockOutline(
@@ -275,20 +271,16 @@ class State:
 
             # Load pre state
             pre_state = self.load(block.header.parent)
-            #             print("CURR ROOT 1", self.root.hex())
 
-            #             print("CURR ROOT 2", self.root.hex())
 
             # Disputes
             Disputes.transition(pre_state, self, block)
 
-            #             print("CURR ROOT 3", self.root.hex())
 
             # Safrole
             entropy_proof = IETF_VRF[Bandersnatch].from_bytes(block.header.entropy_source)
             vrf_output = OpaqueHash(entropy_proof.proof_to_hash(entropy_proof.output_point)[:32])
             Safrole.transition(pre_state, self, block, vrf_output)
-            #             print("CURR ROOT 4", self.root.hex())
 
             # Block Validation
             block_valid = block.validate(self, pre_state)
@@ -300,7 +292,6 @@ class State:
             if len(beta.h):
                 beta.h[-1].state_root = block.header.parent_state_root
             self.beta = beta
-            #             print("CURR ROOT 5", self.root.hex())
 
             # Assurances
             _, newly_avail_wrs = Assurances.transition(pre_state, self, block)
@@ -310,21 +301,17 @@ class State:
                     count=len(newly_avail_wrs),
                     wrs=[wr.hash().hex()[:16] + "..." for wr in newly_avail_wrs],
                 )
-            #             print("CURR ROOT 6", self.root.hex())
 
             # Reporting
             Reporting.transition(pre_state, self, block, [])
-            #             print("CURR ROOT 7", self.root.hex())
 
             # Accumulation
             _, commitment_map = Accumulation.transition(
                 pre_state, self, block, newly_avail_wrs=newly_avail_wrs
             )
-            #             print("CURR ROOT 8", self.root.hex())
 
             # Authorization
             Authorization.transition(pre_state, self, block)
-            #             print("CURR ROOT 9", self.root.hex())
 
             # Recent History
             bmr_merklizer = BMRFunctions()
@@ -337,22 +324,18 @@ class State:
                 Hash.keccak256,
             )
             RecentHistory.transition(pre_state, self, block, accumulate_root, header_hash)
-            #             print("CURR ROOT 10", self.root.hex())
 
             # Preimages
             Preimages.transition(pre_state, self, block)
-            #             print("CURR ROOT 11", self.root.hex())
 
             # Statistics
             Statistics.transition(pre_state, self, block, newly_avail_wrs)
-            #             print("CURR ROOT 12", self.root.hex())
 
             if block_valid:
                 # Set local chain head to produced block
                 # Save block in db, update ll create ghost block.
                 block.save(_set.main_db)
                 self.stash(header_hash)
-                #                 print("CURR ROOT 13", self.root.hex())
 
                 Finality.set_head(block, _set.main_db)
 
@@ -370,7 +353,6 @@ class State:
                         event_id=U64(event_id), services=TypedVector[ServiceExecution]([])
                     )
                 )
-                #                 print("CURR ROOT 14", self.root.hex())
 
                 if not skip_hooks:
                     from jam.operations.handlers.assurer import assurer
@@ -391,16 +373,13 @@ class State:
                 # TODO: Mark block as audited once audit process is done.
                 # from jam.block.block_view import viewer
                 # viewer.mark_as_audited(block, _set.main_db)
-                #                 print("CURR ROOT 15" , self.root.hex())
                 # TODO: Remove Direct Finality
                 # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
                 if instant_finality:
                     # finalize the block and update viewer and whole chain
                     Finality.finalise(block, _set.main_db, True)
-                    print("SETTLING")
                     self.settle(header_hash)
 
-                print("SETTLED ROOT", self.root.hex())
 
                 # Publishes updates of the statistics stored in chain state
                 asyncio.create_task(subscribe_statistics(state.pi))
@@ -417,7 +396,6 @@ class State:
             emit_event(
                 BlockExecutionFailed(event_id=U64(event_id), reason=String(str(jam_e)[:100]))
             )
-            print("ERROR OCCURED", jam_e)
             logger.error(
                 "Invalid block",
                 error=jam_e,

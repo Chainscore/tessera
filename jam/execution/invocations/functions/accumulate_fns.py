@@ -358,7 +358,6 @@ class AccumulateFunctions(INVF):
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
         l = BlobLength(max(81, account.service.num_o) - 81)
-        print("EJECT LEN", l, registers[8])
         lookup_key = LookupTable(hash=ServiceCodeHash(code_hash), length=BlobLength(l))
 
         if account.service.num_i != 2 or account.lookup[lookup_key] is None:
@@ -414,7 +413,6 @@ class AccumulateFunctions(INVF):
         elif len(lookup_value) == 3:
             registers[7] = 3 + 2**32 * U64(lookup_value[0])
             registers[8] = U64(lookup_value[1]) + 2**32 * U64(lookup_value[2])
-            print("LOOKUP CHANGED", registers[8])
         else:
             logger.critical(
                 "Unexpected metadata",
