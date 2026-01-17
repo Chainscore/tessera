@@ -1,7 +1,10 @@
 from copy import deepcopy
 from typing import Tuple, Set, List, Dict, TYPE_CHECKING
 
-from tsrkit_types import Bytes, Uint, Null, U32
+from tsrkit_types import U32
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import Uint
+from tsrkit_types.null import Null
 
 from jam.block import Block
 from jam.execution.invocations.accumulate import PsiA
@@ -198,7 +201,6 @@ class Accumulation:
             return 0, set(), []
 
         work_reports_start = work_reports[: index]
-        # print("STARTING REPS", WorkReports(work_reports_start).to_json())
         # Parallely accumulate ChiZ services (always accumulate services)
         transfers, outputs, gas_consumed = Accumulation.parallel_accumulation(
             state, deferred_transfers, work_reports_start, privileged_services
@@ -215,7 +217,6 @@ class Accumulation:
             utilized_gas += gas
 
         gas_diff = gas_star - utilized_gas
-        # print("END REPS", WorkReports(work_reports_end).to_json())
 
         j, r_outputs, r_gas_consumed = (
             Accumulation.seq_accumulation(
@@ -265,26 +266,15 @@ class Accumulation:
 
         # All service IDs to accumulate
         # s in 12.19
-        services: List[ServiceId] = []
+        services: Set[ServiceId] = {
+            digest.service_id
+            for report in work_reports
+            for digest in report.digests
+        }
 
-
-        for report in work_reports:
-            for digest in report.digests:
-                if digest.service_id not in services:
-                    services.append(digest.service_id)
-
-        # print("PRIVELEGES", privileged_services.keys())
-
-        # print("SERVICES", services)
-
-        for serv in privileged_services.keys():
-            services.append(serv)
-
+        services.update(privileged_services.keys())
         for t in deferred_transfers:
-            services.append(t.receiver)
-
-        # print("FINAL SERVICES", services)
-        # services = [U32(2068330841), U32(1213618014), U32(1190592518), U32(503495392)]
+            services.add(t.receiver)
 
 
         # Accumulated gas by each service
@@ -538,7 +528,9 @@ class Accumulation:
                         )
                     )
 
-        # print("\n\n", "- - -- -- ACCUMULATING SERVICE -- - -- - ", service_id, "\n\n")
+        if initial_state.service_accounts[service_id] is None:
+            return initial_state, DeferredTransfers([]), None, Gas(0), set()
+
         return PsiA(u=initial_state, t=timeslot, s=service_id, entropy=entropy, g=g, i=i).execute()
 
     @staticmethod
@@ -563,7 +555,7 @@ class Accumulation:
                     "[Accumulation] Unexpected: Received preimage for a service that does not exist"
                 )
             key_hash = Hash.blake2b(blobs)
-            lookup = LookupTable(hash=key_hash,length= len(blobs))
+            lookup = LookupTable(hash=key_hash,length=U32(len(blobs)))
             if service.lookup[lookup] is not None and len(service.lookup[lookup]) == 0:
                 service.lookup[lookup] = Timestamps([timeslot])
                 service.preimages[key_hash] = blobs

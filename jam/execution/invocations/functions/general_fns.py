@@ -133,8 +133,7 @@ class GeneralFunctions(INVF):
                     + w.export_count.encode()
                     + U16(len(w.import_segments)).encode()
                     + U16(len(w.extrinsic)).encode()
-                    # FIX: Was missing .encode() - U32 object is not bytes
-                    + U32(len(w.payload)).encode()
+                    + U32(len(w.payload))
                 )
 
             if w10 == 7:
@@ -166,12 +165,6 @@ class GeneralFunctions(INVF):
         memory_start = int(registers[7])
         f = min(int(registers[8]), len(v))
         l = min(int(registers[9]), len(v) - f)
-
-        # print(
-        #     "[FETCH-DEBUG] type=",
-        #     fetch_type,
-        # )
-
         if not memory.is_accessible(memory_start, l, Accessibility.WRITE):
             logger.error(
                 "Fetch: memory not accessible for write",
@@ -263,6 +256,9 @@ class GeneralFunctions(INVF):
         key_size = registers[9]
         output_offset = registers[10]
 
+        if service_key == 2**64 - 1:
+            service_key = service_index
+
         logger.debug(
             "Host call: read",
             service_key=service_key,
@@ -270,9 +266,6 @@ class GeneralFunctions(INVF):
             key_size=key_size,
             output_offset=output_offset,
         )
-
-        if service_key == 2**64 - 1:
-            service_key = service_index
 
         a: None | AccountData = None
         if service_key == service_index:
@@ -312,9 +305,11 @@ class GeneralFunctions(INVF):
                     required_size=length,
                 )
                 raise PvmError(PANIC)
+
             registers[7] = Register(len(value))
-            if length > 0:
-                memory.write(o, value[start : start + length])
+            # print("LENGTH VALUES", len(value))
+            # print("READ DATA", service_key, "VAL", value[start : start + length].hex(), "KEY", key.hex())
+            memory.write(o, value[start : start + length])
 
         return CONTINUE, gas, registers, memory, context
 
@@ -352,7 +347,7 @@ class GeneralFunctions(INVF):
 
         a = service_data.storage
 
-        curr_value = a.get(k)
+        curr_value = a[k]
         storage_len = len(curr_value) if curr_value else HostStatus.NONE.value
 
         if vz == 0:
@@ -360,14 +355,7 @@ class GeneralFunctions(INVF):
         elif memory.is_accessible(vo, vz):
             pre_data = a[k]
             a[k] = Bytes(memory.read(vo, vz))
-
             if service_data.service.t > service_data.service.balance:
-                print(
-                    f"DEBUG: StorageFull. T: {service_data.service.t}, Balance: {service_data.service.balance}"
-                )
-                print(
-                    f"DEBUG: Meta: i={service_data.service.num_i}, o={service_data.service.num_o}, f={service_data.service.gratis_offset}"
-                )
                 registers[7] = HostStatus.FULL.value
 
                 if pre_data is None:
@@ -400,6 +388,9 @@ class GeneralFunctions(INVF):
         target_service = registers[7]
         output_offset = registers[8]
 
+        if target_service == 2**64 - 1:
+            target_service = service_index
+
         logger.debug(
             "Host call: info",
             target_service=target_service,
@@ -410,7 +401,8 @@ class GeneralFunctions(INVF):
         if target_service == 2**64 - 1:
             target_service = service_index
 
-        if target_service > 2**32 - 1 or target_service not in accounts:
+
+        if target_service > 2**32-1 or target_service not in accounts:
             registers[7] = HostStatus.NONE.value
             return CONTINUE, gas, registers, memory, context
 
@@ -437,8 +429,7 @@ class GeneralFunctions(INVF):
             raise PvmError(PANIC)
         
         registers[7] = len(v)
-        # print("INFO DATA", v[f : f + l].hex())
-        memory.write(output_offset, v[f : f + l])
+        memory.write(output_offset, v[f:f+l])
 
         return CONTINUE, gas, registers, memory, context
 

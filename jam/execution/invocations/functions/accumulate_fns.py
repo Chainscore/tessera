@@ -131,13 +131,7 @@ class AccumulateFunctions(INVF):
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
 
-        # FIX: Gray Paper says check if 'a' is a valid serviceid (a ∉ serviceid means a >= 2^32)
-        # Not checking if account exists - that's a different check
-        if a >= 2**32:
-            registers[7] = HostStatus.WHO.value
-            return CONTINUE, gas, registers, memory, context
-
-        if not a in context.x.partial_state.service_accounts:
+        if a > 2**32 - 1:
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
 
@@ -242,7 +236,10 @@ class AccumulateFunctions(INVF):
             ),
         )
 
-        if accounts[ServiceId(context.x.s_index)].service.balance < new_service.service.balance:
+        new_balance_sender = int(accounts[ServiceId(context.x.s_index)].service.balance) - int(
+            new_service.service.balance
+        )
+        if new_balance_sender < accounts[ServiceId(context.x.s_index)].service.t:
             registers[7] = HostStatus.CASH.value
             return CONTINUE, gas, registers, memory, context
 
@@ -361,6 +358,7 @@ class AccumulateFunctions(INVF):
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
         l = BlobLength(max(81, account.service.num_o) - 81)
+        print("EJECT LEN", l, registers[8])
         lookup_key = LookupTable(hash=ServiceCodeHash(code_hash), length=BlobLength(l))
 
         if account.service.num_i != 2 or account.lookup[lookup_key] is None:
@@ -416,6 +414,7 @@ class AccumulateFunctions(INVF):
         elif len(lookup_value) == 3:
             registers[7] = 3 + 2**32 * U64(lookup_value[0])
             registers[8] = U64(lookup_value[1]) + 2**32 * U64(lookup_value[2])
+            print("LOOKUP CHANGED", registers[8])
         else:
             logger.critical(
                 "Unexpected metadata",
@@ -449,13 +448,10 @@ class AccumulateFunctions(INVF):
         # from jam.state.state import state
         # state.store.save_n_clear_cache()
 
-
-        # Account
         account: AccountData = context.x.partial_state.service_accounts[context.x.s_index]
         lookup_key = LookupTable(hash=preimage_hash, length=BlobLength(preimage_len))
         # storing the initial lookup value
         lookup_val: Timestamps | None = account.lookup[lookup_key]
-        # TODO: check updated t > balance
 
         # FIX: 'if not lookup_val' is truthy for empty list []
         # Should only create new entry if key doesn't exist (lookup_val is None)
@@ -544,28 +540,20 @@ class AccumulateFunctions(INVF):
         [s, o, z] = registers[7:10]
         d = context.x.partial_state.service_accounts
 
-        if z >= 2**32:
-            registers[7] = HostStatus.HUH.value
-            return CONTINUE, gas, registers, memory, context
-
-        if s == 2**64 - 1:
+        s = registers[7]
+        if registers[7] == 2**64 - 1:
             s = context.x.s_index
-
         if not memory.is_accessible(o, z):
             raise PvmError(PANIC)
         i = Bytes(memory.read(o, z))
 
-        # FIX: Use 'in' check since d[s] always returns Account object, never None
-        # Gray Paper line 978-981: a = d[s] when s ∈ keys(d), None otherwise
-        if ServiceId(s) not in d:
+        if d[s] is None:
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
         a = d[s]
 
         lookup = a.lookup[LookupTable(hash=Hash.blake2b(i), length=BlobLength(z))]
-        # FIX: Gray Paper says HUH when requests[(hash, len)] != []
-        # This means: return HUH if (lookup exists AND is not empty) OR already in preimage
-        if (lookup is not None and len(lookup) != 0) or (ServiceId(s), i) in context.x.preimage:
+        if lookup is None or len(lookup) != 0 or (ServiceId(s), i) in context.x.preimage:
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
 
