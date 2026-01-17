@@ -24,9 +24,10 @@ def package(packages: GuaranteesExtrinsic) -> SegmentRootLookup:
 
 
 class RecentHistory:
-
     @staticmethod
-    def transition(pre_state: Sigma, state: Sigma, block: Block, acc_root: OpaqueHash, header_hash: HeaderHash) -> Sigma:
+    def transition(
+        pre_state: Sigma, state: Sigma, block: Block, acc_root: OpaqueHash, header_hash: HeaderHash
+    ) -> Sigma:
         """
         Transition the state's Beta Component and update Recent History.
 
@@ -47,7 +48,9 @@ class RecentHistory:
 
         # Length Check
         if len(beta_dagger.h) > RECENT_HISTORY_SIZE:
-            raise ValueError(f"Invalid beta length, must be equal to {RECENT_HISTORY_SIZE}, got {len(beta_dagger.h)}")
+            raise ValueError(
+                f"Invalid beta length, must be equal to {RECENT_HISTORY_SIZE}, got {len(beta_dagger.h)}"
+            )
 
         mmr_merklizer = MMRFunctions()
 
@@ -62,13 +65,13 @@ class RecentHistory:
             header_hash=header_hash,
             state_root=Bytes[32]([0] * 32),
             beefy_root=beefy_root,
-            reported=package(block.extrinsic.guarantees)
+            reported=package(block.extrinsic.guarantees),
         )
 
         beta_dagger.h.append(n)
 
         # β′h
-        beta_dagger.h = BetaHistory(beta_dagger.h[-8:])
+        beta_dagger.h = BetaHistory(beta_dagger.h[-RECENT_HISTORY_SIZE:])
 
         state.beta = beta_dagger
 

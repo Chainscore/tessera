@@ -7,15 +7,7 @@ from jam.execution.invocations.functions.protocol import (
 from jam.execution.invocations.protocol import Context, DispatchReturn
 from jam.types.state.accumulation.types import AccumulationInputs
 from jam.types.work.manifest import Extrinsics
-from tsrkit_pvm import (
-    Memory,
-    ExecutionStatus,
-    PANIC,
-    HostStatus,
-    CONTINUE,
-    PvmError,
-    Accessibility
-)
+from tsrkit_pvm import Memory, ExecutionStatus, PANIC, HostStatus, CONTINUE, PvmError, Accessibility
 from tsrkit_types import U64, U32, U16, Bytes, Uint
 from jam.types.protocol.crypto import OpaqueHash
 from jam.types.state.delta import AccountData
@@ -57,13 +49,16 @@ from jam.utils.constants import (
     W_T,
     W_X,
     Y,
-    PARAMS_ENCODED
+    PARAMS_ENCODED,
 )
+
 
 class GeneralFunctions(INVF):
     @staticmethod
     @INVF.register(0, gas_cost=10)
     def gas(gas: Gas, registers: list, memory: Memory, context: Context) -> DispatchReturn:
+        # FIX: Gray Paper says return post-deduction gas (ξ' = ξ - g)
+        # The gas parameter here is already post-deduction from the decorator
         logger.debug("Host call: gas", gas_remaining=gas, gas_value_returned=gas)
         registers[7] = gas
         return ExecutionStatus.CONTINUE, gas, registers, memory, context
@@ -81,7 +76,7 @@ class GeneralFunctions(INVF):
         item_index: int,
         import_segments: Optional[List],
         extrinsics: Optional[Extrinsics],
-        o: Optional[AccumulationInputs]  # bold i
+        o: Optional[AccumulationInputs],  # bold i
     ):
         fetch_type = registers[10]
 
@@ -105,11 +100,11 @@ class GeneralFunctions(INVF):
         ):
             v = extrinsics[w11][int(w12)]
         elif (
-                w10 == 4
-                and extrinsics is not None
-                and item_index is not None
-                and item_index < len(extrinsics)
-                and w11 < len(extrinsics[item_index])
+            w10 == 4
+            and extrinsics is not None
+            and item_index is not None
+            and item_index < len(extrinsics)
+            and w11 < len(extrinsics[item_index])
         ):
             v = extrinsics[item_index][w11]
         elif (
@@ -120,11 +115,11 @@ class GeneralFunctions(INVF):
         ):
             v = import_segments[w11][w12]
         elif (
-                w10 == 6
-                and import_segments is not None
-                and item_index is not None
-                and item_index < len(import_segments)
-                and w11 < len(import_segments[item_index])
+            w10 == 6
+            and import_segments is not None
+            and item_index is not None
+            and item_index < len(import_segments)
+            and w11 < len(import_segments[item_index])
         ):
             v = import_segments[item_index][w11]
         elif package is not None:
@@ -138,7 +133,8 @@ class GeneralFunctions(INVF):
                     + w.export_count.encode()
                     + U16(len(w.import_segments)).encode()
                     + U16(len(w.extrinsic)).encode()
-                    + U32(len(w.payload))
+                    # FIX: Was missing .encode() - U32 object is not bytes
+                    + U32(len(w.payload)).encode()
                 )
 
             if w10 == 7:
@@ -159,7 +155,6 @@ class GeneralFunctions(INVF):
                 v = package.items[w11].payload
         elif o is not None:
             if w10 == 14:
-                print("TYPE OF OT", type(o), o.to_json(), len(o.encode()))
                 v = o.encode()
             elif w10 == 15 and w11 < len(o):
                 v = o[w11].encode()
@@ -171,7 +166,12 @@ class GeneralFunctions(INVF):
         memory_start = int(registers[7])
         f = min(int(registers[8]), len(v))
         l = min(int(registers[9]), len(v) - f)
-        print("LENGTH", l)
+
+        # print(
+        #     "[FETCH-DEBUG] type=",
+        #     fetch_type,
+        # )
+
         if not memory.is_accessible(memory_start, l, Accessibility.WRITE):
             logger.error(
                 "Fetch: memory not accessible for write",
@@ -181,11 +181,9 @@ class GeneralFunctions(INVF):
             raise PvmError(PANIC)
 
         registers[7] = len(v)
-        print("FETCH DATA", v[f : f + l].hex(), "TYPE", fetch_type)
         memory.write(memory_start, v[f : f + l])
 
         return CONTINUE, gas, registers, memory, context
-
 
     @staticmethod
     @INVF.register(2, gas_cost=10)
@@ -215,12 +213,11 @@ class GeneralFunctions(INVF):
             a = service_data
         elif lookup_key in accounts:
             a = accounts[lookup_key]
-        
+
         # Must be able to read the 32-byte hash_addr
         if not memory.is_accessible(hash_addr, 32):
             logger.error(
-                "Host call lookup: memory not accessible to read preimage key",
-                hash_addr=hash_addr
+                "Host call lookup: memory not accessible to read preimage key", hash_addr=hash_addr
             )
             raise PvmError(PANIC)
 
@@ -244,7 +241,7 @@ class GeneralFunctions(INVF):
                 raise PvmError(PANIC)
 
             registers[7] = len(v)
-            memory.write(output_addr, v[f:f+l])
+            memory.write(output_addr, v[f : f + l])
             return CONTINUE, gas, registers, memory, context
         else:
             registers[7] = HostStatus.NONE.value
@@ -299,15 +296,16 @@ class GeneralFunctions(INVF):
         if a is not None:
             # Directly get data, returns None if not found
             value = a.storage[key]
-            print("VAL READ", value.hex() if value else value)
 
-        if value is None or len(value) == 0:
+        # FIX: Only return NONE when key doesn't exist (value is None)
+        # Empty value (len == 0) should return len(v) = 0, not NONE
+        if value is None:
             registers[7] = HostStatus.NONE.value
         else:
             start = min(int(registers[11]), len(value))
             length = min(int(registers[12]), len(value) - start)
 
-            if not memory.is_accessible(o, length, Accessibility.WRITE):
+            if length > 0 and not memory.is_accessible(o, length, Accessibility.WRITE):
                 logger.error(
                     "Host call read: memory not accessible for output",
                     output_offset=o,
@@ -315,14 +313,13 @@ class GeneralFunctions(INVF):
                 )
                 raise PvmError(PANIC)
             registers[7] = Register(len(value))
-            print("LENGTH VALUES", len(value))
-            print("READ DATA", service_key, "VAL", value[start : start + length].hex(), "KEY", key.hex())
-            memory.write(o, value[start : start + length])
+            if length > 0:
+                memory.write(o, value[start : start + length])
 
         return CONTINUE, gas, registers, memory, context
 
     @staticmethod
-    @INVF.register(4, gas_cost=10)
+    @INVF.register(host_call=4, gas_cost=10)
     def write(
         gas: Gas,
         registers: list,
@@ -363,13 +360,19 @@ class GeneralFunctions(INVF):
         elif memory.is_accessible(vo, vz):
             pre_data = a[k]
             a[k] = Bytes(memory.read(vo, vz))
-            print("STORAGE KEY", service_index, k.hex(), a[k].hex(), pre_data.hex() if pre_data else None)
+
             if service_data.service.t > service_data.service.balance:
+                print(
+                    f"DEBUG: StorageFull. T: {service_data.service.t}, Balance: {service_data.service.balance}"
+                )
+                print(
+                    f"DEBUG: Meta: i={service_data.service.num_i}, o={service_data.service.num_o}, f={service_data.service.gratis_offset}"
+                )
                 registers[7] = HostStatus.FULL.value
+
                 if pre_data is None:
                     del a[k]
                 else:
-                    print("HERE??")
                     a[k] = pre_data
                 logger.warning("Host call write: storage full", storage_key=k.hex()[:16] + "...")
                 return CONTINUE, gas, registers, memory, context
@@ -380,8 +383,6 @@ class GeneralFunctions(INVF):
                 value_size=vz,
             )
             raise PvmError(PANIC)
-
-        print("NOPE HERE")
 
         registers[7] = storage_len
         return CONTINUE, gas, registers, memory, context
@@ -409,8 +410,7 @@ class GeneralFunctions(INVF):
         if target_service == 2**64 - 1:
             target_service = service_index
 
-
-        if target_service > 2**32-1 or target_service not in accounts:
+        if target_service > 2**32 - 1 or target_service not in accounts:
             registers[7] = HostStatus.NONE.value
             return CONTINUE, gas, registers, memory, context
 
@@ -437,8 +437,8 @@ class GeneralFunctions(INVF):
             raise PvmError(PANIC)
         
         registers[7] = len(v)
-        print("INFO DATA", v[f:f+l].hex())
-        memory.write(output_offset, v[f:f+l])
+        # print("INFO DATA", v[f : f + l].hex())
+        memory.write(output_offset, v[f : f + l])
 
         return CONTINUE, gas, registers, memory, context
 

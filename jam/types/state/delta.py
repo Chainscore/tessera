@@ -29,24 +29,27 @@ At = Balance
 class AccountMetadata:
     version: Uint[8] = field(metadata={"default": Uint[8](0)})
     code_hash: ServiceCodeHash  # code_hash, c
-    balance: Balance = field(metadata={"default": Balance(0)}) # b
-    gas_limit: Gas = field(metadata={"name": "min_item_gas"}) # g
-    min_gas: Gas = field(metadata={"name": "min_memo_gas"}) # m
-    num_o: Ao = field(metadata={"name": "bytes"}) # o
-    gratis_offset: Balance = field(metadata={"name": "deposit_offset"}) # f
-    num_i: Ai = field(metadata={"name": "items"}) # i
-    created_at: TimeSlot = field(metadata={"name": "creation_slot"}) # r
-    accumulated_at: TimeSlot = field(metadata={"name": "last_accumulation_slot"}) # a
-    parent_service: ServiceId # p
+    balance: Balance = field(metadata={"default": Balance(0)})  # b
+    gas_limit: Gas = field(metadata={"name": "min_item_gas"})  # g
+    min_gas: Gas = field(metadata={"name": "min_memo_gas"})  # m
+    num_o: Ao = field(metadata={"name": "bytes"})  # o
+    gratis_offset: Balance = field(metadata={"name": "deposit_offset"})  # f
+    num_i: Ai = field(metadata={"name": "items"})  # i
+    created_at: TimeSlot = field(metadata={"name": "creation_slot"})  # r
+    accumulated_at: TimeSlot = field(metadata={"name": "last_accumulation_slot"})  # a
+    parent_service: ServiceId  # p
 
     @property
     def t(self):
-        return max(Balance(0), Balance(
-            BASIC_MINIMUM_BALANCE
-            + ADDITIONAL_BALANCE_PER_ITEM * self.num_i
-            + ADDITIONAL_BALANCE_PER_OCTET * self.num_o
-            - self.gratis_offset
-        ))
+        return max(
+            Balance(0),
+            Balance(
+                BASIC_MINIMUM_BALANCE
+                + ADDITIONAL_BALANCE_PER_ITEM * self.num_i
+                + ADDITIONAL_BALANCE_PER_OCTET * self.num_o
+                - self.gratis_offset
+            ),
+        )
 
     @staticmethod
     def empty() -> "AccountMetadata":
@@ -71,6 +74,7 @@ class AccountStorage(Dictionary[Bytes, Bytes, "key", "value"]):
 
     def transform(self, service_id: ServiceId):
         from jam.state.utils import construct_state_key
+
         res = {}
         for k, v in self.items():
             res[construct_state_key((service_id, Bytes(U32(2**32 - 1).encode()) + k))] = v
@@ -78,10 +82,12 @@ class AccountStorage(Dictionary[Bytes, Bytes, "key", "value"]):
 
 
 """Preimage dictionary"""
+
+
 class AccountPreimages(Dictionary[Bytes[32], Bytes, "hash", "blob"]):
-    
     def transform(self, service_id: ServiceId):
         from jam.state.utils import construct_state_key
+
         res = {}
         for k, v in self.items():
             res[construct_state_key((service_id, Bytes(U32(2**32 - 2).encode()) + k))] = v
@@ -116,6 +122,7 @@ class LookupTable:
             return cls(Bytes[32].from_json(data["hash"]), BlobLength(data["length"]))
         return cls.decode(bytes.fromhex(data))
 
+
 class AccountLookup(Dictionary[LookupTable, Timestamps, "key", "value"]):
     """Lookup timestamps"""
 
@@ -123,10 +130,14 @@ class AccountLookup(Dictionary[LookupTable, Timestamps, "key", "value"]):
 
     def transform(self, service_id: ServiceId):
         from jam.state.utils import construct_state_key
+
         res = {}
         for k, v in self.items():
-            res[construct_state_key((service_id, Bytes(U32(k.length).encode()) + k.hash))] = v.encode()
+            res[construct_state_key((service_id, Bytes(U32(k.length).encode()) + k.hash))] = (
+                v.encode()
+            )
         return res
+
 
 @structure
 class AccountData:
@@ -145,10 +156,11 @@ class AccountData:
     def __post_init__(self):
         self.storage._meta = self.service
         self.lookup._meta = self.service
-        
+
     def transform(self, service_id: ServiceId):
         res = {}
         from jam.state.utils import construct_state_key
+
         res[construct_state_key((255, service_id))] = self.service.encode()
         res.update(self.storage.transform(service_id))
         res.update(self.preimages.transform(service_id))

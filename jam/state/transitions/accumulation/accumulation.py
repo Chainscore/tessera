@@ -1,9 +1,7 @@
 from copy import deepcopy
 from typing import Tuple, Set, List, Dict, TYPE_CHECKING
 
-from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import Uint
-from tsrkit_types.null import Null
+from tsrkit_types import Bytes, Uint, Null, U32
 
 from jam.block import Block
 from jam.execution.invocations.accumulate import PsiA
@@ -200,7 +198,7 @@ class Accumulation:
             return 0, set(), []
 
         work_reports_start = work_reports[: index]
-        print("STARTING REPS", WorkReports(work_reports_start).to_json())
+        # print("STARTING REPS", WorkReports(work_reports_start).to_json())
         # Parallely accumulate ChiZ services (always accumulate services)
         transfers, outputs, gas_consumed = Accumulation.parallel_accumulation(
             state, deferred_transfers, work_reports_start, privileged_services
@@ -217,7 +215,7 @@ class Accumulation:
             utilized_gas += gas
 
         gas_diff = gas_star - utilized_gas
-        print("END REPS", WorkReports(work_reports_end).to_json())
+        # print("END REPS", WorkReports(work_reports_end).to_json())
 
         j, r_outputs, r_gas_consumed = (
             Accumulation.seq_accumulation(
@@ -274,13 +272,10 @@ class Accumulation:
             for digest in report.digests:
                 if digest.service_id not in services:
                     services.append(digest.service_id)
-                print("CURR SERVICE ID", digest.service_id)
-                print("CURR SERVICES", services)
 
+        # print("PRIVELEGES", privileged_services.keys())
 
-        print("PRIVELEGES", privileged_services.keys())
-
-        print("SERVICES", services)
+        # print("SERVICES", services)
 
         for serv in privileged_services.keys():
             services.append(serv)
@@ -288,8 +283,8 @@ class Accumulation:
         for t in deferred_transfers:
             services.append(t.receiver)
 
-        print("FINAL SERVICES", services)
-        services = [ServiceId(1190592518),  ServiceId(503495392), ServiceId(1213618014), ServiceId(2068330841)]
+        # print("FINAL SERVICES", services)
+        # services = [U32(2068330841), U32(1213618014), U32(1190592518), U32(503495392)]
 
 
         # Accumulated gas by each service
@@ -543,7 +538,7 @@ class Accumulation:
                         )
                     )
 
-        print("\n\n", "- - -- -- ACCUMULATING SERVICE -- - -- - ", service_id, "\n\n")
+        # print("\n\n", "- - -- -- ACCUMULATING SERVICE -- - -- - ", service_id, "\n\n")
         return PsiA(u=initial_state, t=timeslot, s=service_id, entropy=entropy, g=g, i=i).execute()
 
     @staticmethod
@@ -643,11 +638,9 @@ class Accumulation:
 
         # Latest Work Reports to Process
         work_reports = WorkReports(newly_avail_wrs)
-        print("WRS", work_reports.to_json())
 
         # Reports to be processed Immediately, Eq 12.4
         immediate_reports = cls.filter_wr_fn(work_reports)
-        print("IMMEDIATE WRS", immediate_reports.to_json())
 
         queued_wr = AllReadyWRs([])
 
@@ -660,7 +653,6 @@ class Accumulation:
 
         # Reports to be queued, Rq, Eq 12.5
         queued_reports = cls.queue_edit_fn(queued_wr, xi_union)
-        print("QUEUED", queued_reports.to_json())
 
         # Calculate current timeslot index, Eq 12.10
         m = block.header.slot % EPOCH_LENGTH
@@ -683,13 +675,11 @@ class Accumulation:
 
         # Calculate accumulatable wrs queue, Q(q)
         accumulatable_wrs = cls.priority_queue_fn(intermediate_queue)
-        print("ACCUMULATAVLKE WRS", accumulatable_wrs.to_json())
 
         # Evaluate ready to accumulate WRs, W! ⌢ Q(q), Eq 12.11
         star_work_reports = WorkReports([])
         star_work_reports.extend(immediate_reports)
         star_work_reports.extend(accumulatable_wrs)
-        print("ALL WRS", star_work_reports.to_json())
         # ----------------------
         # Section 12.2 Execution (Step 3)
         # ----------------------

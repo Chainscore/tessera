@@ -13,18 +13,21 @@ from jam.log_setup import logger
 from jam.types.protocol.crypto import StateRoot, HeaderHash, Hash
 from jam.utils.trie.merkle import StateTrie
 
+
 @structure
 class Updates:
     prev: Bytes
     curr: Bytes
+
 
 @structure
 class Roots:
     prev: StateRoot
     curr: StateRoot
 
-class StateUpdates(Dictionary[Bytes[31], Updates]):
-    ...
+
+class StateUpdates(Dictionary[Bytes[31], Updates]): ...
+
 
 @structure
 class StateRecord:
@@ -46,7 +49,14 @@ class StateStorage:
     _read_only = True
     _prop_cache: dict[int, OrderedDict]
 
-    def __init__(self, trie: StateTrie, db: RockStore, _cache_updates=None, cache_mode = False, inherited_keys=None):
+    def __init__(
+        self,
+        trie: StateTrie,
+        db: RockStore,
+        _cache_updates=None,
+        cache_mode=False,
+        inherited_keys=None,
+    ):
         self._TRIE = trie
         self._DB = db
         self._updates = _cache_updates if _cache_updates is not None else {}
@@ -87,7 +97,7 @@ class StateStorage:
         Args:
             hh (HeaderHash): block whose cache needs to be stashed.
             apply_trie (bool): flag for applying changes in trie.
-        
+
         Returns:
             Tuple of (updates dict, final_root). final_root is the expected
             state root after applying all updates.
@@ -147,7 +157,7 @@ class StateStorage:
             # Stop if we've reached genesis (parent is zero hash)
             if block.header.parent == HeaderHash(32):
                 break
-                
+
             curr_head = block.header.parent
 
         if ahead:
@@ -188,7 +198,7 @@ class StateStorage:
                     logger.debug(
                         "Loaded State's Root doesn't match",
                         expected_root=final_root.hex(),
-                        actual_root=self._TRIE.root_hash.hex()
+                        actual_root=self._TRIE.root_hash.hex(),
                     )
 
         return _updates, final_root
@@ -210,14 +220,14 @@ class StateStorage:
         prior_root = StateRoot(self._TRIE.root_hash)
         trie_updates = {}
         trie_deletes = []
-#         print("CURRENT STASHING ROOT 1", self._TRIE.root_hash.hex())
+        #         print("CURRENT STASHING ROOT 1", self._TRIE.root_hash.hex())
 
         if hh:
             block = Block.load(hh, kv)
             previous_updates, _ = self.load_cache(block.header.parent, False)
         else:
             previous_updates = {}
-#         print("CURRENT STASHING ROOT 2", self._TRIE.root_hash.hex())
+        #         print("CURRENT STASHING ROOT 2", self._TRIE.root_hash.hex())
 
         for k, v in self._updates.items():
             curr_val = self._DB.get(k)
@@ -229,8 +239,7 @@ class StateStorage:
 
             if kv and hh:
                 updates = Updates(
-                    prev=Bytes(curr_val) if curr_val else Bytes(0),
-                    curr=Bytes(v) if v else Bytes(0)
+                    prev=Bytes(curr_val) if curr_val else Bytes(0), curr=Bytes(v) if v else Bytes(0)
                 )
                 _state_cache[stored_key] = updates
 
@@ -238,25 +247,21 @@ class StateStorage:
                 trie_deletes.append(Bytes(k))
             else:
                 trie_updates[Bytes[32](k)] = Bytes(v)
-#         print("CURRENT STASHING ROOT 3", self._TRIE.root_hash.hex())
+        #         print("CURRENT STASHING ROOT 3", self._TRIE.root_hash.hex())
 
         # Batch process trie updates for better performance
-        print("UPDATES LENGTH", len(trie_updates))
         if trie_updates:
             self._TRIE.batch_update(trie_updates)
-#         print("CURRENT STASHING ROOT 4", self._TRIE.root_hash.hex())
+        #         print("CURRENT STASHING ROOT 4", self._TRIE.root_hash.hex())
 
         # Process deletes individually (could be optimized further if needed)
         for key in trie_deletes:
             self._TRIE.delete(key)
 
-#         print("CURRENT STASHING ROOT 5", self._TRIE.root_hash.hex())
+        #         print("CURRENT STASHING ROOT 5", self._TRIE.root_hash.hex())
         posterior_root = StateRoot(self._TRIE.root_hash)
-        roots = Roots(
-            prev=prior_root,
-            curr=posterior_root
-        )
-#         print("CURRENT STASHING ROOT 6", self._TRIE.root_hash.hex())
+        roots = Roots(prev=prior_root, curr=posterior_root)
+        #         print("CURRENT STASHING ROOT 6", self._TRIE.root_hash.hex())
 
         record = StateRecord(updates=_state_cache, roots=roots)
         if kv and hh:
@@ -265,7 +270,8 @@ class StateStorage:
                 record.encode(),
             )
         # print("STORING RECORDS", self.get_storage_key(hh).hex(), record.to_json())
-#         print("CURRENT STASHING ROOT 7", self._TRIE.root_hash.hex())
+
+    #         print("CURRENT STASHING ROOT 7", self._TRIE.root_hash.hex())
 
     def settle_cache(self):
         """Apply cached updates to DB"""
@@ -282,6 +288,7 @@ class StateStorage:
 
         # Clear hash cache periodically to prevent memory buildup
         from jam.types.protocol.crypto import Hash
+
         Hash.clear_cache()
 
         # Save the cache to DB

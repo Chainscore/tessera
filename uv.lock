@@ -1453,7 +1453,6 @@ wheels = [
 
 [[package]]
 name = "rockstore"
-version = "0.1.2"
 source = { editable = "deps/rockstore" }
 dependencies = [
     { name = "cffi" },
@@ -1463,13 +1462,15 @@ dependencies = [
 dev = [
     { name = "pytest" },
     { name = "pytest-benchmark" },
+    { name = "pytest-cov" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "cffi", specifier = ">=2.0.0" },
+    { name = "cffi", specifier = ">=1.15.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-benchmark", marker = "extra == 'dev'", specifier = ">=4.0.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
 ]
 provides-extras = ["dev"]
 
@@ -1804,7 +1805,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "tsrkit-types"
-version = "0.1.8"
+version = "1.0.1"
 source = { editable = "deps/tsrkit-types" }
 
 [package.optional-dependencies]

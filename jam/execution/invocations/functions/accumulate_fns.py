@@ -46,7 +46,7 @@ from jam.utils.constants import (
     PREIMAGE_EVICTION_TIMESLOTS,
     TRANSFER_MEMO_SIZE,
     VALIDATOR_COUNT,
-    MINIMUM_SERVICE_INDEX
+    MINIMUM_SERVICE_INDEX,
 )
 
 
@@ -54,23 +54,33 @@ def check(u: GhostPartial, i: ServiceId):
     if i not in u.service_accounts:
         return i
     else:
-        return check(u, ServiceId((i - MINIMUM_SERVICE_INDEX + 1) % (2**32 - 2**8 - MINIMUM_SERVICE_INDEX) + MINIMUM_SERVICE_INDEX))
+        return check(
+            u,
+            ServiceId(
+                (i - MINIMUM_SERVICE_INDEX + 1) % (2**32 - 2**8 - MINIMUM_SERVICE_INDEX)
+                + MINIMUM_SERVICE_INDEX
+            ),
+        )
 
 
 class AccumulateFunctions(INVF):
     @staticmethod
     @INVF.register(14, gas_cost=10)
     def bless(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
-        [m, a, v, r, o, n] = registers[7:7 + 6]
+        [m, a, v, r, o, n] = registers[7 : 7 + 6]
 
         if not memory.is_accessible(a, 4 * CORE_COUNT):
-            logger.warning("Memory access violation in bless function: inaccessible chi_a memory region")
+            logger.warning(
+                "Memory access violation in bless function: inaccessible chi_a memory region"
+            )
             raise PvmError(PANIC)
 
         chi_a = ChiA.decode(memory.read(a, 4 * CORE_COUNT))
 
         if not memory.is_accessible(o, 12 * n):
-            logger.warning("Memory access violation in bless function: inaccessible chi_z memory region")
+            logger.warning(
+                "Memory access violation in bless function: inaccessible chi_z memory region"
+            )
             raise PvmError(PANIC)
 
         # Read all n records at once
@@ -84,32 +94,47 @@ class AccumulateFunctions(INVF):
             g = U64.decode(chunk[4:12], offset=0)  # next   8 bytes
             z_dict[s] = g
 
-        if not all(0 <= x < 2**32 - 1 for x in (m, v, r)):
+        # FIX: Off-by-one - serviceid is N_{2^32}, so valid range is 0 <= x < 2**32
+        if not all(0 <= x < 2**32 for x in (m, v, r)):
             logger.warning(f"Invalid values for m or v in bless function: m={m}, v={v}")
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
 
         registers[7] = HostStatus.OK.value
-        context.x.partial_state.privileges = Chi(chi_m=ChiM(m), chi_a=chi_a, chi_v=ChiV(v), chi_z=z_dict, chi_r=ChiR(r))
+        context.x.partial_state.privileges = Chi(
+            chi_m=ChiM(m), chi_a=chi_a, chi_v=ChiV(v), chi_z=z_dict, chi_r=ChiR(r)
+        )
         return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(15, gas_cost=10)
     def assign(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
-        [c, o, a] = registers[7: 7 + 3]
+        [c, o, a] = registers[7 : 7 + 3]
 
         if not memory.is_accessible(o, 32 * MAX_AUTH_QUEUE_ITEMS):
-            logger.warning("Assign: Memory access violation in assign function: inaccessible authorizer_keys memory region")
+            logger.warning(
+                "Assign: Memory access violation in assign function: inaccessible authorizer_keys memory region"
+            )
             raise PvmError(PANIC)
 
         if c >= CORE_COUNT:
-            logger.warning(f"Assign: Invalid value for c={c} in assign function: exceeds CORE_COUNT={CORE_COUNT}")
+            logger.warning(
+                f"Assign: Invalid value for c={c} in assign function: exceeds CORE_COUNT={CORE_COUNT}"
+            )
             registers[7] = HostStatus.CORE.value
             return CONTINUE, gas, registers, memory, context
 
         if context.x.partial_state.privileges.chi_a[c] != context.x.s_index:
-            logger.warning("Assign: Privilege mismatch in assign function: chi_a does not match s_index for given c")
+            logger.warning(
+                "Assign: Privilege mismatch in assign function: chi_a does not match s_index for given c"
+            )
             registers[7] = HostStatus.HUH.value
+            return CONTINUE, gas, registers, memory, context
+
+        # FIX: Gray Paper says check if 'a' is a valid serviceid (a ∉ serviceid means a >= 2^32)
+        # Not checking if account exists - that's a different check
+        if a >= 2**32:
+            registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
 
         if not a in context.x.partial_state.service_accounts:
@@ -120,7 +145,7 @@ class AccumulateFunctions(INVF):
         queue = []
         for index in range(MAX_AUTH_QUEUE_ITEMS):
             start = 32 * index
-            queue.append(AuthorizerHash(buf[start: start + 32]))
+            queue.append(AuthorizerHash(buf[start : start + 32]))
 
         auth_keys = context.x.partial_state.authorizer_keys
         auth_keys[c] = AuthorizationQueue(queue)
@@ -139,17 +164,16 @@ class AccumulateFunctions(INVF):
         o = registers[7]
         if not memory.is_accessible(o, VALIDATOR_COUNT * 336):
             raise PvmError(PANIC)
-            
+
         if context.x.s_index != context.x.partial_state.privileges.chi_v:
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
 
         buf: bytes = memory.read(o, 336 * VALIDATOR_COUNT)
 
-        context.x.partial_state.validator_keys = Iota([
-            ValidatorData.decode(buf[336 * i: 336*i + 336])
-            for i in range(VALIDATOR_COUNT)
-        ])
+        context.x.partial_state.validator_keys = Iota(
+            [ValidatorData.decode(buf[336 * i : 336 * i + 336]) for i in range(VALIDATOR_COUNT)]
+        )
         registers[7] = HostStatus.OK.value
         return CONTINUE, gas, registers, memory, context
 
@@ -168,17 +192,27 @@ class AccumulateFunctions(INVF):
 
     @staticmethod
     @INVF.register(18, gas_cost=10)
-    def new(gas: Gas, registers: list, memory: Memory, context: AccumulationContext, block_timeslot: TimeSlot):
+    def new(
+        gas: Gas,
+        registers: list,
+        memory: Memory,
+        context: AccumulationContext,
+        block_timeslot: TimeSlot,
+    ):
         [o, l, g, m, f, i] = registers[7 : 7 + 6]
 
         if not (memory.is_accessible(o, 32) and l < 2**32 - 1):
-            logger.warning("Memory access violation in new function: inaccessible code_hash memory region or invalid length type")
+            logger.warning(
+                "Memory access violation in new function: inaccessible code_hash memory region or invalid length type"
+            )
             raise PvmError(PANIC)
 
         accounts: DeltaView = context.x.partial_state.service_accounts
 
         if f != 0 and context.x.s_index != context.x.partial_state.privileges.chi_m:
-            logger.warning("Privilege mismatch in new function: chi_m does not match s_index when gratis_offset is non-zero")
+            logger.warning(
+                "Privilege mismatch in new function: chi_m does not match s_index when gratis_offset is non-zero"
+            )
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
 
@@ -189,7 +223,8 @@ class AccumulateFunctions(INVF):
                 balance=Balance(
                     BASIC_MINIMUM_BALANCE
                     + ADDITIONAL_BALANCE_PER_ITEM * 2
-                    + ADDITIONAL_BALANCE_PER_OCTET * (81 + l) - f
+                    + ADDITIONAL_BALANCE_PER_OCTET * (81 + l)
+                    - f
                 ),
                 gas_limit=Gas(g),
                 min_gas=Gas(m),
@@ -198,25 +233,31 @@ class AccumulateFunctions(INVF):
                 num_i=Ai(0),
                 created_at=TimeSlot(block_timeslot),
                 accumulated_at=TimeSlot(0),
-                parent_service=ServiceId(context.x.s_index)
+                parent_service=ServiceId(context.x.s_index),
             ),
             storage=AccountStorage({}),
             preimages=AccountPreimages({}),
-            lookup=AccountLookup({
-                LookupTable(hash=ServiceCodeHash(c), length=BlobLength(l)): Timestamps([])
-            })
+            lookup=AccountLookup(
+                {LookupTable(hash=ServiceCodeHash(c), length=BlobLength(l)): Timestamps([])}
+            ),
         )
-
 
         if accounts[ServiceId(context.x.s_index)].service.balance < new_service.service.balance:
             registers[7] = HostStatus.CASH.value
             return CONTINUE, gas, registers, memory, context
 
-        if context.x.s_index == context.x.partial_state.privileges.chi_r and i < MINIMUM_SERVICE_INDEX and i in context.x.partial_state.service_accounts:
+        if (
+            context.x.s_index == context.x.partial_state.privileges.chi_r
+            and i < MINIMUM_SERVICE_INDEX
+            and i in context.x.partial_state.service_accounts
+        ):
             registers[7] = HostStatus.FULL.value
             return CONTINUE, gas, registers, memory, context
 
-        if context.x.s_index == context.x.partial_state.privileges.chi_r and i < MINIMUM_SERVICE_INDEX:
+        if (
+            context.x.s_index == context.x.partial_state.privileges.chi_r
+            and i < MINIMUM_SERVICE_INDEX
+        ):
             accounts[i] = new_service
             accounts[context.x.s_index].service.balance -= new_service.service.balance
             return CONTINUE, gas, registers, memory, context
@@ -226,7 +267,11 @@ class AccumulateFunctions(INVF):
         accounts[ServiceId(context.x.s_index)].service.balance -= new_service.service.balance
         context.x.i_index = check(
             u=context.x.partial_state,
-            i=ServiceId(MINIMUM_SERVICE_INDEX + (context.x.i_index - MINIMUM_SERVICE_INDEX + 42) % (2**32 - MINIMUM_SERVICE_INDEX - 2**8)),
+            i=ServiceId(
+                MINIMUM_SERVICE_INDEX
+                + (context.x.i_index - MINIMUM_SERVICE_INDEX + 42)
+                % (2**32 - MINIMUM_SERVICE_INDEX - 2**8)
+            ),
         )
         return CONTINUE, gas, registers, memory, context
 
@@ -251,13 +296,12 @@ class AccumulateFunctions(INVF):
 
         delta: DeltaView = context.x.partial_state.service_accounts
 
-        if d > (2**32-1):
+        if d > (2**32 - 1):
             registers[7] = HostStatus.NONE.value
             return CONTINUE, gas, registers, memory, context
 
         if not memory.is_accessible(o, TRANSFER_MEMO_SIZE):
             raise PvmError(PANIC)
-
 
         if ServiceId(d) not in delta:
             registers[7] = HostStatus.WHO.value
@@ -310,7 +354,9 @@ class AccumulateFunctions(INVF):
         if d in delta and d != context.x.s_index:
             account = delta[d]
 
-        if account is None or account.service.code_hash != ServiceCodeHash(list(context.x.s_index.encode()) + [0] * 28):
+        if account is None or account.service.code_hash != ServiceCodeHash(
+            list(context.x.s_index.encode()) + [0] * 28
+        ):
             logger.warning("Eject function called with mismatched code hash for service account")
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
@@ -318,12 +364,14 @@ class AccumulateFunctions(INVF):
         lookup_key = LookupTable(hash=ServiceCodeHash(code_hash), length=BlobLength(l))
 
         if account.service.num_i != 2 or account.lookup[lookup_key] is None:
-            logger.warning("Eject function called with invalid number of items or missing lookup entry for service account")
+            logger.warning(
+                "Eject function called with invalid number of items or missing lookup entry for service account"
+            )
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
         elif (
-            len(account.lookup[lookup_key]) == 2 and
-            account.lookup[lookup_key][1] < block_timeslot - PREIMAGE_EVICTION_TIMESLOTS
+            len(account.lookup[lookup_key]) == 2
+            and account.lookup[lookup_key][1] < block_timeslot - PREIMAGE_EVICTION_TIMESLOTS
         ):  # [1] refers to x 2nd timestamp which should be smaller than Block Timeslot - PreImage Eviction Timeslot
             registers[7] = HostStatus.OK.value
             balance = account.service.balance
@@ -334,7 +382,9 @@ class AccumulateFunctions(INVF):
             delta[context.x.s_index].service.balance += balance
             return CONTINUE, gas, registers, memory, context
         else:
-            logger.warning("Eject function called with invalid lookup entry or timestamp conditions not met for service account")
+            logger.warning(
+                "Eject function called with invalid lookup entry or timestamp conditions not met for service account"
+            )
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
 
@@ -350,7 +400,7 @@ class AccumulateFunctions(INVF):
         lookup_key = LookupTable(hash=preimage_hash, length=BlobLength(preimage_len))
         lookup_value = context.x.partial_state.service_accounts[context.x.s_index].lookup[
             lookup_key
-        ] # a' s value
+        ]  # a' s value
         if lookup_value is None:
             registers[7] = HostStatus.NONE.value
             registers[8] = 0
@@ -388,13 +438,17 @@ class AccumulateFunctions(INVF):
     ):
         preimage_hash_addr, preimage_len = registers[7], registers[8]
 
-        # Preimage hash
+        if preimage_len >= 2**32:
+            registers[7] = HostStatus.FULL.value
+            return ExecutionStatus.CONTINUE, gas, registers, memory, context
+
         if not memory.is_accessible(preimage_hash_addr, 32):
             raise PvmError(PANIC)
         preimage_hash = Bytes[32](memory.read(preimage_hash_addr, 32))
 
         # from jam.state.state import state
         # state.store.save_n_clear_cache()
+
 
         # Account
         account: AccountData = context.x.partial_state.service_accounts[context.x.s_index]
@@ -403,7 +457,9 @@ class AccumulateFunctions(INVF):
         lookup_val: Timestamps | None = account.lookup[lookup_key]
         # TODO: check updated t > balance
 
-        if not lookup_val:
+        # FIX: 'if not lookup_val' is truthy for empty list []
+        # Should only create new entry if key doesn't exist (lookup_val is None)
+        if lookup_val is None:
             account.lookup[lookup_key] = Timestamps([])
         elif len(lookup_val) == 2:
             lookup_val.append(U32(block_timeslot))
@@ -413,8 +469,8 @@ class AccumulateFunctions(INVF):
             return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
         if account.service.balance < account.service.t:
-             registers[7] = HostStatus.FULL.value
-             return ExecutionStatus.CONTINUE, gas, registers, memory, context
+            registers[7] = HostStatus.FULL.value
+            return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
         registers[7] = HostStatus.OK.value
         return CONTINUE, gas, registers, memory, context
@@ -429,6 +485,10 @@ class AccumulateFunctions(INVF):
         block_timeslot: TimeSlot,
     ):
         preimage_hash_addr, preimage_len = registers[7], registers[8]
+
+        if preimage_len >= 2**32:
+            registers[7] = HostStatus.HUH.value
+            return CONTINUE, gas, registers, memory, context
 
         if not memory.is_accessible(preimage_hash_addr, 32):
             raise PvmError(PANIC)
@@ -445,8 +505,8 @@ class AccumulateFunctions(INVF):
             lookup_value.append(block_timeslot)
             a.lookup[lookup_key] = lookup_value
         elif len(a.lookup[lookup_key]) == 0 or (
-            len(a.lookup[lookup_key]) == 2 and
-            a.lookup[lookup_key][1] < int(block_timeslot) - PREIMAGE_EVICTION_TIMESLOTS
+            len(a.lookup[lookup_key]) == 2
+            and a.lookup[lookup_key][1] < int(block_timeslot) - PREIMAGE_EVICTION_TIMESLOTS
         ):
             del a.lookup[lookup_key]
             del a.preimages[preimage_hash]
@@ -481,30 +541,34 @@ class AccumulateFunctions(INVF):
         memory: Memory,
         context: AccumulationContext,
     ):
-        [o, z] = registers[8: 10]
+        [s, o, z] = registers[7:10]
         d = context.x.partial_state.service_accounts
 
-        s = registers[7]
-        print("INITIAL s", s, s==2**64 - 1)
-        if registers[7] == 2**64 - 1:
+        if z >= 2**32:
+            registers[7] = HostStatus.HUH.value
+            return CONTINUE, gas, registers, memory, context
+
+        if s == 2**64 - 1:
             s = context.x.s_index
-        print("UPDATED S", s)
+
         if not memory.is_accessible(o, z):
             raise PvmError(PANIC)
         i = Bytes(memory.read(o, z))
-        print("PROVIDE DATA", i.hex())
-        if d[s] is None:
+
+        # FIX: Use 'in' check since d[s] always returns Account object, never None
+        # Gray Paper line 978-981: a = d[s] when s ∈ keys(d), None otherwise
+        if ServiceId(s) not in d:
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
         a = d[s]
 
         lookup = a.lookup[LookupTable(hash=Hash.blake2b(i), length=BlobLength(z))]
-        print("DIDNT ADD")
+        # FIX: Gray Paper says HUH when requests[(hash, len)] != []
+        # This means: return HUH if (lookup exists AND is not empty) OR already in preimage
         if (lookup is not None and len(lookup) != 0) or (ServiceId(s), i) in context.x.preimage:
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
 
-        print("ADDING PREIMAGE", s, i.hex())
         context.x.preimage.add((s, i))
         registers[7] = HostStatus.OK.value
         return CONTINUE, gas, registers, memory, context
