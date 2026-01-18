@@ -1,8 +1,6 @@
 from typing import Self
 from collections import OrderedDict
 
-from docutils.utils import split_escaped_whitespace
-
 from rockstore import RockStore
 from tsrkit_types import Bytes, structure, Dictionary
 
