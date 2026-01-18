@@ -1,7 +1,7 @@
 from typing import Dict, Tuple
 
 from jam.types import Balance
-from tsrkit_types import U32
+from tsrkit_types import U32, U64
 from jam.state.accounts import DeltaView
 from jam.state.partial import GhostPartial
 from jam.types.state.accumulation.types import (
@@ -9,7 +9,8 @@ from jam.types.state.accumulation.types import (
     AccumulationInputs,
     AccuContextX,
     AccumulationContext,
-    PreimageDict, DeferredTransfer,
+    PreimageDict,
+    DeferredTransfer,
 )
 from jam.execution.invocations.arg_invoke import PsiM
 from jam.execution.invocations.functions.general_fns import GeneralFunctions
@@ -28,7 +29,15 @@ from jam.utils.constants import MAX_SERVICE_CODE_SIZE, MINIMUM_SERVICE_INDEX
 
 
 class PsiA(InvocationProtocol):
-    def __init__(self, u: GhostPartial, t: TimeSlot, s: ServiceId, g: Gas, i: AccumulationInputs, entropy: OpaqueHash):
+    def __init__(
+        self,
+        u: GhostPartial,
+        t: TimeSlot,
+        s: ServiceId,
+        g: Gas,
+        i: AccumulationInputs,
+        entropy: OpaqueHash,
+    ):
         cloned_state = u.clone(True)
 
         bal = Balance(0)
@@ -38,8 +47,18 @@ class PsiA(InvocationProtocol):
                 bal += _t.amount
 
         # Credit transfer amounts to receiver's balance
-        old_bal = cloned_state.service_accounts[s].service.balance or Balance(0)
-        cloned_state.service_accounts[s].service.balance = old_bal + bal
+        service_account = cloned_state.service_accounts.get(s)
+        old_bal = service_account.service.balance if service_account else Balance(0)
+
+        if service_account:
+            service_account.service.balance = old_bal + bal
+        elif bal > 0:
+            # If service doesn't exist but receiving non-zero balance,
+            # we should probably create it or handle it.
+            # But spec implies we only process if service exists.
+            # Gray Paper: "processed... if destination service exists"
+            pass
+
         self.partial_state = cloned_state
         self.timeslot = t
         self.service_id = s
@@ -48,19 +67,16 @@ class PsiA(InvocationProtocol):
         self.entropy = entropy
         self.context = AccumulationContext(
             x=self.initializer_fn(s, cloned_state.clone(True, reset_inherited=False), t, entropy),
-            y=self.initializer_fn(s, cloned_state.clone(True, reset_inherited=False), t, entropy)
+            y=self.initializer_fn(s, cloned_state.clone(True, reset_inherited=False), t, entropy),
         )
         self.table = self.build_table(s, self.context.x.partial_state.service_accounts)
 
-    def build_table(self, 
-        xs: ServiceId,
-        delta: DeltaView
-    ) -> Dict[int, InvocationInfo]:
+    def build_table(self, xs: ServiceId, delta: DeltaView) -> Dict[int, InvocationInfo]:
         return {
             # fetch
             1: (
                 GeneralFunctions,
-                {  
+                {
                     "package": None,
                     "entropy": self.entropy,
                     "trace": None,
@@ -71,12 +87,12 @@ class PsiA(InvocationProtocol):
                 },
             ),
             # gas (Returns the gas remaining)
-            0: (GeneralFunctions, {}),  
+            0: (GeneralFunctions, {}),
             # lookup
             2: (
                 GeneralFunctions,
                 {"service_data": delta[xs], "service_index": xs, "accounts": delta},
-            ),  
+            ),
             # read
             3: (
                 GeneralFunctions,
@@ -96,7 +112,7 @@ class PsiA(InvocationProtocol):
             16: (AccumulateFunctions, {}),
             # checkpoint (fn to update the context[y])
             17: (AccumulateFunctions, {}),
-             # new (Updates the delta with a new service)
+            # new (Updates the delta with a new service)
             18: (AccumulateFunctions, {"block_timeslot": self.timeslot}),
             # upgrade (Updates the service account)
             19: (AccumulateFunctions, {}),
@@ -104,23 +120,23 @@ class PsiA(InvocationProtocol):
             20: (
                 AccumulateFunctions,
                 {},
-            ),  
+            ),
             # eject (Removal of service account)
             21: (
                 AccumulateFunctions,
                 {"block_timeslot": self.timeslot},
-            ),  
+            ),
             # query (Updates registers[7,8] wrt AccountLookup)
             22: (
                 AccumulateFunctions,
                 {},
-            ),  
+            ),
             # solicit (Updated the AccountLookup)
-            23: (AccumulateFunctions, {"block_timeslot": self.timeslot}),  
+            23: (AccumulateFunctions, {"block_timeslot": self.timeslot}),
             # forget (Updates lookupTimestamp & preimage)
-            24: (AccumulateFunctions, {"block_timeslot": self.timeslot}),  
+            24: (AccumulateFunctions, {"block_timeslot": self.timeslot}),
             # yield_ (Updates context[x]_hash)
-            25: (AccumulateFunctions, {}),  
+            25: (AccumulateFunctions, {}),
             # provide (Updates preimage)
             26: (AccumulateFunctions, {}),
             # log
@@ -128,11 +144,17 @@ class PsiA(InvocationProtocol):
             100: (
                 GeneralFunctions,
                 {"core_index": 0, "service_id": self.service_id},
-            ),  
+            ),
         }
 
     def execute(self):
-        meta_n_code = self.partial_state.service_accounts[self.service_id].m_c()
+        service_account = self.partial_state.service_accounts.get(self.service_id)
+        if service_account is None:
+            # If service doesn't exist, we can't execute accumulation logic.
+            # Return empty/default result.
+            return self.partial_state, DeferredTransfers([]), None, Gas(0), set()
+
+        meta_n_code = service_account.m_c()
         if meta_n_code is None or len(meta_n_code[1]) > MAX_SERVICE_CODE_SIZE:
             return self.partial_state, DeferredTransfers([]), None, Gas(0), set()
         else:
@@ -149,7 +171,9 @@ class PsiA(InvocationProtocol):
             return self.collapse(status, gas, context)
 
     @staticmethod
-    def initializer_fn(s: ServiceId, state_context: GhostPartial, timeslot: TimeSlot, entropy: OpaqueHash) -> AccuContextX:
+    def initializer_fn(
+        s: ServiceId, state_context: GhostPartial, timeslot: TimeSlot, entropy: OpaqueHash
+    ) -> AccuContextX:
         """
         Take Service id and Account to yield a "mutator context" - this is to make sure no changes to actual state are made if we exit
         Args:
@@ -162,11 +186,8 @@ class PsiA(InvocationProtocol):
             Mutator context
         """
         value = (
-            U32.decode(
-                Hash.blake2b(
-                    Uint(s).encode() + entropy.encode() + Uint(timeslot).encode()
-                )
-            ) % (2**32 - MINIMUM_SERVICE_INDEX - 2**8)
+            U32.decode(Hash.blake2b(Uint(s).encode() + entropy.encode() + Uint(timeslot).encode()))
+            % (2**32 - MINIMUM_SERVICE_INDEX - 2**8)
         ) + MINIMUM_SERVICE_INDEX
         i = check(state_context, value)
         context = AccuContextX(

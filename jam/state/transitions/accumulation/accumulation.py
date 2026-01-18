@@ -1,6 +1,7 @@
 from copy import deepcopy
 from typing import Tuple, Set, List, Dict, TYPE_CHECKING
 
+from tsrkit_types import U32
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import Uint
 from tsrkit_types.null import Null
@@ -200,7 +201,6 @@ class Accumulation:
             return 0, set(), []
 
         work_reports_start = work_reports[: index]
-
         # Parallely accumulate ChiZ services (always accumulate services)
         transfers, outputs, gas_consumed = Accumulation.parallel_accumulation(
             state, deferred_transfers, work_reports_start, privileged_services
@@ -275,6 +275,7 @@ class Accumulation:
         services.update(privileged_services.keys())
         for t in deferred_transfers:
             services.add(t.receiver)
+
 
         # Accumulated gas by each service
         # u in 12.19
@@ -527,6 +528,9 @@ class Accumulation:
                         )
                     )
 
+        if initial_state.service_accounts[service_id] is None:
+            return initial_state, DeferredTransfers([]), None, Gas(0), set()
+
         return PsiA(u=initial_state, t=timeslot, s=service_id, entropy=entropy, g=g, i=i).execute()
 
     @staticmethod
@@ -551,7 +555,7 @@ class Accumulation:
                     "[Accumulation] Unexpected: Received preimage for a service that does not exist"
                 )
             key_hash = Hash.blake2b(blobs)
-            lookup = LookupTable(hash=key_hash,length= len(blobs))
+            lookup = LookupTable(hash=key_hash,length=U32(len(blobs)))
             if service.lookup[lookup] is not None and len(service.lookup[lookup]) == 0:
                 service.lookup[lookup] = Timestamps([timeslot])
                 service.preimages[key_hash] = blobs
@@ -668,7 +672,6 @@ class Accumulation:
         star_work_reports = WorkReports([])
         star_work_reports.extend(immediate_reports)
         star_work_reports.extend(accumulatable_wrs)
-
         # ----------------------
         # Section 12.2 Execution (Step 3)
         # ----------------------

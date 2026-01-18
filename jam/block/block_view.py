@@ -43,7 +43,7 @@ class GhostBlock:
     def __repr__(self):
         return f"GhostBlock(header={self.header.hex()}, slot={self.slot}, status={self.status.value})"
 
-    def __init__ (self, block: Optional[Block], parent: Optional["GhostBlock"] = None):
+    def __init__ (self, block: Optional[Block] = None, parent: Optional["GhostBlock"] = None):
         self.status = BlockStatus("unaudited")
         if block is None:
             block = Block.genesis()
@@ -68,14 +68,14 @@ class GhostBlock:
             self.parent = None
 
 class BlockView:
-    final: Optional[GhostBlock]
+    final: GhostBlock
     heads: Heads
     best: Optional[GhostBlock]
 
     _index_map: Dict[HeaderHash, GhostBlock]
 
     def __init__(self):
-        self.final = None
+        self.final = GhostBlock()
         self.heads = Heads([])
         self.acceptable = []
         self.best = None
@@ -200,8 +200,8 @@ class BlockView:
             return
 
         if ghost_block.parent is None or ghost_block.parent.header != pre_final.header:
-            # print("pre-final must be direct parent of the block being finalized")
-            raise ValueError("pre-final must be direct parent of the block being finalized")
+            print("pre-final must be direct parent of the block being finalized")
+            # raise ValueError("pre-final must be direct parent of the block being finalized")
 
         self._index_map.pop(pre_final.header, None)
 

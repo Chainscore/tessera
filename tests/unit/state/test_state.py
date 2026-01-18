@@ -54,6 +54,7 @@ async def test_delta_update(db_path, rpc):
     settings = setup_setting(db_path, None, "alice", 0, rpc)
     state = setup_state(settings.state_db, GhostState.genesis())
     prev_hash = state.root
+    state.delta[ServiceId(1)] = AccountData()
     state.delta[ServiceId(1)].service = AccountMetadata(
         code_hash=Bytes[32]([1] * 32),
         balance=U64(10000000),
@@ -92,6 +93,7 @@ async def test_preimage_add(db_path, rpc):
     state = setup_state(settings.state_db, GhostState.genesis())
     prev_hash = state.root
     data = create_dummy_bytes(100)
+    state.delta[ServiceId(1)] = AccountData()
     state.delta[ServiceId(1)].preimages[Hash.blake2b(data)] = Bytes(data)
 
 

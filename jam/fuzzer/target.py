@@ -9,6 +9,7 @@ import json
 import socket
 import time
 import os
+from pathlib import Path
 import sys
 import shutil
 from typing import Optional
@@ -18,7 +19,7 @@ from tsrkit_types import Bytes, Bytes32, U8, U32, TypedVector, String, structure
 
 from .constants import (
     TAG_PEER_INFO,
-    TAG_INITIALIZE, 
+    TAG_INITIALIZE,
     TAG_IMPORT_BLOCK,
     TAG_GET_STATE,
     TAG_STATE,
@@ -36,22 +37,24 @@ from ..block.extrinsics.extrinsic import Extrinsic
 def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optional[str] = None):
     """
     The main server loop that listens for connections and handles messages.
-    
+
     Args:
         sock: Unix socket to listen on
         db_path: DB path
         record_path: Optional path to record session data
     """
-    
+
     record_enabled = record_path is not None
     json_data = {"blocks": []} if record_enabled else None
     SESSION_ID = 0
-    
+    record_index = 0
+
     while True:
+        print("V0.7.2")
         conn, addr = sock.accept()
         with conn:
             print("🔌 Fuzzer connected.")
-            
+
             peer = handle_handshake(conn)
             if not peer:
                 continue
@@ -70,8 +73,8 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
             block_count = 0
 
             # Initialize state
-            from jam.state.state import state as _state 
-            state = _state 
+            from jam.state.state import state as _state
+            state = _state
 
             while True:
                 tag, payload = read_message(conn)
@@ -88,17 +91,17 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                     block_count += 1
                     print(f"📦 Received Block #{block_count} ({len(payload)} bytes)")
 
-                    start_time = time.time()
                     try:
                         block = Block.decode(payload)
+
                         if record_enabled and json_data:
                             json_data["blocks"].append(block.to_json())
-                        valid_block = state._force_transition(block, False)
+                        valid_block = state._force_transition(block, True, True)
                         if valid_block:
-                            duration = time.time() - start_time
                             post_state = state.load(block.header.hash())
-
                             send_message(conn, TAG_STATE_ROOT, post_state.root)
+
+                            record_index += 1
                         else:
                             send_message(conn, TAG_ERROR, String("Invalid block. Error message unavailable").encode())
                     except Exception as e:

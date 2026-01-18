@@ -29,7 +29,8 @@ jobs:
             runner: macos-14
           - os: linux
             arch: x64
-            runner: ubuntu-22.04
+            runner: ubuntu-24.04
+            timeout-minutes: 15
           - os: darwin
             arch: x64
             runner: macos-15
@@ -38,10 +39,10 @@ jobs:
       - name: 📥 Checkout code with submodules
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0  # Full clone for better submodule handling
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           submodules: 'recursive'  # Checkout all submodules recursively
-          submodules-depth: 1
+          # Remove submodules-depth to allow full history for recursive submodules
 
       - name: � Verify submodules are present
         run: |
@@ -69,6 +70,7 @@ jobs:
             echo ""
             echo "🔧 Attempting manual submodule update..."
             git config --global url."https://x-access-token:${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
+            git submodule sync --recursive
             git submodule update --init --recursive --force
             
             # Verify again

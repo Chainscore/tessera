@@ -30,23 +30,26 @@ class PsiM:
                 error_type=type(e).__name__,
             )
             return Gas(0), PANIC, context
-        
+
+        # print(f"DEBUG: PsiM Init. Stack size (s): {program.stack_size}, Heap (z): {program.heap_size}")
+
         # Direct execution without intermediate R call
         host_result = PsiH.execute(program, pc, int(gas), registers, memory, dispatch_fn, context)
         return PsiM.R(gas, host_result)
 
-
     @staticmethod
     def R(g: Gas, grouped: HostCallReturn) -> ArgInvokeReturn:
         status, pc, remaining_gas, registers, memory, context = grouped
-        
+
         # Fast path calculations
         consumed_gas = Gas(g - max(remaining_gas, 0))
 
         # Optimized status handling
         if status == ExecutionStatus.OUT_OF_GAS:
             result = status
-            logger.warning("Invocation ran out of gas", initial_gas=int(g), consumed_gas=int(consumed_gas))
+            logger.warning(
+                "Invocation ran out of gas", initial_gas=int(g), consumed_gas=int(consumed_gas)
+            )
         elif status == ExecutionStatus.HALT:
             # Fast path for memory access check
             reg7, reg8 = int(registers[7]), int(registers[8])

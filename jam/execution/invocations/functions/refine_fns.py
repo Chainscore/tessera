@@ -59,11 +59,12 @@ class RefineFunctions(INVF):
         timeslot: TimeSlot,
     ):
         # Select account: if w7 == 2^64-1 use the explicit `service_id` arg, else w7 holds the sid
+        # FIX: Use 'in' check instead of 'is not None' since delta[x] always returns Account object
         a = None
-        if delta[service_id] is not None and registers[7] == 2**64 - 1:
+        if registers[7] == 2**64 - 1 and service_id in delta:
             a = delta[service_id]
-        elif delta[registers[7]] is not None:
-            a = delta[registers[7]]
+        elif ServiceId(registers[7]) in delta:
+            a = delta[ServiceId(registers[7])]
 
         h, o = registers[8], registers[9]  # h: ptr to 32-byte hash, o: output ptr (0 = probe)
 
@@ -93,7 +94,7 @@ class RefineFunctions(INVF):
         if o != 0 and l > 0:
             if not memory.is_accessible(o, l, True):
                 raise PvmError(PANIC)
-            memory.write(o, v[f:f + l])
+            memory.write(o, v[f : f + l])
 
         # w7 returns the FULL preimage length, not the number written
         registers[7] = len(v)
@@ -110,8 +111,10 @@ class RefineFunctions(INVF):
     ):
         p = registers[7]
         z = min(registers[8], SEGMENT_SIZE)
-        if memory.is_accessible(address=p, length=z, for_write=True): #TODO: need to change to readable only
+        # FIX: Check readability (for_write=False), not writability
+        if memory.is_accessible(address=p, length=z, for_write=False):
             from jam.incore.utils import Utils
+
             x = Utils.zero_padding(
                 value=ByteArray(memory.read(address=p, length=z)), n=SEGMENT_SIZE
             )
@@ -121,8 +124,10 @@ class RefineFunctions(INVF):
             registers[7] = HostStatus.FULL.value
             return CONTINUE, gas, registers, memory, context
         else:
+            # FIX: Save current length BEFORE appending (off-by-one fix)
+            current_len = len(context.e)
             context.e.append(Segment(x))
-            registers[7] = Register(export_segment_offset + len(context.e))
+            registers[7] = Register(export_segment_offset + current_len)
             return CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -144,14 +149,13 @@ class RefineFunctions(INVF):
         try:
             Program.decode_from(p)
             # TODO: Updating the commitment map, need to see how the dict is appended
-            context.m[n] = IntegratedPVM(
-                program_code=p, memory=u, instruction_counter=i
-            )
+            context.m[n] = IntegratedPVM(program_code=p, memory=u, instruction_counter=i)
             registers[7] = n
             return CONTINUE, gas, registers, memory, context
         except:
             registers[7] = HostStatus.HUH.value
-            return CONTINUE, gas, registers, context, context
+            # FIX: Was returning (context, context), should be (memory, context)
+            return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(9, gas_cost=10)
@@ -161,14 +165,15 @@ class RefineFunctions(INVF):
             raise PvmError(PANIC)
         elif n not in context.m:
             registers[7] = HostStatus.WHO.value
-            return CONTINUE, gas, registers, memory,context
+            return CONTINUE, gas, registers, memory, context
         elif not context.m[n].memory.is_accessible(s, z):
             registers[7] = HostStatus.OOB.value
-            return CONTINUE, gas, registers, memory,context
+            return CONTINUE, gas, registers, memory, context
         else:
             memory.write(o, context.m[n].memory.read(s, z))
-            registers[7] = HostStatus.OK
-            return CONTINUE, gas, registers, memory,context
+            # FIX: Was missing .value - HostStatus.OK is enum, not integer
+            registers[7] = HostStatus.OK.value
+            return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(10, gas_cost=10)
@@ -179,13 +184,14 @@ class RefineFunctions(INVF):
             raise PvmError(PANIC)
         elif n not in context.m:
             registers[7] = HostStatus.WHO.value
-            return CONTINUE, gas, registers, memory,context
+            return CONTINUE, gas, registers, memory, context
         elif not context.m[n].memory.is_accessible(o, z, True):
             registers[7] = HostStatus.OOB.value
-            return CONTINUE, gas, registers, memory,context
+            return CONTINUE, gas, registers, memory, context
         else:
             context.m[n].memory.write(o, memory.read(s, z))
-            registers[7] = n
+            # FIX: Gray Paper says return OK, not n (machine index)
+            registers[7] = HostStatus.OK.value
             return CONTINUE, gas, registers, memory, context
 
     @staticmethod
@@ -194,11 +200,13 @@ class RefineFunctions(INVF):
         [n, start_p, num_p, r] = registers[7:11]
         if n in context.m:
             u = context.m[n].memory
-            if( 
-                start_p < 16 or 
-                start_p + num_p >= 2 * 32 / PVM_MEMORY_PAGE_SIZE or 
-                (not u.is_accessible(start_p, num_p, Accessibility.NULL) and r > 2)
-                ):
+            # FIX: Added r > 4 check and fixed 2*32 to 2**32
+            if (
+                r > 4
+                or start_p < 16
+                or start_p + num_p >= 2**32 / PVM_MEMORY_PAGE_SIZE
+                or (not u.is_accessible(start_p, num_p, Accessibility.NULL) and r > 2)
+            ):
                 registers[7] = HostStatus.HUH.value
                 return CONTINUE, gas, registers, memory, context
             else:
@@ -278,6 +286,9 @@ class RefineFunctions(INVF):
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
         else:
+            # FIX: Return instruction counter (pc), not machine index (n)
+            # Gray Paper line 663: {m[n]_pc, m \ n}
+            pc = context.m[n].instruction_counter
             context.m.pop(n)
-            registers[7] = n
+            registers[7] = pc
             return CONTINUE, gas, registers, memory, context

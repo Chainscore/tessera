@@ -33,7 +33,7 @@ class Preimages:
             hashed_blob = Hash.blake2b(preimage.blob)
             lookup_key = LookupTable(hash=hashed_blob, length=BlobLength(len(preimage.blob)))
 
-            if account.lookup.get(lookup_key) is None or len(account.lookup.get(lookup_key)) != 0:
+            if not account or account.lookup.get(lookup_key) is None or len(account.lookup.get(lookup_key)) != 0:
                 raise PreimageError(
                     PreimageErrorEnum.PREIMAGE_UNNEEDED,
                     "Preimage metadata does not exist",

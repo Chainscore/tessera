@@ -189,7 +189,6 @@ class StateTrie:
                 bit_index=0,
             )
             self.root_hash = self._reconstruct_root(self.root_hash, node)
-        
         return self.root_hash
     
     def _extract_current_state(self) -> Dict[Bytes[32], Bytes]:
