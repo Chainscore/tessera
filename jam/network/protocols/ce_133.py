@@ -78,7 +78,6 @@ class WorkPackageSubmission(NetworkProtocol):
         logger.debug("Assigned Guarantors (133)", mapping=mapping[1], tau=state.tau, root=state.root.hex())
         # mapping = assign_fn(state)
         # guarantors = mapping[1]
-        # print(mapping[0])
         # logger.debug("Fetched Assigned Guarantors (133)", mapping=mapping[0], tau=state.tau, root=state.root.hex())
         wp_hash = data.package_data.work_package.hash().hex()
         logger.info(

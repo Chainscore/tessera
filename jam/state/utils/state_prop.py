@@ -34,6 +34,7 @@ def make_state_prop(state_key: int, cl: Type[Codable]):
     def fset(self, value):
         cache = _get_cache(self)
         k, v = construct_state_key(state_key), value.encode()
+        # print("UPDATING KEY", k.hex(), v.hex())
         self.store.put(bytes(k), v)
         storage_key_bytes = bytes(k)
         to_remove = [key for key in cache if key[0] == storage_key_bytes]

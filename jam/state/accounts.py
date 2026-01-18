@@ -27,13 +27,13 @@ from jam.api.rpc.subscription_handlers import (
     subscribe_service_value,
     subscribe_service_request,
     subscribe_service_data,
-    subscribe_service_preimage
+    subscribe_service_preimage,
 )
 
 
 def make_account_prop(field):
     def getter(self):
-        data = self.store.get(bytes(construct_state_key((255, self.id)))) 
+        data = self.store.get(bytes(construct_state_key((255, self.id))))
         if data is None:
             return None
         meta = AccountMetadata.decode(data)
@@ -47,7 +47,7 @@ def make_account_prop(field):
 
         setattr(meta, field, value)
         k, v = construct_state_key((255, self.id)), meta.encode()
-       
+
         self.store.put(k, v)
         # Publishes updates of the service data.
         asyncio.create_task(subscribe_service_data(self.id, meta))
@@ -60,25 +60,28 @@ class AccountDataView:
         self.id = id
         self.store = store
 
-    code_hash   = make_account_prop("code_hash")
-    balance     = make_account_prop("balance")
-    gas_limit   = make_account_prop("gas_limit")  # min_item_gas
-    min_gas     = make_account_prop("min_gas")  # min_memo_gas
-    num_o       = make_account_prop("num_o")
+    code_hash = make_account_prop("code_hash")
+    balance = make_account_prop("balance")
+    gas_limit = make_account_prop("gas_limit")  # min_item_gas
+    min_gas = make_account_prop("min_gas")  # min_memo_gas
+    num_o = make_account_prop("num_o")
     gratis_offset = make_account_prop("gratis_offset")
-    num_i       = make_account_prop("num_i")
-    created_at  = make_account_prop("created_at")
+    num_i = make_account_prop("num_i")
+    created_at = make_account_prop("created_at")
     accumulated_at = make_account_prop("accumulated_at")
     parent_service = make_account_prop("parent_service")
 
     @property
     def t(self):
-        return Balance(max(0, 
-            BASIC_MINIMUM_BALANCE
-            + ADDITIONAL_BALANCE_PER_ITEM * self.num_i
-            + ADDITIONAL_BALANCE_PER_OCTET * self.num_o
-            - self.gratis_offset
-        ))
+        return Balance(
+            max(
+                0,
+                BASIC_MINIMUM_BALANCE
+                + ADDITIONAL_BALANCE_PER_ITEM * self.num_i
+                + ADDITIONAL_BALANCE_PER_OCTET * self.num_o
+                - self.gratis_offset,
+            )
+        )
 
 
 class Account:
@@ -88,12 +91,15 @@ class Account:
 
     @property
     def t(self):
-        return Balance(max(0, 
-            BASIC_MINIMUM_BALANCE
-            + ADDITIONAL_BALANCE_PER_ITEM * self.service.num_i
-            + ADDITIONAL_BALANCE_PER_OCTET * self.service.num_o
-            - self.service.gratis_offset
-        ))
+        return Balance(
+            max(
+                0,
+                BASIC_MINIMUM_BALANCE
+                + ADDITIONAL_BALANCE_PER_ITEM * self.service.num_i
+                + ADDITIONAL_BALANCE_PER_OCTET * self.service.num_o
+                - self.service.gratis_offset,
+            )
+        )
 
     @property
     def service(self):
@@ -108,7 +114,7 @@ class Account:
         self.store.put(storage_key, encoded_val)
         # Publishes updates of the service data.
         asyncio.create_task(subscribe_service_data(self.id, value))
-        
+
     @property
     def storage(self):
         return StorageView(self.id, self.store)
@@ -177,7 +183,15 @@ class DeltaView:
         self.store = store
 
     def __getitem__(self, key: ServiceId):
+        data = self.store.get(bytes(construct_state_key((255, key))))
+        if data is None:
+            return None
         return Account(id=key, store=self.store)
+
+    def get(self, key: ServiceId, default=None):
+        if key in self:
+            return self[key]
+        return default
 
     def __setitem__(self, key: ServiceId, value: AccountData):
         account = Account(id=key, store=self.store)
@@ -191,10 +205,11 @@ class DeltaView:
 
     def __contains__(self, key: ServiceId):
         return self.store.get(bytes(construct_state_key((255, key)))) is not None
-    
+
     def __delitem__(self, key: ServiceId):
         account_s_key = bytes(construct_state_key((255, key)))
         self.store.delete(account_s_key)
+
 
 class StorageView:
     def __init__(self, id: ServiceId, store: StateStorage):
@@ -265,7 +280,6 @@ class PreImageView:
         asyncio.create_task(subscribe_service_preimage(self.id, key, None))
 
         self.store.delete(storage_key)
-
 
 
 class TimestampsView:

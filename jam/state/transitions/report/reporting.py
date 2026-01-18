@@ -32,7 +32,10 @@ from jam.utils.constants import (
 class Reporting:
     @staticmethod
     def transition(
-        pre_state: Sigma, state: Sigma, block: Block, known_packages: List[OpaqueHash] = [],
+        pre_state: Sigma,
+        state: Sigma,
+        block: Block,
+        known_packages: List[OpaqueHash] = [],
     ) -> Sigma:
         """
         Description:
@@ -88,7 +91,10 @@ class Reporting:
             # -------- Check if the core already has pending report -------------
             # Ensure Rho is empty for this report
             # 11.29
-            if rho[report.core_index].unwrap() != Null:
+            # Debug Rho
+            rho_val = rho[report.core_index].unwrap()
+            if rho_val != Null:
+                print(f"DEBUG: Core {report.core_index} ENGAGED! Value: {rho_val}")
                 raise ReportingError(
                     ReportingErrorCode.CORE_ENGAGED,
                     "The core index mentioned in report should be available in rho",
@@ -143,7 +149,9 @@ class Reporting:
             # -------- report_epoch_before_last ------------
             if guarantee.slot != block.header.slot:
                 # https://graypaper.fluffylabs.dev/#/38c4e62/15d80115e301?v=0.7.0
-                last_rotation_slot = ROTATION_PERIOD * ((int(block.header.slot) // ROTATION_PERIOD) - 1)
+                last_rotation_slot = ROTATION_PERIOD * (
+                    (int(block.header.slot) // ROTATION_PERIOD) - 1
+                )
                 if guarantee.slot < last_rotation_slot:
                     raise ReportingError(
                         ReportingErrorCode.REPORT_EPOCH_BEFORE_LAST,
@@ -217,15 +225,13 @@ class Reporting:
                     if recent_block.state_root != context.state_root:
                         raise ReportingError(ReportingErrorCode.BAD_STATE_ROOT, f"")
                     found_anchor = True
+
             if not found_anchor:
                 raise ReportingError(
                     ReportingErrorCode.ANCHOR_NOT_RECENT, "Anchor not found in beta"
                 )
 
-            if (
-                int(context.lookup_anchor_slot)
-                < int(block.header.slot) - LOOKUP_ANCHOR_MAX_AGE
-            ):
+            if int(context.lookup_anchor_slot) < int(block.header.slot) - LOOKUP_ANCHOR_MAX_AGE:
                 raise ReportingError(
                     ReportingErrorCode.ANCHOR_NOT_RECENT,
                     "Lookup anchor older than max age",
@@ -356,8 +362,7 @@ class Reporting:
                 try:
                     Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(
                         bytes(signature),
-                        X.GUARANTEE.value
-                        + bytes(x.report.hash()),
+                        X.GUARANTEE.value + bytes(x.report.hash()),
                     )
                 except InvalidSignature:
                     raise ReportingError(
