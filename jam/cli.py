@@ -192,7 +192,8 @@ def main():
                 args.theme,
                 False,
                 True,
-                args.no_rpc
+                args.no_rpc,
+                None
             )
         )
     except KeyboardInterrupt:
