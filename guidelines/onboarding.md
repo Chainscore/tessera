@@ -86,12 +86,11 @@ uv --version
 git clone https://github.com/chainscore/tessera.git
 cd tessera
 
-# Run setup script (installs dependencies and sets up environment)
-./scripts/setup.sh
+# Install dependencies
+uv sync
 
-# Or manually:
-# uv sync --all-extras
-# uv run pre-commit install
+# Set up pre-commit hooks
+uv run pre-commit install
 ```
 
 ### 🔧 IDE Setup

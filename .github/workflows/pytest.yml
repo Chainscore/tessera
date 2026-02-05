@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 📥 Checkout code
+    - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
@@ -19,7 +19,7 @@ jobs:
         token: ${{ secrets.PRIVATE_REPO_TOKEN }}
         submodules: false
 
-    - name: 🧾 Show disk usage (before)
+    - name: Show disk usage (before)
       run: |
         echo "=== df -h ==="
         df -h
@@ -28,55 +28,31 @@ jobs:
         echo "=== top 40 under /home/runner ==="
         sudo du -ah /home/runner 2>/dev/null | sort -rh | head -n 40 || true
 
-    - name: 🔧 Install system dependencies
+    - name: Install system dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential python3-dev python3-venv librocksdb-dev
 
-    - name: 📦 Checkout submodules
-      run: |
-        git config --global url."https://x-access-token:${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
-        git lfs install --skip-smudge
-        git submodule update --init --recursive
-        git submodule status --recursive
-        
-        git lfs pull --all || echo "Some LFS files may be inaccessible, continuing..."
-
-    - name: 🚀 Install uv
+    - name: Install uv
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
         export PATH="$HOME/.local/bin:$PATH"
         uv --version
 
-    - name: 🦀 Install Rust toolchain
-      run: |
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-        source "$HOME/.cargo/env"
-        rustc --version
-        cargo --version
-
-    - name: 🐍 Install Python 3.12 via uv
+    - name: Install Python 3.12 via uv
       run: |
         uv python install 3.12
         uv python find 3.12
 
-    - name: 🧼 Free disk space
+    - name: Free disk space
       run: |
         sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android
         df -h
 
-    - name: 🔧 Sync dependencies with uv
+    - name: Sync dependencies with uv
       run: uv sync --extra test
 
-    - name: 🔨 Build tsrkit-pvm
-      run: |
-        export PVM_BUILD_MODE=cython
-        cd deps/tsrkit-pvm/
-        uv run python setup.py build_ext --inplace
-        cd ../../
-
-    - name: 🧼 Aggressive cleanup before tests
+    - name: Aggressive cleanup before tests
       run: |
         pip3 cache purge || true
         rm -rf ~/.cache/pip ~/.cache/* || true
@@ -87,5 +63,5 @@ jobs:
         sudo du -ah /home/runner 2>/dev/null | sort -rh | head -n 40 || true
 
 
-    - name: 🏗️ Run unit tests
+    - name: Run unit tests
       run: ASYNC=1 uv run pytest tests/unit/

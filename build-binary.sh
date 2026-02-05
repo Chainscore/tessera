@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🔨 Building Tessera Node Binary..."
+echo "Building Tessera Node Binary..."
 
 # Detect platform
 PLATFORM=$(uname -s)
@@ -14,7 +14,7 @@ elif [ "$PLATFORM" = "Linux" ]; then
     PLATFORM_NAME="Linux"
     [ "$ARCH" = "x86_64" ] && ARCH_NAME="x64" || ARCH_NAME="$ARCH"
 else
-    echo "❌ Unsupported platform: $PLATFORM"
+    echo "ERROR: Unsupported platform: $PLATFORM"
     exit 1
 fi
 
@@ -31,7 +31,7 @@ uv run pyinstaller tessera.spec --clean --noconfirm
 # Test binary
 echo "[INFO] Testing binary..."
 if ./dist/tessera-node --help > /dev/null 2>&1; then
-    echo "[INFO] ✅ Binary test passed!"
+    echo "[INFO] Binary test passed!"
     
     # Show size
     SIZE=$(du -sh dist/tessera-node | cut -f1)
@@ -46,15 +46,15 @@ if ./dist/tessera-node --help > /dev/null 2>&1; then
     tar -czf "tessera-node-${PLATFORM_NAME}-${ARCH_NAME}.tar.gz" tessera-node $([ -f "dev-spec.json" ] && echo "dev-spec.json") $([ -d "envs" ] && echo "envs")
     cd ..
     
-    echo "[INFO] ✅ BUILD COMPLETE!"
-    echo "[INFO] 📦 Binary: dist/tessera-node"
-    echo "[INFO] 📦 Package: dist/tessera-node-${PLATFORM_NAME}-${ARCH_NAME}.tar.gz"
+    echo "[INFO] BUILD COMPLETE!"
+    echo "[INFO] Binary: dist/tessera-node"
+    echo "[INFO] Package: dist/tessera-node-${PLATFORM_NAME}-${ARCH_NAME}.tar.gz"
     echo "[INFO] "
     echo "[INFO] Usage:"
     echo "[INFO]   ./dist/tessera-node --help"
     echo "[INFO]   ./dist/tessera-node --port 40000"
     
 else
-    echo "[ERROR] ❌ Binary test failed"
+    echo "[ERROR] Binary test failed"
     exit 1
 fi

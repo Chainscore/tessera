@@ -114,7 +114,7 @@ if [ -d "venv" ]; then
     source venv/bin/activate
     print_info "Activated virtual environment"
 else
-    print_warning "No virtual environment found. Run scripts/setup.sh first."
+    print_warning "No virtual environment found. Run 'uv sync' first."
 fi
 
 # Run all modules (vectors + traces)

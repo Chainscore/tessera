@@ -1,168 +1,139 @@
-# Tessera
 
-Clean-room JAM client implementation in Python
+![Tessera Logo](guidelines/cover.svg)
 
-## 🚀 Quick Start
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/Chainscore/tessera/build-binaries.yml?branch=main)](https://github.com/Chainscore/tessera/actions)
+[![Test Status](https://img.shields.io/github/actions/workflow/status/Chainscore/tessera/pytest.yml?branch=main&label=tests)](https://github.com/Chainscore/tessera/actions)
+[![Code Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen)](https://github.com/Chainscore/tessera)
 
-### Prerequisites
+[Installation](#installation) • [Usage](#usage) • [Architecture](#architecture) • [Testing](#testing) • [Development](#development)
 
-- Python 3.11+ (3.12 recommended)
-- Git
+---
+
+## About
+
+Tessera is a Python implementation of the JAM (Join-Accumulate Machine) blockchain protocol as specified in the [JAM Graypaper](https://graypaper.com). It implements the core state transition functions, block production (Safrole), work package execution (PVM), and P2P networking required to participate in a JAM-based network.
+
+## Installation
+
+### Requirements
+
+- Python 3.12
+- uv package manager
+- RocksDB system library
 
 ### Setup
 
-1. **Clone the repository with submodules:**
-   ```bash
-   git clone --recursive https://github.com/chainscore/tessera.git
-   cd tessera
-   ```
+```bash
+# Clone repository (test-suites submodule is optional)
+git clone --recursive https://github.com/Chainscore/tessera.git
+cd tessera
 
-2. **Run the automated setup script:**
-   ```bash
-   ./scripts/setup.sh
-   ```
+# Install dependencies
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv python install 3.12
 
-   This script will:
-   - ✅ Install UV package manager (if not present)
-   - � Install Python 3.12 (if needed)
-   - 📥 Initialize and update Git submodules  
-   - 📦 Install all project dependencies
-   - 🔧 Build native extensions (Rust, MyPyC)
-   - 🔗 Set up pre-commit hooks
-   - 💾 Create necessary data directories
+export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
+uv sync --all-extras
 
-### Development Workflow
+# Initialize database directory
+mkdir -p data/
 
-- **Run the application:**
-  ```bash
-  uv run jam
-  ```
+# Initialize pre-commit hooks
+uv run pre-commit install
+```
 
-- **Run tests:**
-  ```bash
-  # All tests (unit + integration + vectors)
-  uv run poe tests
-  
-  # Just unit tests
-  poetry run poe tests unit
-  
-  # Test vectors for specific module
-  uv run poe tests vectors --module safrole
-  
-  # Test vectors with tiny spec
-  uv run poe tests vectors --module accumulate --spec tiny
-  ```
+## Usage
 
-- **Update internal dependencies:**
-  ```bash
-  uv run poe update-deps
-  ```
+### Running a Node
 
-- **Update dependencies:**
-  ```bash
-  uv lock --upgrade
-  ```
+```bash
+# Start node with environment configuration
+uv run jam --env envs/40000.env
 
-- **Build binary:**
-  ```bash
-  uv run poe build
-  ```
+# Enable validator mode
+uv run jam --env envs/40000.env --validator
 
-## 📦 Dependencies
+# Enable builder mode
+uv run jam --env envs/40000.env --builder
 
-This project uses several external dependencies that are managed as Git submodules:
+# Disable RPC server
+uv run jam --env envs/40000.env --no-rpc
 
-- `py-ark-vrf` - VRF implementation (uses published ark-vrf crate from crates.io)
-- `tsrkit-pvm` - PVM toolkit
-- `tsrkit-asm` - Assembly toolkit
-- `tsrkit-types` - Serialization & scrit typing
+# Enable telemetry
+uv run jam --env envs/40000.env --telemetry host:port
 
-## 🧪 Test Suites
+# Specify database path
+uv run jam --env envs/40000.env --db /path/to/db
+```
 
-The repository includes comprehensive test suites as a submodule:
+### Building Binary
 
-- **W3F Test Vectors** - Official JAM protocol test vectors
-- **PVM Tests** - Polkavm execution tests
-- **Trace Tests** - State transition trace validation
-- **Performance Tests** - Benchmarking and profiling tools
+```bash
+# Build standalone executable with PyInstaller
+./build-binary.sh
 
-All submodules are automatically handled by the setup script.
+# Binary output location
+./dist/tessera-node-<OS>-<ARCH>.tar.gz
+```
 
-## 🛠️ Manual Setup (Alternative)
+### Testing
 
-If you prefer to set up manually:
+```bash
+# Run all tests
+uv run pytest tests/
 
-1. **Clone with submodules:**
-   ```bash
-   git clone --recursive https://github.com/chainscore/tessera.git
-   cd tessera
-   ```
+# Run specific test suite
+uv run pytest tests/unit/safrole/
+uv run pytest tests/unit/execution/
+uv run pytest tests/integration/
 
-2. **Install UV:**
-   ```bash
-   curl -LsSf https://astral.sh/uv/install.sh | sh
-   ```
+# Run with coverage report
+uv run pytest --cov=jam --cov-report=html tests/
+```
 
-3. **Setup:**
-   ```bash
-   uv run poe setup
-   ```
+## Architecture
 
-4. **Start Dev Node**
-   ```bash
-   uv run jam --env envs/40000.env
-   ```
+### Core Components
 
-## 🔧 Troubleshooting
+- **State Management** (`jam/state/`): JAM state structure and transitions
+  - Safrole: Block production and validator rotation (VRF-based)
+  - Accumulation: Work report processing and service account updates
+  - Disputes: Guarantor judgement system
 
-### Python Version Issues
-- Ensure you have Python 3.11+ installed (3.12 recommended)
-- Check your Python version: `python3 --version`
+- **Execution Engine** (`jam/execution/`): Polkavm (PVM) execution
+  - Host calls: Import, export, gas, read, write, etc.
+  - Invocations: Refine, accumulate, on-transfer handlers
 
-### Submodule Issues
-- Run update-deps: `poetry run poe update-deps`
+- **Block Processing** (`jam/block/`): Header and extrinsic validation
+  - Tickets: VRF ticket generation and verification
+  - Guarantees: Work report guarantees
+  - Assurances: Availability assurances
 
-#### Alternate option:
-- Update submodules: `git submodule update --init --recursive`
-- Force update: `git submodule update --remote --merge`
+- **Operations** (`jam/operations/`): Node operation handlers
+  - Block Producer: Ticket-based block authoring
+  - Conductor: State transition orchestration
+  - Assurer: Work package availability
 
-### Virtual Environment Issues
-- Recreate venv: `rm -rf venv && python3 -m venv venv`
-- Reactivate: `source venv/bin/activate`
+- **Networking** (`jam/networking/`): QUIC-based P2P protocol
+  - Block propagation
+  - Work package distribution
 
-### Dependency Issues
-- Clear Poetry cache: `poetry cache clear --all .`
-- Reinstall: `poetry install --no-cache`
+- **Storage** (`jam/db/`): RocksDB-backed state persistence
 
-## 📋 Development Guidelines
-
-See [guidelines/](guidelines/) for detailed development guidelines:
-
-- [Architecture](guidelines/architecture.md)
-- [Code Style](guidelines/code.md)
-- [Dependencies](guidelines/dependencies.md)
-- [Testing](guidelines/testing.md)
-
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes
-4. Run tests: `poetry run pytest`
-5. Submit a pull request
+3. Make changes with tests
+4. Ensure `uv run pytest` passes
+5. Submit pull request
 
-## 📄 License
+Follow the code style guidelines in `guidelines/code.md`.
 
-GPL-3.0-only
+## License
 
-## How to Create an Executable Binary from PyArmor-protected Code
+GNU General Public License v3.0 - see [LICENSE](LICENSE)
 
-```bash
-poetry run poe build
-```
-
-## How to run the Binary
-
-```bash
-./dist/tessera-node --env envs/40000.env
-```
+Copyright (c) 2025 [Chainscore Labs](https://chainscorelabs.com/)
