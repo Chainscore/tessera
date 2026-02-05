@@ -1,7 +1,7 @@
 import os
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from py_ark_vrf.py_ark_vrf import secret_from_seed
+from dot_ring import secret_from_seed
 
 from jam.state.ghost import GhostState
 from jam.types import Hash

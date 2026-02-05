@@ -4,11 +4,6 @@ build-backend = "hatchling.build"
 
 [tool.uv.workspace]
 members = [
-    "deps/rockstore",
-    "deps/py-ark-vrf", 
-    "deps/tsrkit-pvm",
-    "deps/tsrkit-asm",
-    "deps/tsrkit-types",
     "test-suites"
 ]
 
@@ -41,23 +36,15 @@ dependencies = [
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
     "deepdiff>=8.6.1",
-    "tsrkit-asm",
     "pre-commit>=4.0.1",
     "safe-pysha3>=1.0.5",
-    "dot-ring>=0.1.4",
-    "py-ark-vrf",
+    "dot-ring>=0.1.6",
     "gmpy2>=2.2.2",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["jam"]
 
-[tool.uv.sources]
-rockstore = { workspace = true }
-tsrkit-types = { workspace = true }
-tsrkit-pvm = { workspace = true }
-tsrkit-asm = { workspace = true }
-py-ark-vrf = { workspace = true }
 
 [project.optional-dependencies]
 dev = [
@@ -84,7 +71,6 @@ docs = [
 ]
 build = [
     "pyinstaller>=6.15.0",
-    "mypyc>=0.0.1",
 ]
 
 [project.scripts]

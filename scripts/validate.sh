@@ -24,11 +24,11 @@ fi
 echo ""
 echo "📦 Testing core dependency imports..."
 
-# Test py_ark_vrf import
-if python -c "import py_ark_vrf; print('   ✅ py_ark_vrf imported successfully')" 2>/dev/null; then
-    echo "   ✅ py_ark_vrf imported successfully"
+# Test dot_ring import
+if python -c "import dot_ring; print('   ✅ dot_ring imported successfully')" 2>/dev/null; then
+    echo "   ✅ dot_ring imported successfully"
 else
-    echo "   ❌ py_ark_vrf import failed"
+    echo "   ❌ dot_ring import failed"
 fi
 
 # Test tsrkit_pvm import (with lazy loading)

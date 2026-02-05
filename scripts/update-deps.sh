@@ -1,14 +1,14 @@
 #!/bin/bash
-# scripts/update-deps.sh - Update all Git submodules to latest commits on their tracked branches
+# scripts/update-deps.sh - Update test-suites submodule to latest commit
 
 # Ensure script fails on any error
 set -e
 
-echo "🔄 Updating Git submodules..."
+echo "🔄 Updating test-suites submodule..."
 echo ""
 
-# Show what branches are being tracked
-echo "📋 Tracked branches:"
+# Show what branch is being tracked
+echo "📋 Tracked branch:"
 git config -f .gitmodules --get-regexp 'submodule\..*\.path' | while read key path; do
     submodule_name="${key#submodule.}"
     submodule_name="${submodule_name%.path}"
@@ -18,29 +18,29 @@ done
 
 echo ""
 
-# Update all submodules to latest commit on their tracked branch
+# Update submodule to latest commit on tracked branch
 git submodule init
 git submodule update --remote
 
-if [ -d "deps/test-suites" ]; then
-    echo "   Updating test-suites submodules..."
-    cd deps/test-suites
+if [ -d "test-suites" ]; then
+    echo "   Updating test-suites nested submodules..."
+    cd test-suites
     git submodule init
     git submodule update --remote --recursive
-    cd ../..
+    cd ..
 fi
 
 # Check if there are any changes
 if git diff --quiet --ignore-submodules; then
-    echo "✅ All submodules are up to date"
+    echo "✅ Submodule is up to date"
 else
-    echo "📝 Submodules updated. Please review changes:"
+    echo "📝 Submodule updated. Please review changes:"
     git status --porcelain
     echo ""
     echo "💡 To commit the updates:"
     echo "   git add ."
-    echo "   git commit -m 'Update submodules to latest commits'"
+    echo "   git commit -m 'Update test-suites submodule to latest commit'"
     echo ""
-    echo "🔍 To see what changed in each submodule:"
+    echo "🔍 To see what changed:"
     echo "   git submodule foreach 'git log --oneline HEAD~3..HEAD'"
 fi

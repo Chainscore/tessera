@@ -1,4 +1,9 @@
-from py_ark_vrf import vrf_output
+from dot_ring import RingVRF, Bandersnatch
+
+def vrf_output(signature):
+    """Extract VRF output (hash) from Ring VRF signature."""
+    ring_proof = RingVRF[Bandersnatch].from_bytes(signature, skip_pedersen=False)
+    return ring_proof.proof_to_hash(ring_proof.pedersen_proof.output_point)[:32]
 import pytest
 import os
 from tsrkit_types.bytes import Bytes

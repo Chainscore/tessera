@@ -1,7 +1,7 @@
 from time import time
 from types import NoneType
 from typing import TYPE_CHECKING
-from py_ark_vrf import  secret_from_seed
+from dot_ring import secret_from_seed
 from typing import Optional
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types import U32, Bytes, Bytes32
