@@ -85,7 +85,7 @@ jobs:
 
       - name: Setup project
         run: |
-          uv sync
+          uv sync --extra build
           uv run pre-commit install
 
       - name: Build binary
