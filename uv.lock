@@ -2,12 +2,6 @@ version = 1
 revision = 3
 requires-python = "==3.12.*"
 
-[manifest]
-members = [
-    "tessera",
-    "tessera-test-suites",
-]
-
 [[package]]
 name = "aiofiles"
 version = "25.1.0"
@@ -1699,21 +1693,6 @@ provides-extras = ["dev", "test", "docs", "build"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "maturin", specifier = ">=1.9.4" }]
-
-[[package]]
-name = "tessera-test-suites"
-version = "0.1.0"
-source = { editable = "test-suites" }
-dependencies = [
-    { name = "rockstore" },
-    { name = "tessera", extra = ["test"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "rockstore", specifier = ">=0.1.2" },
-    { name = "tessera", extras = ["test"], editable = "." },
-]
 
 [[package]]
 name = "toolz"

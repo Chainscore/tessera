@@ -7,7 +7,6 @@
 [![Test Status](https://img.shields.io/github/actions/workflow/status/Chainscore/tessera/pytest.yml?branch=main&label=tests)](https://github.com/Chainscore/tessera/actions)
 [![Code Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen)](https://github.com/Chainscore/tessera)
 
-[Installation](#installation) • [Usage](#usage) • [Architecture](#architecture) • [Testing](#testing) • [Development](#development)
 
 ---
 
@@ -117,8 +116,6 @@ uv run pytest --cov=jam --cov-report=html tests/
   - Assurer: Work package availability
 
 - **Networking** (`jam/networking/`): QUIC-based P2P protocol
-  - Block propagation
-  - Work package distribution
 
 - **Storage** (`jam/db/`): RocksDB-backed state persistence
 
