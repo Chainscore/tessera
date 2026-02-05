@@ -4,8 +4,8 @@ from typing import List, Optional, Dict
 
 from jam.api.rpc.subscription_handlers import subscribe_best_block
 from jam.block import Block
-from jam.types.protocol.core import TimeSlot
-from jam.types.protocol.crypto import OpaqueHash, HeaderHash
+from jam.models.protocol.core import TimeSlot
+from jam.models.protocol.crypto import OpaqueHash, HeaderHash
 
 from tsrkit_types import Dictionary, Enum, structure, Option, TypedVector
 

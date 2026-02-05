@@ -3,11 +3,11 @@ from typing import Self
 
 from jam.block.errors import BlockError, BlockErrorCode
 from jam.block.extrinsics.extrinsic import Extrinsic
-from jam.types.protocol.ticket import TicketBody
-from jam.types.state.gamma import GammaSFallback, GammaSTickets
+from jam.models.protocol.ticket import TicketBody
+from jam.models.state.gamma import GammaSFallback, GammaSTickets
 from jam.utils.constants import EPOCH_LENGTH, X, TICKET_SUBMISSION_END
 from tsrkit_types import Option, structure, Null, Bytes
-from jam.types import (
+from jam.models import (
     BandersnatchVrfSignature,
     Hash,
     HeaderHash,

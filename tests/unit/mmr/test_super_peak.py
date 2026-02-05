@@ -1,7 +1,7 @@
 from jam.utils.merkle import MMRFunctions
 from tsrkit_types import Null, TypedVector
-from jam.types.protocol.crypto import OpaqueHash
-from jam.types.protocol.merkle import MMR, OptionHash
+from jam.models.protocol.crypto import OpaqueHash
+from jam.models.protocol.merkle import MMR, OptionHash
 
 
 def test_beefy():

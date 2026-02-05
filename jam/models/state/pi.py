@@ -2,7 +2,7 @@ from tsrkit_types.sequences import TypedArray
 from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.integers import Uint, U32
 from tsrkit_types.struct import structure
-from jam.types.protocol.core import ServiceId
+from jam.models.protocol.core import ServiceId
 from jam.utils.constants import CORE_COUNT, VALIDATOR_COUNT
 
 

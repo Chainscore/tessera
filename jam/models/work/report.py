@@ -6,14 +6,14 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
-from jam.types.protocol.core import CoreIndex, Gas
-from jam.types.protocol.crypto import (
+from jam.models.protocol.core import CoreIndex, Gas
+from jam.models.protocol.crypto import (
     OpaqueHash,
     WorkReportHash, Hash
 )
-from jam.types.work.execution import WorkDigests, RefineContext
-from jam.types.work.package import WorkPackageSpec
-from jam.types.work.manifest import SegmentRootLookup
+from jam.models.work.execution import WorkDigests, RefineContext
+from jam.models.work.package import WorkPackageSpec
+from jam.models.work.manifest import SegmentRootLookup
 
 
 @structure
@@ -47,9 +47,9 @@ class WorkReport:
 
     @classmethod
     def empty(cls, **overrides) -> "WorkReport":
-        from jam.types.work.package import WorkPackageSpec
-        from jam.types.work.manifest import SegmentRootLookup
-        from jam.types.work import WorkDigests
+        from jam.models.work.package import WorkPackageSpec
+        from jam.models.work.manifest import SegmentRootLookup
+        from jam.models.work import WorkDigests
         
         defaults = {
             "package_spec": WorkPackageSpec.empty(),

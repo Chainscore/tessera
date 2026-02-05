@@ -2,9 +2,9 @@
 
 from tsrkit_types import Dictionary, structure, Bytes, TypedVector, TypedArray, U8, U16
 
-from jam.types.protocol.crypto import OpaqueHash
-from jam.types.protocol.core import SegmentRoot, WorkPackageHash
-from jam.types.protocol.core import WorkReportHash, ValidatorIndex, ExportsRoot
+from jam.models.protocol.crypto import OpaqueHash
+from jam.models.protocol.core import SegmentRoot, WorkPackageHash
+from jam.models.protocol.core import WorkReportHash, ValidatorIndex, ExportsRoot
 
 from jam.utils.constants import SEGMENT_SIZE
 

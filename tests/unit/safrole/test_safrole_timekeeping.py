@@ -1,13 +1,13 @@
 from tsrkit_types.bytes import Bytes
 
 from jam.state.transitions import Safrole
-from jam.types.state.eta import Eta
+from jam.models.state.eta import Eta
 from tsrkit_types.integers import U32
-from jam.types.state.kappa import Kappa
-from jam.types.state.gamma import GammaP, GammaA, GammaS, GammaSFallback, GammaZ
-from jam.types.state.psi import PsiO
-from jam.types.state.iota import Iota
-from jam.types.state.lambda_ import Lambda_
+from jam.models.state.kappa import Kappa
+from jam.models.state.gamma import GammaP, GammaA, GammaS, GammaSFallback, GammaZ
+from jam.models.state.psi import PsiO
+from jam.models.state.iota import Iota
+from jam.models.state.lambda_ import Lambda_
 from jam.utils.dummy.utils import create_dummy_bytes
 from tests.unit.safrole.data import (
     create_block,

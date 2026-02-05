@@ -18,7 +18,7 @@ from jam.network.start import start_node as start_global_node
 
 from jam.log_setup import setup_logging
 from jam.network.base.certificate import generate_san
-from jam.types import (
+from jam.models import (
     WorkReport,
     WorkPackage,
     Authorizer,
@@ -38,7 +38,7 @@ from jam.types import (
     ErasureRoot,
     ExportsRoot,
 )
-from jam.types.work import RefineLoad
+from jam.models.work import RefineLoad
 from jam.utils.chainspec import chain_config
 
 from jam.finality.finality import Finality
@@ -49,11 +49,11 @@ from jam.state.state import setup_state
 from jam.block import Block
 
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
-from jam.types.work.manifest import Extrinsics
+from jam.models.work.manifest import Extrinsics
 from jam.log_setup import node_logger as logger
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
-from jam.types.protocol.core import CoreIndex
+from jam.models.protocol.core import CoreIndex
 
 CLIENTS = [
     {"port": 40000, "role": "VALIDATOR", "theme": "matrix", "genesis": True},

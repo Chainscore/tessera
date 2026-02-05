@@ -9,8 +9,8 @@ from jam.network.connection import NodeConnection
 from jam.network.protocols.ce_137 import CE137Data
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.types.work.manifest import Justification, Assurers
-from jam.types.work.shard import BundleShard, SegmentsShard
+from jam.models.work.manifest import Justification, Assurers
+from jam.models.work.shard import BundleShard, SegmentsShard
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 

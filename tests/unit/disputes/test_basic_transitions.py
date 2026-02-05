@@ -15,7 +15,7 @@ from jam.block.extrinsics.disputes import (
     Culprit,
     Fault,
 )
-from jam.types.protocol.crypto import Ed25519Public, Ed25519Signature, WorkReportHash
+from jam.models.protocol.crypto import Ed25519Public, Ed25519Signature, WorkReportHash
 from jam.utils.constants import VALIDATORS_SUPER_MAJORITY, VALIDATORS_WONKY, X
 from jam.utils.dummy.utils import create_dummy_bytes, create_dummy_bytes32
 

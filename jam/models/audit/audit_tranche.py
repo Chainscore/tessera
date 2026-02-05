@@ -5,9 +5,9 @@ from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.struct import structure
 from tsrkit_types.option import Option
 from jam.network.protocols.ce_144 import NoShows
-from jam.types.protocol.crypto import HeaderHash, Hash, Ed25519Signature, Ed25519Public
-from jam.types.protocol.core import ValidatorIndex, TrancheIndex, CoreIndex, EpochIndex
-from jam.types.work.report import WorkReport, WorkReportHash
+from jam.models.protocol.crypto import HeaderHash, Hash, Ed25519Signature, Ed25519Public
+from jam.models.protocol.core import ValidatorIndex, TrancheIndex, CoreIndex, EpochIndex
+from jam.models.work.report import WorkReport, WorkReportHash
 
 SignatureList = TypedVector[Bytes]
 ValidatorSet = set[ValidatorIndex]

@@ -20,9 +20,9 @@ from jam.network.base.certificate import verify_certificate, generate_san
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import PrefixType
 
-from jam.types.protocol.core import CoreIndex, ValidatorIndex
-from jam.types.protocol.crypto import Ed25519Public
-from jam.types.work.shard import ShardIndex
+from jam.models.protocol.core import CoreIndex, ValidatorIndex
+from jam.models.protocol.crypto import Ed25519Public
+from jam.models.work.shard import ShardIndex
 from jam.utils.constants import VALIDATOR_COUNT, NODE_ALPN
 
 genesis_hash = "476243ad"
@@ -161,7 +161,7 @@ class NodeConnection(QuicConnectionProtocol):
             # try:
             #     return await asyncio.wait_for(asyncio.shield(waiter), timeout=timeout)
             # except asyncio.TimeoutError:
-            #     logger.warning(f"⏱️ Timeout waiting for stream {stream_id} response")
+            #     logger.warning(f"Timeout waiting for stream {stream_id} response")
             #     del self.waiter[stream_id]
             #     return None
 
@@ -216,7 +216,7 @@ class NodeConnection(QuicConnectionProtocol):
                 # Add prefix to the buffer
                 prefix = U8.decode(data)
                 logger.debug(
-                    f"📥 Received data",
+                    f"Received data",
                     stream_id=stream_id,
                     prefix=prefix,
                     data_len=len(data)

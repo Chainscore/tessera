@@ -2,8 +2,8 @@ import math
 from tsrkit_types import U32, Uint, U8, Null, TypedVector, Bool
 from jam.block.extrinsics.disputes import DisputesExtrinsic, Verdicts, Culprits, Faults
 from jam.block.block import Block
-from jam.types.work.report import WorkReportHash, WorkReport, WorkReports
-from jam.types.audit.audit_tranche import (
+from jam.models.work.report import WorkReportHash, WorkReport, WorkReports
+from jam.models.audit.audit_tranche import (
     TrancheIndex,
     Tranche,
     OptionalReports,
@@ -12,8 +12,8 @@ from jam.types.audit.audit_tranche import (
     CoreReport,
     AuditRecord,
 )
-from jam.types.protocol.crypto import BandersnatchVrfSignature, Ed25519Signature
-from jam.types.protocol.core import CoreIndex, EpochIndex, ValidatorIndex
+from jam.models.protocol.crypto import BandersnatchVrfSignature, Ed25519Signature
+from jam.models.protocol.core import CoreIndex, EpochIndex, ValidatorIndex
 from jam.network.protocols.ce_144 import NoShow, SubsequentTrancheEvidence
 from jam.utils.constants import EPOCH_LENGTH, VALIDATORS_SUPER_MAJORITY, VALIDATORS_WONKY
 from jam.block.extrinsics.disputes import Verdict, Culprit, Fault, JudgementVotes, Judgement

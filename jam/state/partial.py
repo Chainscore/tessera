@@ -3,10 +3,10 @@ from tsrkit_types import structure
 from jam.state.accounts import DeltaView
 from jam.state.utils import make_state_prop
 from jam.state.storage import StateStorage
-from jam.types.state.chi import Chi
-from jam.types.state.delta import Delta
-from jam.types.state.iota import Iota
-from jam.types.state.phi import Phi
+from jam.models.state.chi import Chi
+from jam.models.state.delta import Delta
+from jam.models.state.iota import Iota
+from jam.models.state.phi import Phi
 
 
 class PartialState:

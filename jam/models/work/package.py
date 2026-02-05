@@ -9,19 +9,19 @@ from tsrkit_types.struct import structure
 from typing_extensions import TypeVar
 
 from jam.execution.utils import decode_code_hash
-from jam.types.protocol.core import (
+from jam.models.protocol.core import (
     ErasureRoot,
     ExportsRoot,
     ServiceId,
     WorkPackageHash,
 )
-from jam.types.protocol.crypto import OpaqueHash, Hash
-from jam.types.work.item import WorkItem
-from jam.types.work.execution import RefineContext
-from jam.types.work.manifest import MultiSegments, MultiExtrinsics, MultiJustifications
+from jam.models.protocol.crypto import OpaqueHash, Hash
+from jam.models.work.item import WorkItem
+from jam.models.work.execution import RefineContext
+from jam.models.work.manifest import MultiSegments, MultiExtrinsics, MultiJustifications
 
 if TYPE_CHECKING:
-    from jam.types.state.delta import Delta
+    from jam.models.state.delta import Delta
 
 T = TypeVar("T")
 

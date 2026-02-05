@@ -3,24 +3,24 @@ import json
 from typing import List
 
 from rockstore import RockStore
-from jam.types.protocol.validators import ValidatorsData
-from jam.types.state.alpha import Alpha
-from jam.types.state.eta import Eta
-from jam.types.state.omega import AllReadyWRs, Omega
-from jam.types.state.pi import AllValidatorStats, Pi, AllServiceStats, AllCoreStats
-from jam.types.state.psi import Psi, PsiB, PsiG, PsiO, PsiW
-from jam.types.state.kappa import Kappa
-from jam.types.state.lambda_ import Lambda_
-from jam.types.state.rho import Rho, OptionalWorkReportState
-from jam.types.state.tau import Tau
-from jam.types.state.chi import Chi, ChiZ, ChiA
-from jam.types.state.iota import Iota
-from jam.types.state.theta import Theta
-from jam.types.state.xi import Xi
-from jam.types.state.beta import Beta, BetaHistory, BeefyBelt
-from jam.types.state.phi import Phi
-from jam.types.state.gamma import Gamma, GammaA, GammaP, GammaZ
-from jam.types.state.delta import (
+from jam.models.protocol.validators import ValidatorsData
+from jam.models.state.alpha import Alpha
+from jam.models.state.eta import Eta
+from jam.models.state.omega import AllReadyWRs, Omega
+from jam.models.state.pi import AllValidatorStats, Pi, AllServiceStats, AllCoreStats
+from jam.models.state.psi import Psi, PsiB, PsiG, PsiO, PsiW
+from jam.models.state.kappa import Kappa
+from jam.models.state.lambda_ import Lambda_
+from jam.models.state.rho import Rho, OptionalWorkReportState
+from jam.models.state.tau import Tau
+from jam.models.state.chi import Chi, ChiZ, ChiA
+from jam.models.state.iota import Iota
+from jam.models.state.theta import Theta
+from jam.models.state.xi import Xi
+from jam.models.state.beta import Beta, BetaHistory, BeefyBelt
+from jam.models.state.phi import Phi
+from jam.models.state.gamma import Gamma, GammaA, GammaP, GammaZ
+from jam.models.state.delta import (
     Delta,
     AccountData,
     Timestamps,
@@ -28,12 +28,12 @@ from jam.types.state.delta import (
     AccountPreimages,
     AccountStorage,
 )
-from jam.types.state.sigma import Sigma
-from jam.types.work import WorkDependencies
+from jam.models.state.sigma import Sigma
+from jam.models.work import WorkDependencies
 from jam.utils.constants import CORE_COUNT, EPOCH_LENGTH
 from jam.state.utils import construct_state_key
-from jam.types.protocol.crypto import OpaqueHash, Hash
-from jam.types.protocol.core import Balance, Gas, ServiceId
+from jam.models.protocol.crypto import OpaqueHash, Hash
+from jam.models.protocol.core import Balance, Gas, ServiceId
 from jam.utils.trie.merkle import StateTrie
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U32

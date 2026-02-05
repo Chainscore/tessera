@@ -3,7 +3,7 @@ from dataclasses import field
 from tsrkit_types.sequences import TypedArray
 from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.struct import structure
-from jam.types.protocol.core import Gas, ServiceId
+from jam.models.protocol.core import Gas, ServiceId
 from jam.utils.constants import CORE_COUNT
 
 """Index of Manager service that can alter Chi"""

@@ -2,9 +2,9 @@ import pytest
 from tsrkit_types import Bytes, Vector
 
 from jam.incore.utils import Utils
-from jam.types.work.shard import SegmentsShards, SegmentsShard, SegmentShard
+from jam.models.work.shard import SegmentsShards, SegmentsShard, SegmentShard
 from jam.utils.erasure_coding.erasure_code import ErasureCode
-from jam.types.work.manifest import Segments, Segment, ProvedSegments
+from jam.models.work.manifest import Segments, Segment, ProvedSegments
 from jam.utils.dummy.utils import create_dummy_bytes4104
 
 

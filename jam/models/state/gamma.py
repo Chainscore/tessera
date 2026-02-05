@@ -3,12 +3,12 @@ from dataclasses import field
 from tsrkit_types.choice import Choice
 from tsrkit_types.sequences import TypedArray, TypedVector
 from tsrkit_types.struct import structure
-from jam.types.protocol.ticket import TicketBody
-from jam.types.protocol.crypto import (
+from jam.models.protocol.ticket import TicketBody
+from jam.models.protocol.crypto import (
     BandersnatchPublic,
     BandersnatchRingRoot,
 )
-from jam.types.protocol.validators import ValidatorData
+from jam.models.protocol.validators import ValidatorData
 from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
 
 

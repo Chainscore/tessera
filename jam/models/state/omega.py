@@ -1,6 +1,6 @@
 from tsrkit_types.sequences import TypedArray, TypedVector
 from tsrkit_types.struct import structure
-from jam.types.work import WorkReport, WorkDependencies
+from jam.models.work import WorkReport, WorkDependencies
 from jam.utils.constants import EPOCH_LENGTH
 
 

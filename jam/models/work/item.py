@@ -7,9 +7,9 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
-from jam.types import WorkPackageHash
-from jam.types.protocol.core import Gas, ServiceId, SegmentRoot
-from jam.types.protocol.crypto import OpaqueHash
+from jam.models import WorkPackageHash
+from jam.models.protocol.core import Gas, ServiceId, SegmentRoot
+from jam.models.protocol.crypto import OpaqueHash
 
 TreeRoot = Union[SegmentRoot, WorkPackageHash]
 

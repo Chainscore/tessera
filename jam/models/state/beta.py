@@ -4,8 +4,8 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
-from jam.types.protocol.crypto import HeaderHash, StateRoot, BeefyRoot
-from jam.types.protocol.merkle import MMR
+from jam.models.protocol.crypto import HeaderHash, StateRoot, BeefyRoot
+from jam.models.protocol.merkle import MMR
 
 class ReportedDictionary(Dictionary[Bytes[32], Bytes[32], "hash", "exports_root"]):
     ...

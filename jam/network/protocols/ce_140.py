@@ -1,5 +1,5 @@
 from typing import Tuple
-from jam.types.protocol.crypto import Hash
+from jam.models.protocol.crypto import Hash
 from tsrkit_types import U32, Uint, Bytes, TypedVector
 
 from jam.network.connection import NodeConnection
@@ -14,7 +14,7 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.log_setup import network_logger as logger
 from jam.utils.merkle import BMRFunctions
 
-from jam.types.work.shard import SegmentsShard, SegmentShard
+from jam.models.work.shard import SegmentsShard, SegmentShard
 
 from jam.storage.da.segments import SegmentShardsDA
 from jam.storage.da.audits import JustificationsDA, AuditShardsDA

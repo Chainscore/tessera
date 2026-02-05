@@ -12,7 +12,7 @@ from jam.utils.trie.merkle import StateTrie
 from jam.state.storage import StateStorage
 from jam.state.utils import make_state_prop
 from tsrkit_types import Bytes, Dictionary, TypedVector
-from jam.types import (
+from jam.models import (
     Hash,
     Alpha,
     Eta,
@@ -34,7 +34,7 @@ from jam.types import (
 )
 from jam.block.block import Block
 from jam.log_setup import block_logger as logger
-from jam.types.state.theta import Theta, Commitment
+from jam.models.state.theta import Theta, Commitment
 from jam.state.transitions import (
     Accumulation,
     Reporting,

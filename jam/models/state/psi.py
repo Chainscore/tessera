@@ -1,6 +1,6 @@
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
-from jam.types.protocol.crypto import Ed25519Public, WorkReportHash
+from jam.models.protocol.crypto import Ed25519Public, WorkReportHash
 
 
 class PsiG(TypedVector[WorkReportHash]):

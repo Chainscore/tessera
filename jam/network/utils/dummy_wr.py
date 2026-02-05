@@ -9,7 +9,7 @@ from jam.network.node import Node
 from jam.log_setup import pvm_logger
 from rockstore import RockStore
 from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
-from jam.types.protocol.core import TimeSlot
+from jam.models.protocol.core import TimeSlot
 
 # Module-specific logger
 logger = pvm_logger

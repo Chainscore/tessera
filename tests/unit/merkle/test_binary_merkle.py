@@ -1,7 +1,7 @@
 from tsrkit_types import TypedVector, Bytes
 
-from jam.types import ErasureRoot, ExportsRoot
-from jam.types.work.shard import BundleShardHashes, SegmentsShardRoots, ShardKey
+from jam.models import ErasureRoot, ExportsRoot
+from jam.models.work.shard import BundleShardHashes, SegmentsShardRoots, ShardKey
 from jam.utils.merkle import BMRFunctions
 
 bs_hashes = BundleShardHashes.from_json([

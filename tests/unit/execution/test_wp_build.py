@@ -9,10 +9,10 @@ from tsrkit_pvm import Code, ExecutionStatus
 from jam.state.accounts import AccountMetadata
 from jam.state.ghost import GhostState
 from jam.state.state import setup_state
-from jam.types.protocol.core import Balance, Gas, BlobLength, ServiceId, TimeSlot
-from jam.types.protocol.crypto import Hash
-from jam.types.state.delta import Ao, Ai, LookupTable, Timestamps
-from jam.types.work import WorkItem, ImportSpecs, ExtrinsicSpecs
+from jam.models.protocol.core import Balance, Gas, BlobLength, ServiceId, TimeSlot
+from jam.models.protocol.crypto import Hash
+from jam.models.state.delta import Ao, Ai, LookupTable, Timestamps
+from jam.models.work import WorkItem, ImportSpecs, ExtrinsicSpecs
 from jam.utils.dummy.dummy_package import create_dummy_package
 
 

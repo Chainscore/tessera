@@ -7,9 +7,9 @@ from jam.log_setup import node_logger as logger
 
 from tsrkit_types import Bytes, U32, TypedVector
 
-from jam.types.protocol.crypto import Hash
-from jam.types.work.manifest import Assurers, Justification
-from jam.types.work.shard import SegmentsShard, ShardKey, ShardIndex
+from jam.models.protocol.crypto import Hash
+from jam.models.work.manifest import Assurers, Justification
+from jam.models.work.shard import SegmentsShard, ShardKey, ShardIndex
 
 from jam.storage.da.audits import AuditShardsDA, JustificationsDA
 from jam.storage.da.segments import SegmentShardsDA
@@ -40,7 +40,7 @@ class Assurer:
         from jam.state.state import state
 
         from jam.block.extrinsics.assurances import AvailBitField
-        from jam.types.protocol.crypto import Ed25519Signature, HeaderHash, Hash
+        from jam.models.protocol.crypto import Ed25519Signature, HeaderHash, Hash
 
         try:
             # This block must be the same as for which req shard is being called upon

@@ -3,13 +3,13 @@ import pytest
 import asyncio
 import json
 
-from jam.types import AccountData
+from jam.models import AccountData
 from tsrkit_types import U32, Bytes
 
 from jam.block.block import Block
 from jam.api.rpc.app import rpc as quart
-from jam.types.protocol.core import TimeSlot, ServiceId
-from jam.types.protocol.crypto import Hash
+from jam.models.protocol.core import TimeSlot, ServiceId
+from jam.models.protocol.crypto import Hash
 
 from tests.unit.api.utils import produce_chain, init_chain, tweak_service, tweak_storage, tweak_lookup
 

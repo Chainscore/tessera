@@ -1,13 +1,13 @@
-from jam.types.state.pi import ServiceStat
+from jam.models.state.pi import ServiceStat
 from copy import deepcopy
 from tsrkit_types import Bytes
 from jam.state.transitions.preimages.errors import PreimageError, PreimageErrorEnum
-from jam.types.state.delta import LookupTable, Timestamps
-from jam.types.state.sigma import Sigma
+from jam.models.state.delta import LookupTable, Timestamps
+from jam.models.state.sigma import Sigma
 from jam.block import Block
 from jam.block.extrinsics.preimages import Preimage, PreimagesExtrinsic
-from jam.types.protocol.crypto import Hash
-from jam.types.protocol.core import BlobLength
+from jam.models.protocol.crypto import Hash
+from jam.models.protocol.core import BlobLength
 
 
 class Preimages:

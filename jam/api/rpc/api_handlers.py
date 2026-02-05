@@ -4,10 +4,10 @@ from jam.api.rpc.utils import parse_data
 from jam.finality.finality import Finality
 from jam.state.utils import construct_state_key
 from jam.block import Block
-from jam.types.protocol.crypto import HeaderHash, OpaqueHash
+from jam.models.protocol.crypto import HeaderHash, OpaqueHash
 from jam.state.state import State
-from jam.types.protocol.core import ServiceId
-from jam.types.state.delta import LookupTable
+from jam.models.protocol.core import ServiceId
+from jam.models.state.delta import LookupTable
 
 Hash = TypedArray[U8]
 

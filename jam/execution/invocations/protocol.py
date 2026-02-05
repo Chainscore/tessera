@@ -5,7 +5,7 @@ from tsrkit_pvm import (
     ExecutionStatus,
     HostStatus,
 )
-from jam.types.protocol.core import Gas, Register
+from jam.models.protocol.core import Gas, Register
 
 Context = Any
 MemoryLike = Any

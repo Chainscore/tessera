@@ -2,8 +2,8 @@ from tsrkit_types import structure, TypedVector, Bytes, Vector
 
 from jam.block import Block
 # from jam.state.state import Rho
-from jam.types.state.rho import Rho
-from jam.types import (
+from jam.models.state.rho import Rho
+from jam.models import (
     WorkPackage,
     CoreIndex,
     WorkReport,
@@ -11,8 +11,8 @@ from jam.types import (
     WorkPackageBundle,
     Segments, HeaderHash, ValidatorIndex, StateRoot
 )
-from jam.types.work.manifest import Extrinsics, MultiSegments
-from jam.types.work.shard import SegmentsShards, BundleShardHashes, SegmentsShardRoots
+from jam.models.work.manifest import Extrinsics, MultiSegments
+from jam.models.work.shard import SegmentsShards, BundleShardHashes, SegmentsShardRoots
 
 
 @structure

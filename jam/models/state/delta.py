@@ -5,8 +5,8 @@ from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.integers import Uint, U32
 from tsrkit_types.sequences import TypedBoundedVector
 from tsrkit_types.struct import structure
-from jam.types.protocol.core import Balance, BlobLength, Gas, ServiceId, TimeSlot
-from jam.types.protocol.crypto import Hash
+from jam.models.protocol.core import Balance, BlobLength, Gas, ServiceId, TimeSlot
+from jam.models.protocol.crypto import Hash
 from jam.utils.constants import (
     BASIC_MINIMUM_BALANCE,
     ADDITIONAL_BALANCE_PER_ITEM,

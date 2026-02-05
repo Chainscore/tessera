@@ -13,9 +13,9 @@ from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.protocols.ce_128 import BlockRequest, CE128Data, Direction
 from jam.block import Block, Header
 
-from jam.types.protocol.core import TimeSlot
-from jam.types.protocol.crypto import HeaderHash
-from jam.types.protocol.validators import ValidatorData
+from jam.models.protocol.core import TimeSlot
+from jam.models.protocol.crypto import HeaderHash
+from jam.models.protocol.validators import ValidatorData
 from jam.api.rpc.subscription_handlers import subscribe_sync_status
 from jam.telemetry import emit_event
 from jam.telemetry.events import (
@@ -84,7 +84,7 @@ class BlockAnnouncement(NetworkProtocol):
     def handshake(stream_id: int, conn: NodeConnection, prefix = False):
         from jam.settings import settings
         from jam.finality.finality import Finality
-        from jam.types.protocol.crypto import Hash
+        from jam.models.protocol.crypto import Hash
 
         db = settings.main_db
         finality = Finality()
@@ -126,7 +126,7 @@ class BlockAnnouncement(NetworkProtocol):
         Convert a Block to an Announcement.
         """
         from jam.finality.finality import Finality
-        from jam.types.protocol.crypto import Hash
+        from jam.models.protocol.crypto import Hash
         from jam.settings import settings
 
         finality = Finality()

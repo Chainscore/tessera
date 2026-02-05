@@ -1,7 +1,7 @@
 """Work types module for the JAM protocol."""
 
 # Execution types
-from jam.types.work.execution import (
+from jam.models.work.execution import (
     WorkExecResult,
     ExecResults,
     RefineLoad,
@@ -10,7 +10,7 @@ from jam.types.work.execution import (
 )
 
 # Item types
-from jam.types.work.item import (
+from jam.models.work.item import (
     ImportSpec,
     ExtrinsicSpec,
     ImportSpecs,
@@ -19,7 +19,7 @@ from jam.types.work.item import (
 )
 
 # Report types
-from jam.types.work.report import (
+from jam.models.work.report import (
     RefineContext,
     WorkReport,
     WorkDependencies,
@@ -27,7 +27,7 @@ from jam.types.work.report import (
 )
 
 # Package types
-from jam.types.work.package import (
+from jam.models.work.package import (
     WorkPackageSpec,
     Authorizer,
     WorkItems,
@@ -36,7 +36,7 @@ from jam.types.work.package import (
 )
 
 
-from jam.types.work.manifest import (
+from jam.models.work.manifest import (
     Segment,
     Segments,
     MultiSegments,

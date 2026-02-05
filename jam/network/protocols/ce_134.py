@@ -11,10 +11,10 @@ from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
 from jam.storage.item_extrinsics import ItemExtrinsics
 
-from jam.types.protocol.core import CoreIndex
-from jam.types.protocol.crypto import WorkReportHash, Ed25519Signature
-from jam.types.work.package import WorkPackageBundle
-from jam.types.work import SegmentRootLookup
+from jam.models.protocol.core import CoreIndex
+from jam.models.protocol.crypto import WorkReportHash, Ed25519Signature
+from jam.models.work.package import WorkPackageBundle
+from jam.models.work import SegmentRootLookup
 
 from jam.utils.gather import gather_with_exceptions
 from jam.utils.constants import X

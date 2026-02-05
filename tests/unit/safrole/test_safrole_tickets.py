@@ -13,14 +13,14 @@ from jam.operations.handlers.conductor import Conductor
 from jam.settings import setup_setting
 from jam.state.transitions import SafroleError, SafroleErrorCode
 from jam.state.transitions import Safrole
-from jam.types.state.eta import Eta
+from jam.models.state.eta import Eta
 from tsrkit_types.integers import U32
-from jam.types.state.kappa import Kappa
-from jam.types.state.gamma import GammaP, GammaA, GammaS, GammaSFallback, GammaZ
-from jam.types.state.psi import PsiO
-from jam.types.state.iota import Iota
-from jam.types.state.lambda_ import Lambda_
-from jam.types.protocol.ticket import TicketBody, TicketId, TicketAttempt
+from jam.models.state.kappa import Kappa
+from jam.models.state.gamma import GammaP, GammaA, GammaS, GammaSFallback, GammaZ
+from jam.models.state.psi import PsiO
+from jam.models.state.iota import Iota
+from jam.models.state.lambda_ import Lambda_
+from jam.models.protocol.ticket import TicketBody, TicketId, TicketAttempt
 from jam.utils.dummy.utils import create_dummy_bytes
 from tests.unit.safrole.data import create_block, create_state, create_validator_data_from_keys
 from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END

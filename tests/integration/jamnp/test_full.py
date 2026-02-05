@@ -13,8 +13,8 @@ from jam.log_setup import node_logger as logger
 from jam.network.protocols import WorkPackageSubmission
 from jam.network.protocols.ce_133 import CE133Data, WorkPackageCore
 from jam.operations import operate
-from jam.types import Hash, WorkPackage, RefineContext, BeefyRoot, HeaderHash
-from jam.types.state.beta import BlockHistory
+from jam.models import Hash, WorkPackage, RefineContext, BeefyRoot, HeaderHash
+from jam.models.state.beta import BlockHistory
 from jam.utils.constants import GENESIS_TS
 from tests.integration.jamnp.utils.fetch_test_vectors import fetch_vectors
 

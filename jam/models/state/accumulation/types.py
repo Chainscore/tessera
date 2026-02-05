@@ -1,14 +1,14 @@
 from typing import Tuple, List, Set, Union
 from tsrkit_types import structure, TypedVector, Bytes, Uint, Choice
 from jam.state.partial import GhostPartial, PartialState
-from jam.types.protocol.merkle import OptionHash
-from jam.types.state.phi import Phi, AuthorizerHash
-from jam.types.work import WorkExecResult
-from jam.types.protocol.core import WorkPackageHash
-from jam.types.state.chi import Chi
-from jam.types.protocol.core import ServiceId, Gas, OpaqueHash, Balance, ExportsRoot
-from jam.types.state.delta import Delta
-from jam.types.state.iota import Iota
+from jam.models.protocol.merkle import OptionHash
+from jam.models.state.phi import Phi, AuthorizerHash
+from jam.models.work import WorkExecResult
+from jam.models.protocol.core import WorkPackageHash
+from jam.models.state.chi import Chi
+from jam.models.protocol.core import ServiceId, Gas, OpaqueHash, Balance, ExportsRoot
+from jam.models.state.delta import Delta
+from jam.models.state.iota import Iota
 from jam.utils.constants import W_T
 
 

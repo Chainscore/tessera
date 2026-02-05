@@ -22,19 +22,19 @@ from jam.log_setup import node_logger as logger
 from jam.execution.invocations.is_authorized import PsiI
 from jam.execution.invocations.refine import PsiR
 
-from jam.types.protocol.core import (
+from jam.models.protocol.core import (
     CoreIndex,
     Gas,
     TimeSlot,
     ExportsRoot,
     ValidatorIndex,
 )
-from jam.types.protocol.crypto import OpaqueHash, Hash, Ed25519Signature, WorkReportHash
-from jam.types.work.execution import WorkDigest, WorkExecResult, RefineLoad, WorkDigests
+from jam.models.protocol.crypto import OpaqueHash, Hash, Ed25519Signature, WorkReportHash
+from jam.models.work.execution import WorkDigest, WorkExecResult, RefineLoad, WorkDigests
 
-from jam.types.work.item import WorkItem
-from jam.types.work.package import WorkPackage, WorkPackageBundle, WorkPackageSpec
-from jam.types.work.manifest import (
+from jam.models.work.item import WorkItem
+from jam.models.work.package import WorkPackage, WorkPackageBundle, WorkPackageSpec
+from jam.models.work.manifest import (
     Segments,
     Segment,
     MultiSegments,
@@ -44,8 +44,8 @@ from jam.types.work.manifest import (
     Assurers,
     SegmentRootLookup,
 )
-from jam.types.work.report import WorkReport
-from jam.types.work.shard import (
+from jam.models.work.report import WorkReport
+from jam.models.work.shard import (
     BundleShardHashes,
     SegmentsShards,
     SegmentsShard,

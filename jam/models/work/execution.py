@@ -7,8 +7,8 @@ from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 from tsrkit_types.null import NullType
 from dataclasses import field
-from jam.types.protocol.core import Gas, ServiceId, TimeSlot
-from jam.types.protocol.crypto import OpaqueHash, HeaderHash, StateRoot, BeefyRoot
+from jam.models.protocol.core import Gas, ServiceId, TimeSlot
+from jam.models.protocol.crypto import OpaqueHash, HeaderHash, StateRoot, BeefyRoot
 
 
 class WorkExecResult(Choice):

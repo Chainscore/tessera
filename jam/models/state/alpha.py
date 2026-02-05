@@ -1,6 +1,6 @@
 from tsrkit_types import TypedBoundedVector
 from tsrkit_types.sequences import TypedArray, TypedVector
-from jam.types.protocol.crypto import OpaqueHash
+from jam.models.protocol.crypto import OpaqueHash
 from jam.utils.constants import CORE_COUNT, O
 
 AuthorizerHash = OpaqueHash

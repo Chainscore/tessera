@@ -1,10 +1,10 @@
 import asyncio
 from jam.operations.dispatcher import NodeDispatcher
 from tsrkit_types import U32
-from jam.types.protocol.ticket import TicketAttempt
+from jam.models.protocol.ticket import TicketAttempt
 from jam.block.extrinsics.tickets import TicketEnvelope
-from jam.types.protocol.crypto import BandersnatchRingVrfSignature
-from jam.types.protocol.core import TimeSlot
+from jam.models.protocol.crypto import BandersnatchRingVrfSignature
+from jam.models.protocol.core import TimeSlot
 from dot_ring import RingVRF, Bandersnatch
 from jam.log_setup import node_logger as logger
 from jam.utils.constants import EPOCH_LENGTH, X, TICKET_ENTRIES_PER_VALIDATOR

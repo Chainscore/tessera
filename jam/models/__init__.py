@@ -1,7 +1,7 @@
 """JAM types."""
 
 # Protocol types
-from jam.types.protocol import (
+from jam.models.protocol import (
     # Core types
     TimeSlot,
     ValidatorIndex,
@@ -43,7 +43,7 @@ from jam.types.protocol import (
 )
 
 # Work types
-from jam.types.work import (
+from jam.models.work import (
     RefineContext,
     ImportSpec,
     ExtrinsicSpec,
@@ -64,7 +64,7 @@ from jam.types.work import (
 )
 
 # State types
-from jam.types.state import (
+from jam.models.state import (
     Alpha,
     AuthorizationPool,
     Beta,

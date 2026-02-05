@@ -10,9 +10,9 @@ from jam.network.connection import NodeConnection
 
 from jam.storage.da.reports import ReportsDA
 
-from jam.types.protocol.crypto import WorkReportHash, Hash
-from jam.types.work.report import WorkReport
-from jam.types.work.manifest import Assurers
+from jam.models.protocol.crypto import WorkReportHash, Hash
+from jam.models.work.report import WorkReport
+from jam.models.work.manifest import Assurers
 
 
 

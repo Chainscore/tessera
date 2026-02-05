@@ -3,7 +3,7 @@ import time
 import pytest
 from tsrkit_types import Bytes
 
-from jam.types import Hash
+from jam.models import Hash
 
 
 def keccak256(data: bytes) -> Bytes[32]:
