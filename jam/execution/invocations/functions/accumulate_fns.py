@@ -435,12 +435,13 @@ class AccumulateFunctions(INVF):
     ):
         preimage_hash_addr, preimage_len = registers[7], registers[8]
 
+        if not memory.is_accessible(preimage_hash_addr, 32):
+            raise PvmError(PANIC)
+
         if preimage_len >= 2**32:
             registers[7] = HostStatus.FULL.value
             return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
-        if not memory.is_accessible(preimage_hash_addr, 32):
-            raise PvmError(PANIC)
         preimage_hash = Bytes[32](memory.read(preimage_hash_addr, 32))
 
         # from jam.state.state import state
