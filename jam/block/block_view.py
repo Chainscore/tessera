@@ -200,7 +200,7 @@ class BlockView:
             return
 
         if ghost_block.parent is None or ghost_block.parent.header != pre_final.header:
-            print("pre-final must be direct parent of the block being finalized")
+            print("WARN: pre-final must be direct parent of the block being finalized")
             # raise ValueError("pre-final must be direct parent of the block being finalized")
 
         self._index_map.pop(pre_final.header, None)

@@ -1687,7 +1687,7 @@ requires-dist = [
     { name = "sphinx", marker = "extra == 'docs'", specifier = "==8.1.3" },
     { name = "structlog", specifier = ">=25.2.0" },
     { name = "tsrkit-pvm" },
-    { name = "tsrkit-types", specifier = "==0.1.9" },
+    { name = "tsrkit-types", specifier = "==0.2.1" },
 ]
 provides-extras = ["dev", "test", "docs", "build"]
 
@@ -1740,11 +1740,11 @@ wheels = [
 
 [[package]]
 name = "tsrkit-types"
-version = "0.1.9"
+version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d6/ce/026a50f16b8149d56a89342c9752802b4abfe3ccb1f9b9062614b8d009ce/tsrkit_types-0.1.9.tar.gz", hash = "sha256:03f438b3d16bd4cd271e9e8d8cf616fd3c29f85921658a1d2b5c9ac64b0989d7", size = 59509, upload-time = "2026-01-09T09:38:28.217Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8d/2d/df22ac405d9d1fd54614ce0aa5a5ed80d49a3975863c72b6dbe90242db1c/tsrkit_types-0.2.1.tar.gz", hash = "sha256:99d7392e6336b0a21b2296409c762e44e65d7bc0b79db26cbc7911ecf45f12fa", size = 52353, upload-time = "2026-02-05T20:35:12.489Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c5/b4/7b04498bc8bb1d2a91642086d2e0c2b09c3dedf812c2964ff2d5a4b210d2/tsrkit_types-0.1.9-py3-none-any.whl", hash = "sha256:ca99bdddd8ea50dc30b6a7bbf9fe0245f1a7c8040d43b4c79e2d6a6c4819f043", size = 29804, upload-time = "2026-01-09T09:38:27.086Z" },
+    { url = "https://files.pythonhosted.org/packages/96/26/2f27577615ad3a82ff4a4cb27b07a54a99049ace88317b3c412b101d3fba/tsrkit_types-0.2.1-py3-none-any.whl", hash = "sha256:7e66234d662a4ed9a92531a3781e112d7a4a39fb2efc2b9e4ed49c887172ee54", size = 27313, upload-time = "2026-02-05T20:35:11.023Z" },
 ]
 
 [[package]]
