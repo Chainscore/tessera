@@ -73,7 +73,7 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
             block_count = 0
 
             # Initialize state
-            from jam.state.state import state as _state
+            from jam.state.state import state as _state, State
             state = _state
 
             while True:
@@ -98,7 +98,7 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                             json_data["blocks"].append(block.to_json())
                         valid_block = state._force_transition(block, True, True)
                         if valid_block:
-                            post_state = state.load(block.header.hash())
+                            post_state = State.load(block.header.hash())
                             send_message(conn, TAG_STATE_ROOT, post_state.root)
 
                             record_index += 1
