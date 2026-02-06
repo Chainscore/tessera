@@ -1,3 +1,5 @@
+from jam.utils.chainspec import chain_config
+
 __all__ = ["JamConfig", "chain_config"]
 
 

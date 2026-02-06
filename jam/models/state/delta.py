@@ -1,4 +1,5 @@
 from dataclasses import field
+from functools import total_ordering
 from typing import Self
 from tsrkit_types import Bytes
 from tsrkit_types.dictionary import Dictionary
@@ -98,6 +99,7 @@ class AccountPreimages(Dictionary[Bytes[32], Bytes, "hash", "blob"]):
 Timestamps = TypedBoundedVector[U32, 0, 3]
 
 
+@total_ordering
 @structure
 class LookupTable:
     hash: ServiceCodeHash
@@ -105,6 +107,11 @@ class LookupTable:
 
     def __hash__(self):
         return int.from_bytes(Hash.blake2b(self.length.encode() + self.hash.encode()))
+
+    def __eq__(self, other):
+        if not isinstance(other, LookupTable):
+            return NotImplemented
+        return (self.hash, self.length) == (other.hash, other.length)
 
     def __lt__(self, other):
         if not isinstance(other, LookupTable):
