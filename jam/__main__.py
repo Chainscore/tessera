@@ -11,7 +11,8 @@ if TYPE_CHECKING:
     from jam.finality.finality import Finality
     from jam.log_setup import setup_logging
     from jam.network.start import start_node
-    from jam.operations.operator import operate
+    # from jam.operations.operator import operate
+    from jam.operations import OperatorService
     from jam.utils.chainspec import chain_config
     from jam.settings import setup_setting
     from jam.state.state import setup_state
@@ -22,7 +23,8 @@ if TYPE_CHECKING:
 
 from jam.log_setup import setup_logging, logger
 from jam.network.start import start_node
-from jam.operations.operator import operate
+# from jam.operations.operator import operate
+from jam.operations import OperatorService
 from jam.operations.ticket_queue import setup_ticket_queue
 from jam.state.state import setup_state
 from jam.settings import setup_setting
@@ -114,6 +116,8 @@ async def main(
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
         state = setup_state(settings.state_db, "dev-spec.json")
 
+        operator_service = OperatorService(settings, state)
+
         # FIX: setup ticket queue
         setup_ticket_queue()
 
@@ -137,7 +141,7 @@ async def main(
                 # RPC
                 tg.create_task(rpc.run_task(debug=True, host=rpc_host, port=int(rpc_port), shutdown_trigger=rpc_shutdown_trigger))
             # Node Ops - Block Prod, Audit, Assurances, etc
-            tg.create_task(operate(is_builder))
+            tg.create_task(operator_service.start())
 
     except ExceptionGroup as eg:
         shutdown_event.set()

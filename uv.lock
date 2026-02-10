@@ -1772,13 +1772,14 @@ source = { editable = "deps/tsrkit-asm" }
 
 [[package]]
 name = "tsrkit-pvm"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "deps/tsrkit-pvm" }
 dependencies = [
     { name = "bitarray" },
     { name = "cython" },
     { name = "mypy" },
     { name = "setuptools" },
+    { name = "tsrkit-asm" },
     { name = "tsrkit-types" },
 ]
 
@@ -1798,6 +1799,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
     { name = "setuptools", specifier = ">=80.9.0" },
+    { name = "tsrkit-asm", editable = "deps/tsrkit-asm" },
     { name = "tsrkit-types", editable = "deps/tsrkit-types" },
 ]
 provides-extras = ["dev"]

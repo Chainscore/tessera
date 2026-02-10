@@ -118,14 +118,14 @@ class Block:
         # Return the HeaderHash
         return HeaderHash(hh)
 
-    def validate(self, state, prestate) -> bool:
-        return self.header.validate(state, prestate) and self.extrinsic.validate(self.header)
+    def validate(self, state, prestate, settings) -> bool:
+        return self.header.validate(state, prestate, settings) and self.extrinsic.validate(self.header)
 
-    def produce(self, time_slot: TimeSlot, state, ticket: TicketBody | None = None) -> "Block":
+    def produce(self, time_slot: TimeSlot, state, settings, ticket: TicketBody | None = None) -> "Block":
         extrinsic = Extrinsic.from_collected(time_slot)
 
         # Produce a new header from previous header
-        header = self.header.produce(time_slot, extrinsic, ticket, state)
+        header = self.header.produce(time_slot, extrinsic, ticket, state, settings)
 
         block = Block(header=header, extrinsic=extrinsic)
 
