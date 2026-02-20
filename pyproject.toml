@@ -27,7 +27,6 @@ dependencies = [
     "structlog>=25.2.0",
     "aioquic>=1.2.0",
     "quart>=0.20.0",
-    "reed-solomon-leopard>=0.2.1",
     "python-dotenv>=1.1.0",
     "pycryptodome>=3.23.0",
     "pydantic>=2.11.7",
