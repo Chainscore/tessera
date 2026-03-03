@@ -6,7 +6,7 @@ from jam.state.utils import construct_state_key
 from jam.block import Block
 from jam.types.protocol.crypto import HeaderHash, OpaqueHash
 from jam.state.state import State
-from jam.types.protocol.core import ServiceId
+from jam.types.protocol.core import ServiceId, TimeSlot
 from jam.types.state.delta import LookupTable
 
 Hash = TypedArray[U8]
@@ -94,6 +94,25 @@ def submit_preimage_handler(params: list):
     return []
 
 
+def block_request_handler(params: list):
+    from jam.settings import settings
+    identifier = params[0]
+    by = params[1] if len(params) > 1 else "hash"
+    try:
+        if by == "slot":
+            block = Block.load_w_ts(TimeSlot(identifier), settings.main_db)
+            if isinstance(block, list):
+                block = block[0]
+        else:
+            hh = HeaderHash(bytes(identifier))
+            block = Block.load(hh, settings.main_db)
+        if block is None:
+            return None
+        return list(block.encode())
+    except (ValueError, Exception):
+        return None
+
+
 def submit_work_package_handler(params: list):
     hh, sid = parse_data([HeaderHash, ServiceId], params)
     state_at_hh = State.load(hh)
@@ -114,6 +133,7 @@ method_map: dict[str, Callable] = {
     "beefyRoot": beefy_root_handler,
     "submitPreimage": submit_preimage_handler,
     "submitWorkPackage": submit_work_package_handler,
+    "blockRequest": block_request_handler,
 }
 
 

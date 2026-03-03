@@ -15,6 +15,7 @@ from jam.types.work.manifest import Extrinsics, Extrinsic
 from jam.types.work.package import WorkPackage
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data, WorkPackageCore
 from jam.api.rpc.parameters import parameters
+from jam.api.rpc.api_handlers import block_request_handler
 
 Hash = TypedArray[U8]
 
@@ -137,7 +138,8 @@ method_map: dict[str, Callable] = {
     "finalizedBlock": finalized_block_handler,
     "submitWorkPackage": submit_work_package_handler,
     "serviceRequest": service_request_handler,
-    "serviceValue": service_value_handler
+    "serviceValue": service_value_handler,
+    "blockRequest": block_request_handler,
 }
 
 

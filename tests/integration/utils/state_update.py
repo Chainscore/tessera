@@ -3,7 +3,7 @@ from tsrkit_types import Bytes
 from tsrkit_pvm import Code
 
 from jam.state.state import State
-from jam.state.accounts import AccountMetadata
+from jam.state.accounts import Account, AccountMetadata
 
 from jam.types.protocol.core import Gas, Balance, BlobLength, ServiceId, TimeSlot
 from jam.types.protocol.crypto import Hash
@@ -17,7 +17,11 @@ def update_state(state: State):
     service_code_hash = Hash.blake2b(service_code)
     service_id = ServiceId(1)
 
-    state.delta[service_id].service = AccountMetadata(
+    # Create the Account directly to bootstrap the service entry in the DB.
+    # DeltaView.__getitem__ returns None for non-existent services, so we
+    # bypass it by constructing the Account object ourselves.
+    account = Account(id=service_id, store=state.store)
+    account.service = AccountMetadata(
         code_hash=service_code_hash,
         balance=Balance(1_000_000),
         gas_limit=Gas(1_000),
@@ -29,6 +33,6 @@ def update_state(state: State):
         accumulated_at=TimeSlot(0),
         parent_service=ServiceId(0)
     )
-    state.delta[service_id].lookup[
+    account.lookup[
         LookupTable(hash=service_code_hash, length=BlobLength(len(service_code)))] = Timestamps([state.tau])
-    state.delta[service_id].preimages[service_code_hash] = service_code
+    account.preimages[service_code_hash] = service_code
