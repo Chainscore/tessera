@@ -23,7 +23,7 @@ from jam.operations.ticket_queue import setup_ticket_queue
 from jam.api.rpc.app import rpc
 from jam.block.block_view import viewer
 from jam.telemetry.client import TelemetryClient, TelemetryConfig
-
+from jam.operations import OperatorService
 
 shutdown_event = asyncio.Event()
 
@@ -90,7 +90,7 @@ async def run_node(
         dev_spec = json.load(open("dev-spec.json"))
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
         state = setup_state(settings.state_db, "dev-spec.json")
-        update_state(state=state)
+        # update_state(state=state)
 
         # FIX: setup ticket queue
         setup_ticket_queue()
@@ -124,7 +124,10 @@ async def run_node(
             # Node Ops - Block Prod, Audit, Assurances, etc
             for node_task in node_tasks:
                 if node_task:
-                    tg.create_task(node_task())
+                    if issubclass(node_task, OperatorService):
+                        tg.create_task(node_task(settings, state).start())
+                    else:
+                        tg.create_task(node_task())
 
     except Exception as e:
         shutdown_event.set()

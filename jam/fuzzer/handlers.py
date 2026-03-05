@@ -102,7 +102,7 @@ def handle_handshake(conn: socket.socket) -> bool|PeerInfo:
     our_peer_info = PeerInfo(
         fuzz_version=U8(1),  # Protocol version 1
         fuzz_features=U32(FEATURE_ANCESTRY | FEATURE_FORK),  # We support ancestry and basic forking
-        jam_version=Version(major=U8(0), minor=U8(7), patch=U8(0)),  # JAM 0.7.0
+        jam_version=Version(major=U8(0), minor=U8(7), patch=U8(2)),  # JAM 0.7.2
         app_version=Version(major=U8(1), minor=U8(0), patch=U8(0)),  # App 1.0.0
         app_name=String("tessera-target")
     )

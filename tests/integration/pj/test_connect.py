@@ -1,6 +1,6 @@
 import asyncio
 from time import time
-from jam.operations import operate
+from jam.operations.service import OperatorService
 from jam.utils.constants import GENESIS_TS
 from tests.integration.utils.setup_processes import Client, Role, setup_processes
 import os
@@ -31,7 +31,7 @@ async def test_1_tsr_1_pjam():
         Client(Role.VAL, 40000 + int(os.environ.get("VAL", "1"))),
         Client(Role.PJAM, int(os.environ.get("PJAM", "0"))),
     ]
-    await setup_processes(CLIENTS, [operate], 240)
+    await setup_processes(CLIENTS, [OperatorService], 240)
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
@@ -41,7 +41,7 @@ async def test_2_tsr():
         Client(Role.VAL, 40000 + int(os.environ.get("VAL2", "1"))),
     ]
 
-    await setup_processes(CLIENTS, [operate], 80)
+    await setup_processes(CLIENTS, [OperatorService], 80)
 
 
 @pytest.mark.asyncio
@@ -54,7 +54,7 @@ async def test_2_tsr_1_pjam():
         Client(Role.PJAM, int(os.environ.get("PJAM", "1"))),
     ]
 
-    await setup_processes(CLIENTS, [operate], 80)
+    await setup_processes(CLIENTS, [OperatorService], 80)
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
@@ -81,7 +81,7 @@ async def test_tiny_tsr(rpc):
         Client(Role.VAL, 40000 + 5),
     ]
     
-    await setup_processes(CLIENTS, [operate], 2400, rpc_flag=rpc)
+    await setup_processes(CLIENTS, [OperatorService], 2400, rpc_flag=rpc)
 
 
 @pytest.mark.asyncio
@@ -96,7 +96,7 @@ async def test_tiny_tsr_1_pjam():
         Client(Role.VAL, 40000 + 5),
     ]
     
-    await setup_processes(CLIENTS, [operate], 240)
+    await setup_processes(CLIENTS, [OperatorService], 240)
 
 
 @pytest.mark.asyncio
@@ -111,7 +111,7 @@ async def test_tiny_tsr_5_pjam():
         Client(Role.PJAM, 5),
     ]
     
-    await setup_processes(CLIENTS, [operate], 2400)
+    await setup_processes(CLIENTS, [OperatorService], 2400)
 
 
 @pytest.mark.asyncio
@@ -126,7 +126,7 @@ async def test_tiny_2_tsr_4_pjam():
         Client(Role.PJAM, 5),
     ]
 
-    await setup_processes(CLIENTS, [operate], 2400)
+    await setup_processes(CLIENTS, [OperatorService], 2400)
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
@@ -140,7 +140,7 @@ async def test_tiny_3_tsr_3_pjam():
         Client(Role.PJAM, 5),
     ]
 
-    await setup_processes(CLIENTS, [operate], 2400)
+    await setup_processes(CLIENTS, [OperatorService], 2400)
 
 
 @pytest.mark.asyncio
@@ -154,7 +154,7 @@ async def test_5_pjam():
         Client(Role.PJAM, 5),
     ]
 
-    await setup_processes(CLIENTS, [operate], 2400)
+    await setup_processes(CLIENTS, [OperatorService], 2400)
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
@@ -163,7 +163,7 @@ async def test_1_pjam():
         Client(Role.PJAM, 0),
     ]
 
-    await setup_processes(CLIENTS, [operate], 2400)
+    await setup_processes(CLIENTS, [OperatorService], 2400)
 
 
 @pytest.mark.asyncio
@@ -177,4 +177,4 @@ async def test_5_tsr():
         Client(Role.VAL, 40000 + 5),
     ]
 
-    await setup_processes(CLIENTS, [operate], 2400)
+    await setup_processes(CLIENTS, [OperatorService], 2400)

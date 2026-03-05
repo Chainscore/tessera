@@ -96,7 +96,7 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
 
                         if record_enabled and json_data:
                             json_data["blocks"].append(block.to_json())
-                        valid_block = state._force_transition(block, True, True)
+                        valid_block = State._force_transition(block, True, True)
                         if valid_block:
                             post_state = State.load(block.header.hash())
                             send_message(conn, TAG_STATE_ROOT, post_state.root)
@@ -118,6 +118,20 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                             json_data["pre_state"] = init_data.keyvals.to_json()
                         
                         from jam.state.state import setup_state
+
+                        # Clear ALL databases to avoid stale data from previous traces
+                        # 1. Clear state DB (stale KV pairs)
+                        for key in settings.state_db.get_all():
+                            settings.state_db.delete(key)
+
+                        # 2. Clear main DB (stale blocks, finality keys, StateRecords)
+                        for key in settings.main_db.get_all():
+                            settings.main_db.delete(key)
+
+                        # 3. Reset BlockView singleton to clear in-memory block tree
+                        from jam.block.block_view import viewer
+                        viewer.initialize(settings.main_db)
+
                         # Convert State to dict for setup_state
                         state_dict = {kv.key: kv.value for kv in init_data.keyvals.keyvals}
                         state = setup_state(settings.state_db, state_dict)
@@ -147,7 +161,8 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                             key_31 = key[:31].ljust(31, b'\x00') if len(key) < 31 else key[:31]
                             keyvals.append(KeyValue(key=Bytes[31](key_31), value=Bytes(val)))
 
-                        state_response = State(keyvals=keyvals)
+                        # state_response = State(keyvals=keyvals)
+                        state_response = keyvals
                         if record_enabled and json_data:
                             json_data["post_state"] = state_response.to_json()
                         
