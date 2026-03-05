@@ -1454,28 +1454,6 @@ wheels = [
 ]
 
 [[package]]
-name = "reed-solomon-leopard"
-version = "0.2.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0f/80/10560c1c594073ed9b6efc8dd545d5f07aee7407e9c8c4314c1e6190f45b/reed_solomon_leopard-0.2.1.tar.gz", hash = "sha256:16a683ae53a9610ef10384ca1048a6952dd0ecd1de93d3a31727eb739e70f9cf", size = 8852, upload-time = "2024-11-25T13:22:13.236Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b3/90/f7528f19d665583b95deacf7085668fec87c6fea4f6c1c4032ac173fd047/reed_solomon_leopard-0.2.1-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:b50a61bae689d1e773423c427b4b35c65a9da9910bca23e83400e644efbb1da5", size = 248981, upload-time = "2024-11-25T13:21:23.473Z" },
-    { url = "https://files.pythonhosted.org/packages/bd/ef/1e9f30a4fcfc1f9234d0ea99fc41b243cb90ff228ef335416b4ad25b357c/reed_solomon_leopard-0.2.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:3e9c9d88e376eedc65c6857649b6e398a9fb798c67a1d99e967a28d2022c907d", size = 235665, upload-time = "2024-11-25T13:21:19.936Z" },
-    { url = "https://files.pythonhosted.org/packages/27/f9/5b1d5b940a519b7d0059dd9414100e4977e5d23170687800d84b8597fc81/reed_solomon_leopard-0.2.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ca02cd83d3832f1567dc1ce53a579e183c4aad67c703226fba5350a9dd0d3118", size = 271036, upload-time = "2024-11-25T13:20:16.364Z" },
-    { url = "https://files.pythonhosted.org/packages/ff/51/6d99705d6777cc98b93be00bd0a3ae8555cd5fffb15ceb99a9f38e4ec9ea/reed_solomon_leopard-0.2.1-cp312-cp312-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:657adf0355e073356fb772c8794c787129876c6c17576d6369ff72005558340d", size = 273896, upload-time = "2024-11-25T13:20:27.252Z" },
-    { url = "https://files.pythonhosted.org/packages/44/db/c9326f7d805c4403e27e2f1c2150123edafb29b49d343c16528766e27b05/reed_solomon_leopard-0.2.1-cp312-cp312-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:af9e3f428535583b5ca42e3de85413522751cab632dfe6dd580bb6bdd7908069", size = 317294, upload-time = "2024-11-25T13:20:39.077Z" },
-    { url = "https://files.pythonhosted.org/packages/dc/b8/2f50813156881a70ca3162c05aa2a1cfb16fe77ae6b125348aa263cc2a17/reed_solomon_leopard-0.2.1-cp312-cp312-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:f5b0a4ff2d7589c29b1a4515b8cf3ce9e07082dde4824bee8b83057b40d1fd82", size = 319109, upload-time = "2024-11-25T13:20:50.421Z" },
-    { url = "https://files.pythonhosted.org/packages/1c/3c/512157b2f18fb531f8d94cb0ed5c71a745adfb66432ab783b31f13f02ea3/reed_solomon_leopard-0.2.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:736ce297d43aad28f0a6938243ba4d3fa516548269c53dd044a9e2d386afa0a4", size = 289196, upload-time = "2024-11-25T13:21:10.752Z" },
-    { url = "https://files.pythonhosted.org/packages/f2/5d/5fa4bb30af2b6026064ab1595bc5e9dca3a924397e13ace0a918a6467b74/reed_solomon_leopard-0.2.1-cp312-cp312-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:4196d4a9c8bbcfd3c6bf160e326d8d12832438885c5c3a6bfc60dc935280d967", size = 306118, upload-time = "2024-11-25T13:21:02.051Z" },
-    { url = "https://files.pythonhosted.org/packages/fa/45/383a09ac2340bd902c4938530000cfce84b274b32ff94342da6107d7c843/reed_solomon_leopard-0.2.1-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:333e8320a9d3e5baac8c4f1a289a7ab27875ee32e69c6c35cc27ef69b258a228", size = 448868, upload-time = "2024-11-25T13:21:27.155Z" },
-    { url = "https://files.pythonhosted.org/packages/b6/96/22db7b48cabd1276aeecc51576ea963e194d4da77e771600eca00b1d8bae/reed_solomon_leopard-0.2.1-cp312-cp312-musllinux_1_2_armv7l.whl", hash = "sha256:d93759814a37637a27cc876d73475dc022a02c38213e280ee882357fc17a7423", size = 536660, upload-time = "2024-11-25T13:21:40.976Z" },
-    { url = "https://files.pythonhosted.org/packages/f6/34/f0439ab75c3ac58c913181b058bf52893430c7c4229f2594edb54dd7ae6e/reed_solomon_leopard-0.2.1-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:ef497791e323ef47c6fd8b567b731321a2d5fbad9c63a9918c35c9273959f316", size = 483662, upload-time = "2024-11-25T13:21:52.126Z" },
-    { url = "https://files.pythonhosted.org/packages/9c/cd/bf3b6740f6b977d76e54235962f65248929f811d37d5029c10231f15f0f0/reed_solomon_leopard-0.2.1-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:17c2dc67a5b99eb0fd83eb38cbdeeeae837aee61def05a28e79afcc73e9670dd", size = 460636, upload-time = "2024-11-25T13:22:03.15Z" },
-    { url = "https://files.pythonhosted.org/packages/08/f7/7bb925ff8af213565c57155c2693b4954aef82a89c462195610c8494991a/reed_solomon_leopard-0.2.1-cp312-none-win32.whl", hash = "sha256:f441f2295e6416577b68a0d249b02a9de6fe3355798361bcebeab639e29d7516", size = 144874, upload-time = "2024-11-25T13:22:22.668Z" },
-    { url = "https://files.pythonhosted.org/packages/94/fe/e49b308a57edc07b46f00f261f80096e6bcc68286e4d752dfcf9203f9c05/reed_solomon_leopard-0.2.1-cp312-none-win_amd64.whl", hash = "sha256:a95f8881369bb047e9957baa009edaae87d289adb34e69987099cdaa03ce466a", size = 153253, upload-time = "2024-11-25T13:22:16.778Z" },
-]
-
-[[package]]
 name = "requests"
 version = "2.32.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1511,6 +1489,31 @@ requires-dist = [
     { name = "pytest-benchmark", marker = "extra == 'dev'", specifier = ">=4.0.0" },
 ]
 provides-extras = ["dev"]
+
+[[package]]
+name = "ruff"
+version = "0.15.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/06/04/eab13a954e763b0606f460443fcbf6bb5a0faf06890ea3754ff16523dce5/ruff-0.15.2.tar.gz", hash = "sha256:14b965afee0969e68bb871eba625343b8673375f457af4abe98553e8bbb98342", size = 4558148, upload-time = "2026-02-19T22:32:20.271Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2f/70/3a4dc6d09b13cb3e695f28307e5d889b2e1a66b7af9c5e257e796695b0e6/ruff-0.15.2-py3-none-linux_armv6l.whl", hash = "sha256:120691a6fdae2f16d65435648160f5b81a9625288f75544dc40637436b5d3c0d", size = 10430565, upload-time = "2026-02-19T22:32:41.824Z" },
+    { url = "https://files.pythonhosted.org/packages/71/0b/bb8457b56185ece1305c666dc895832946d24055be90692381c31d57466d/ruff-0.15.2-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:a89056d831256099658b6bba4037ac6dd06f49d194199215befe2bb10457ea5e", size = 10820354, upload-time = "2026-02-19T22:32:07.366Z" },
+    { url = "https://files.pythonhosted.org/packages/2d/c1/e0532d7f9c9e0b14c46f61b14afd563298b8b83f337b6789ddd987e46121/ruff-0.15.2-py3-none-macosx_11_0_arm64.whl", hash = "sha256:e36dee3a64be0ebd23c86ffa3aa3fd3ac9a712ff295e192243f814a830b6bd87", size = 10170767, upload-time = "2026-02-19T22:32:13.188Z" },
+    { url = "https://files.pythonhosted.org/packages/47/e8/da1aa341d3af017a21c7a62fb5ec31d4e7ad0a93ab80e3a508316efbcb23/ruff-0.15.2-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a9fb47b6d9764677f8c0a193c0943ce9a05d6763523f132325af8a858eadc2b9", size = 10529591, upload-time = "2026-02-19T22:32:02.547Z" },
+    { url = "https://files.pythonhosted.org/packages/93/74/184fbf38e9f3510231fbc5e437e808f0b48c42d1df9434b208821efcd8d6/ruff-0.15.2-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:f376990f9d0d6442ea9014b19621d8f2aaf2b8e39fdbfc79220b7f0c596c9b80", size = 10260771, upload-time = "2026-02-19T22:32:36.938Z" },
+    { url = "https://files.pythonhosted.org/packages/05/ac/605c20b8e059a0bc4b42360414baa4892ff278cec1c91fff4be0dceedefd/ruff-0.15.2-py3-none-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:2dcc987551952d73cbf5c88d9fdee815618d497e4df86cd4c4824cc59d5dd75f", size = 11045791, upload-time = "2026-02-19T22:32:31.642Z" },
+    { url = "https://files.pythonhosted.org/packages/fd/52/db6e419908f45a894924d410ac77d64bdd98ff86901d833364251bd08e22/ruff-0.15.2-py3-none-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:42a47fd785cbe8c01b9ff45031af875d101b040ad8f4de7bbb716487c74c9a77", size = 11879271, upload-time = "2026-02-19T22:32:29.305Z" },
+    { url = "https://files.pythonhosted.org/packages/3e/d8/7992b18f2008bdc9231d0f10b16df7dda964dbf639e2b8b4c1b4e91b83af/ruff-0.15.2-py3-none-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:cbe9f49354866e575b4c6943856989f966421870e85cd2ac94dccb0a9dcb2fea", size = 11303707, upload-time = "2026-02-19T22:32:22.492Z" },
+    { url = "https://files.pythonhosted.org/packages/d7/02/849b46184bcfdd4b64cde61752cc9a146c54759ed036edd11857e9b8443b/ruff-0.15.2-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b7a672c82b5f9887576087d97be5ce439f04bbaf548ee987b92d3a7dede41d3a", size = 11149151, upload-time = "2026-02-19T22:32:44.234Z" },
+    { url = "https://files.pythonhosted.org/packages/70/04/f5284e388bab60d1d3b99614a5a9aeb03e0f333847e2429bebd2aaa1feec/ruff-0.15.2-py3-none-manylinux_2_31_riscv64.whl", hash = "sha256:72ecc64f46f7019e2bcc3cdc05d4a7da958b629a5ab7033195e11a438403d956", size = 11091132, upload-time = "2026-02-19T22:32:24.691Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/ae/88d844a21110e14d92cf73d57363fab59b727ebeabe78009b9ccb23500af/ruff-0.15.2-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:8dcf243b15b561c655c1ef2f2b0050e5d50db37fe90115507f6ff37d865dc8b4", size = 10504717, upload-time = "2026-02-19T22:32:26.75Z" },
+    { url = "https://files.pythonhosted.org/packages/64/27/867076a6ada7f2b9c8292884ab44d08fd2ba71bd2b5364d4136f3cd537e1/ruff-0.15.2-py3-none-musllinux_1_2_armv7l.whl", hash = "sha256:dab6941c862c05739774677c6273166d2510d254dac0695c0e3f5efa1b5585de", size = 10263122, upload-time = "2026-02-19T22:32:10.036Z" },
+    { url = "https://files.pythonhosted.org/packages/e7/ef/faf9321d550f8ebf0c6373696e70d1758e20ccdc3951ad7af00c0956be7c/ruff-0.15.2-py3-none-musllinux_1_2_i686.whl", hash = "sha256:1b9164f57fc36058e9a6806eb92af185b0697c9fe4c7c52caa431c6554521e5c", size = 10735295, upload-time = "2026-02-19T22:32:39.227Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/55/e8089fec62e050ba84d71b70e7834b97709ca9b7aba10c1a0b196e493f97/ruff-0.15.2-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:80d24fcae24d42659db7e335b9e1531697a7102c19185b8dc4a028b952865fd8", size = 11241641, upload-time = "2026-02-19T22:32:34.617Z" },
+    { url = "https://files.pythonhosted.org/packages/23/01/1c30526460f4d23222d0fabd5888868262fd0e2b71a00570ca26483cd993/ruff-0.15.2-py3-none-win32.whl", hash = "sha256:fd5ff9e5f519a7e1bd99cbe8daa324010a74f5e2ebc97c6242c08f26f3714f6f", size = 10507885, upload-time = "2026-02-19T22:32:15.635Z" },
+    { url = "https://files.pythonhosted.org/packages/5c/10/3d18e3bbdf8fc50bbb4ac3cc45970aa5a9753c5cb51bf9ed9a3cd8b79fa3/ruff-0.15.2-py3-none-win_amd64.whl", hash = "sha256:d20014e3dfa400f3ff84830dfb5755ece2de45ab62ecea4af6b7262d0fb4f7c5", size = 11623725, upload-time = "2026-02-19T22:32:04.947Z" },
+    { url = "https://files.pythonhosted.org/packages/6d/78/097c0798b1dab9f8affe73da9642bb4500e098cb27fd8dc9724816ac747b/ruff-0.15.2-py3-none-win_arm64.whl", hash = "sha256:cabddc5822acdc8f7b5527b36ceac55cc51eec7b1946e60181de8fe83ca8876e", size = 10941649, upload-time = "2026-02-19T22:32:18.108Z" },
+]
 
 [[package]]
 name = "safe-pysha3"
@@ -1688,7 +1691,6 @@ dependencies = [
     { name = "pytest-asyncio" },
     { name = "python-dotenv" },
     { name = "quart" },
-    { name = "reed-solomon-leopard" },
     { name = "rockstore" },
     { name = "safe-pysha3" },
     { name = "structlog" },
@@ -1766,7 +1768,6 @@ requires-dist = [
     { name = "pytest-profiling", marker = "extra == 'test'", specifier = ">=1.7.0" },
     { name = "python-dotenv", specifier = ">=1.1.0" },
     { name = "quart", specifier = ">=0.20.0" },
-    { name = "reed-solomon-leopard", specifier = ">=0.2.1" },
     { name = "rockstore", editable = "deps/rockstore" },
     { name = "safe-pysha3", specifier = ">=1.0.5" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = "==8.1.3" },
@@ -1845,7 +1846,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "tsrkit-types"
-version = "0.1.8"
+version = "0.1.9"
 source = { editable = "deps/tsrkit-types" }
 
 [package.optional-dependencies]
@@ -1856,6 +1857,7 @@ dev = [
     { name = "pytest-mock" },
     { name = "pytest-timeout" },
     { name = "pytest-xdist" },
+    { name = "ruff" },
 ]
 
 [package.metadata]
@@ -1866,6 +1868,7 @@ requires-dist = [
     { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.10.0" },
     { name = "pytest-timeout", marker = "extra == 'dev'", specifier = ">=2.1.0" },
     { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.0.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6.0" },
 ]
 provides-extras = ["dev"]
 
