@@ -67,12 +67,13 @@ class Header:
         time_slot: TimeSlot,
         extrinsic: Extrinsic,
         ticket: TicketBody | None,
-        state
+        state,
+        settings
     ) -> Self | None:
         """
         Produces a child header of current header
         """
-        from jam.settings import settings
+        # from jam.settings import settings
 
         header = Header(
             parent=Hash.blake2b(self.encode()),
@@ -121,7 +122,7 @@ class Header:
         
         return header
 
-    def validate(self, state, pre_state) -> bool:
+    def validate(self, state, pre_state, settings) -> bool:
         """
         Validate a block's header
         1. Extrinsic hash should match hash(block.extrinsics)
@@ -132,7 +133,6 @@ class Header:
         6. H_e only when epoch transition
         7. H_r == state.root
         """
-        from jam.settings import settings
 
         slot_entry = self.slot % EPOCH_LENGTH
         full_val_set = state.kappa

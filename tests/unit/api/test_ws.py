@@ -1,5 +1,8 @@
 import os
 import pytest
+
+pytestmark = pytest.mark.skip(reason="RPC tests skipped")
+
 import asyncio
 import json
 

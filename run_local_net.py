@@ -5,7 +5,7 @@ import sys
 # Add current directory to path so we can import modules
 sys.path.append(os.getcwd())
 
-from jam.operations import operate
+from jam.operations import OperatorService
 from tests.integration.utils.setup_processes import Client, Role, setup_processes
 
 async def main():
@@ -20,7 +20,7 @@ async def main():
     ]
     
     # Run for 1 hour
-    await setup_processes(CLIENTS, [operate], 3600, rpc_flag=True)
+    await setup_processes(CLIENTS, [OperatorService], 3600, rpc_flag=True)
 
 if __name__ == "__main__":
     try:

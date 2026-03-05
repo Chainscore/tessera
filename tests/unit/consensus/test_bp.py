@@ -26,7 +26,7 @@ async def test_block_production(db_path):
         Block.load_w_ts(TimeSlot(1), settings.main_db)
 
     # First block production
-    block_1 = genesis.produce(TimeSlot(1), state)
+    block_1 = genesis.produce(TimeSlot(1), state, settings)
     assert block_1.header.slot == TimeSlot(1)
     hh_1 = block_1.save(settings.main_db)
     Finality.set_head(block_1, settings.main_db)
@@ -45,7 +45,7 @@ async def test_block_production(db_path):
     settings = setup_setting(db_path, 3, "dave", 3000)
     state = setup_state(settings.state_db)
 
-    block_2 = block_1.produce(TimeSlot(2), state)
+    block_2 = block_1.produce(TimeSlot(2), state, settings)
     assert block_2.header.slot == TimeSlot(2)
     hh_2 = block_2.save(settings.main_db)
     Finality.set_head(block_2, settings.main_db)

@@ -82,6 +82,7 @@ class BlockAnnouncement(NetworkProtocol):
 
     @staticmethod
     def handshake(stream_id: int, conn: NodeConnection, prefix = False):
+        # TODO: replace settings & finality import
         from jam.settings import settings
         from jam.finality.finality import Finality
         from jam.types.protocol.crypto import Hash
@@ -121,13 +122,14 @@ class BlockAnnouncement(NetworkProtocol):
         conn.stream_and_keep_open(data, stream_id)
     
     @classmethod
-    def block_to_announcement(cls, block: Block) -> Announcement:
+    def block_to_announcement(cls, block: Block, settings=None) -> Announcement:
         """
         Convert a Block to an Announcement.
         """
         from jam.finality.finality import Finality
         from jam.types.protocol.crypto import Hash
-        from jam.settings import settings
+        if not settings:
+            from jam.settings import settings
 
         finality = Finality()
         final_block = finality.load_final(settings.main_db)

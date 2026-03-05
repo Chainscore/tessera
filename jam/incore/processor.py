@@ -406,13 +406,16 @@ class Processor:
             justified_segments: Segments = export_segments
             justified_segments.extend(proofs)
 
-            i = 0
-            all_chunks = []
-            for item in justified_segments:
-                seg_chunks = erasure_codec.encode(item.encode())
-                all_chunks.append(seg_chunks)
-                logger.debug("Segments Shard formed", count=len(seg_chunks), segment=i)
-                i += 1
+            # i = 0
+            # all_chunks = []
+            # for item in justified_segments:
+            #     seg_chunks = erasure_codec.encode(item.encode())
+            #     all_chunks.append(seg_chunks)
+            #     logger.debug("Segments Shard formed", count=len(seg_chunks), segment=i)
+            #     i += 1
+
+            all_chunks = erasure_codec.encode_multiple_segments(justified_segments)
+            logger.debug("Segments Shard formed", count=len(all_chunks))
 
             if len(all_chunks) != 0:
                 segments_shards = SegmentsShards(

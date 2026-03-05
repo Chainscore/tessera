@@ -29,16 +29,21 @@ class BlockProducer(NodeDispatcher):
     If it is our chance to produce a block, we produce a block and announce it to the network.
     """
 
+    # TODO: add node and finality service
     @classmethod
-    async def run(cls, time_slot: int):
+    async def run(cls, time_slot: int, state=None, settings=None):
         """
         Starts the block producer engine in asyncio loop.
         Assumes that the node is initialized and the latest synchronized state is stored in the db.
         """
+        if not settings:
+            from jam.settings import settings
+        if not state:
+            from jam.state.state import state
         from jam.network.start import node
-        from jam.settings import settings
+        # from jam.settings import settings
         from jam.network.protocols.up_0 import BlockAnnouncement
-        from jam.state.state import state 
+        # from jam.state.state import state
 
         up0 = BlockAnnouncement()
 
@@ -91,7 +96,7 @@ class BlockProducer(NodeDispatcher):
         
         emit_event(Authoring(slot=U32(time_slot), parent_hash=Bytes32(latest.header.hash().encode())))
 
-        block = latest.produce(TimeSlot(time_slot), state, ticket)
+        block = latest.produce(TimeSlot(time_slot), state, settings, ticket)
 
         is_valid = state._force_transition(block)
 
@@ -116,6 +121,6 @@ class BlockProducer(NodeDispatcher):
             )
             emit_event(Authored(event_id=U64(0), block=outline))
             
-            create_safe_task(up0.transmit(BlockAnnouncement.block_to_announcement(block)), name="block_announce")
+            create_safe_task(up0.transmit(BlockAnnouncement.block_to_announcement(block, settings)), name="block_announce")
         else:
             logger.info("😓 Failed to produce a valid block", slot=time_slot, block=block.to_json())

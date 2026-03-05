@@ -12,7 +12,7 @@ from jam.block import Block
 from jam.log_setup import node_logger as logger
 from jam.network.protocols import WorkPackageSubmission
 from jam.network.protocols.ce_133 import CE133Data, WorkPackageCore
-from jam.operations import operate
+from jam.operations.service import OperatorService
 from jam.types import Hash, WorkPackage, RefineContext, BeefyRoot, HeaderHash
 from jam.types.state.beta import BlockHistory
 from jam.utils.constants import GENESIS_TS
@@ -118,4 +118,4 @@ async def node_task():
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
 async def test_full_vectorize():
-    await setup_processes(CLIENTS, [node_task, operate], 140)
+    await setup_processes(CLIENTS, [node_task, OperatorService], 140)

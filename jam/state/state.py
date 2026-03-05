@@ -283,7 +283,9 @@ class State:
             Safrole.transition(pre_state, self, block, vrf_output)
 
             # Block Validation
-            block_valid = block.validate(self, pre_state)
+            # TODO: Replace settings with self.settings
+            from jam.settings import settings
+            block_valid = block.validate(self, pre_state, settings)
 
             # Handle Parent's Block Posterior State Root (β† h)
             # This must happen after validation (which checks previous root)

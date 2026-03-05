@@ -8,6 +8,7 @@ from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
 from jam.block.extrinsics.tickets import TicketEnvelope
+from jam.state.state import State
 from jam.utils.constants import VALIDATOR_COUNT, EPOCH_LENGTH
 from dot_ring import RingVRF, Bandersnatch
 from dot_ring.vrf.ring.ring_root import RingRoot
@@ -48,7 +49,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
         super().__init__()
         self._prefix = PrefixType.CE131
 
-    async def transmit(self, data: CE131Data):
+    async def transmit(self, data: CE131Data, state: State):
         """Transmit Safrole ticket from Validator to Proxy validator"""
 
         from jam.network.start import node
@@ -63,7 +64,6 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
         proxy_validator_index = Uint.from_bytes(vrf[-4:], 'big') % VALIDATOR_COUNT
 
         # select validator from next epochs validator list using index
-        from jam.state.state import state
         proxy_validator = state.gamma.p[proxy_validator_index]
 
         logger.info(f"Transmitting ticket ({signature.hex()[:6]}..) to proxy")
@@ -140,6 +140,7 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
             vrf = ring_proof.proof_to_hash(ring_proof.pedersen_proof.output_point)[:32]
             proxy_validator_index = Uint.from_bytes(vrf[-4:], 'big') % VALIDATOR_COUNT
 
+            # TODO: update this with state from node
             from jam.state.state import state
             proxy_validator = state.gamma.p[proxy_validator_index]
 

@@ -13,7 +13,7 @@ from jam.block import Block
 from jam.incore import Processor
 from jam.network.protocols import WorkPackageSubmission
 from jam.network.protocols.ce_133 import CE133Data, WorkPackageCore
-from jam.operations import operate
+from jam.operations import OperatorService
 from jam.types import Hash, WorkPackage, RefineContext, BeefyRoot, HeaderHash, ServiceId, WorkItem, Balance, Gas, Ai, \
     Ao, LookupTable, BlobLength, Timestamps, CoreIndex, TimeSlot, OpaqueHash
 from jam.types.state.beta import BlockHistory
@@ -280,4 +280,4 @@ async def node_task():
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
 async def test_services():
     pytest.skip("This is work in progress")
-    await setup_processes(CLIENTS, [node_task, operate], 140)
+    await setup_processes(CLIENTS, [node_task, OperatorService], 140)
