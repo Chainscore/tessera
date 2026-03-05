@@ -46,6 +46,7 @@ dependencies = [
     "dot-ring>=0.1.4",
     "py-ark-vrf",
     "gmpy2>=2.2.2",
+    "tsrkit-rs>=0.1.1",
 ]
 
 [tool.hatch.build.targets.wheel]

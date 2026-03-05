@@ -1696,6 +1696,7 @@ dependencies = [
     { name = "structlog" },
     { name = "tsrkit-asm" },
     { name = "tsrkit-pvm" },
+    { name = "tsrkit-rs" },
     { name = "tsrkit-types" },
 ]
 
@@ -1774,6 +1775,7 @@ requires-dist = [
     { name = "structlog", specifier = ">=25.2.0" },
     { name = "tsrkit-asm", editable = "deps/tsrkit-asm" },
     { name = "tsrkit-pvm", editable = "deps/tsrkit-pvm" },
+    { name = "tsrkit-rs", specifier = ">=0.1.1" },
     { name = "tsrkit-types", editable = "deps/tsrkit-types" },
 ]
 provides-extras = ["dev", "test", "docs", "build"]
@@ -1843,6 +1845,19 @@ requires-dist = [
     { name = "tsrkit-types", editable = "deps/tsrkit-types" },
 ]
 provides-extras = ["dev"]
+
+[[package]]
+name = "tsrkit-rs"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/bb/d4/0b7fdfeeb5ce6447a279fee9273d5265963b98970501ed6a671768906a26/tsrkit_rs-0.1.1.tar.gz", hash = "sha256:84c4068073289dab75a09f399c878e16b9d0d7cec25cf124b2a8d423a064dbf7", size = 7344, upload-time = "2026-02-20T13:06:55.39Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b3/d1/03e4c229249fc0f85692e442957d4c2e97b480c2142d927f0483095c760f/tsrkit_rs-0.1.1-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:dfa9b94553f10a21216f524969576632921b2661d1506150835c45a6ebf2d40b", size = 316433, upload-time = "2026-02-20T13:06:47.159Z" },
+    { url = "https://files.pythonhosted.org/packages/f8/4e/5528e3d82ba1dd840f46d46ecd0e0897a6feaa5d03dfdb285034efe42e8c/tsrkit_rs-0.1.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:688bd45e025d76f6fba86f2e17dd333b61450f69f0eb89eeade1e90372f535f5", size = 300901, upload-time = "2026-02-20T13:06:48.728Z" },
+    { url = "https://files.pythonhosted.org/packages/7e/e8/ae0da4152b03405a1f2deea23a470870ba7fc1d2ec9e1a67fc363a154daf/tsrkit_rs-0.1.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:577b8f2c494489382b37778e91171a8a1ab53d76d3915cf892a9c8972589b48f", size = 343667, upload-time = "2026-02-20T13:06:50.578Z" },
+    { url = "https://files.pythonhosted.org/packages/35/54/9d11ec7eb62bb2468d00466a3978eee64bb06e0de89dc49bef258e16de89/tsrkit_rs-0.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d70d0a10afdde9c6a87f24c6bc38836f8883f4397b03e150779d65e3b81e9457", size = 369183, upload-time = "2026-02-20T13:06:52.309Z" },
+    { url = "https://files.pythonhosted.org/packages/8e/49/bdfe5ac03a2095e5a51afbbbb8aaa7a045574b070faba76b082b98f488a9/tsrkit_rs-0.1.1-cp312-cp312-win_amd64.whl", hash = "sha256:14e15144ba973b476648fb582582e29250072c0f3a4de3930fbd620a31668e8c", size = 200051, upload-time = "2026-02-20T13:06:53.796Z" },
+]
 
 [[package]]
 name = "tsrkit-types"
