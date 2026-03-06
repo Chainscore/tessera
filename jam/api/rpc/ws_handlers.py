@@ -42,23 +42,34 @@ def finalized_block_handler(params: list):
 
 
 def service_data_handler(params):
-    hh, sid = parse_data([HeaderHash, ServiceId], params)
-    state_at_hh = State.load(hh)
-    service = state_at_hh.delta[sid].service
-    accountMetadata = AccountMetadata(
-        code_hash=service.code_hash,
-        balance=service.balance,
-        gas_limit=service.gas_limit,
-        min_gas=service.min_gas,
-        num_i=service.num_i,
-        num_o=service.num_o,
-        gratis_offset=service.gratis_offset,
-        created_at=service.created_at,
-        accumulated_at=service.accumulated_at,
-        parent_service=service.parent_service
-    )
+    try:
+        hh, sid = parse_data([HeaderHash, ServiceId], params)
+        state_at_hh = State.load(hh)
+        account = state_at_hh.delta[sid]
+        if account is None:
+            return None
+        service = account.service
+        accountMetadata = AccountMetadata(
+            code_hash=service.code_hash,
+            balance=service.balance,
+            gas_limit=service.gas_limit,
+            min_gas=service.min_gas,
+            num_i=service.num_i,
+            num_o=service.num_o,
+            gratis_offset=service.gratis_offset,
+            created_at=service.created_at,
+            accumulated_at=service.accumulated_at,
+            parent_service=service.parent_service
+        )
 
-    return list(accountMetadata.encode())
+        return list(accountMetadata.encode())
+    except Exception:
+        return None
+
+def list_services_handler(params):
+    (hh,) = parse_data([HeaderHash], params)
+    state_at_hh = State.load(hh)
+    return [int(sid) for sid in state_at_hh.delta.keys()]
 
 def submit_preimage_handler(params):
     sid, code = parse_data([ServiceId, Bytes], params)
@@ -140,6 +151,7 @@ method_map: dict[str, Callable] = {
     "serviceRequest": service_request_handler,
     "serviceValue": service_value_handler,
     "blockRequest": block_request_handler,
+    "listServices": list_services_handler,
 }
 
 

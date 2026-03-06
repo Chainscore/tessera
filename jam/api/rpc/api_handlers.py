@@ -120,6 +120,12 @@ def submit_work_package_handler(params: list):
     return []
 
 
+def list_services_handler(params):
+    (hh,) = parse_data([HeaderHash], params)
+    state_at_hh = State.load(hh)
+    return [int(sid) for sid in state_at_hh.delta.keys()]
+
+
 method_map: dict[str, Callable] = {
     "bestBlock": best_block_handler,
     "finalizedBlock": finalized_block_handler,
@@ -134,6 +140,7 @@ method_map: dict[str, Callable] = {
     "submitPreimage": submit_preimage_handler,
     "submitWorkPackage": submit_work_package_handler,
     "blockRequest": block_request_handler,
+    "listServices": list_services_handler,
 }
 
 

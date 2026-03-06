@@ -210,6 +210,31 @@ class DeltaView:
         account_s_key = bytes(construct_state_key((255, key)))
         self.store.delete(account_s_key)
 
+    def keys(self) -> list:
+        """Return all ServiceIds that exist in the current state."""
+        service_ids = set()
+        # Scan DB for service metadata keys (first byte = 0xFF)
+        start = bytes([255] + [0] * 30)
+        end = bytes([255] + [255] * 30)
+        for key_bytes, _ in self.store._DB.iterate_range(start, end):
+            if (len(key_bytes) >= 31 and
+                key_bytes[2] == 0 and key_bytes[4] == 0 and
+                key_bytes[6] == 0 and key_bytes[8] == 0 and
+                all(b == 0 for b in key_bytes[9:31])):
+                sid = int.from_bytes(bytes([key_bytes[1], key_bytes[3], key_bytes[5], key_bytes[7]]), 'little')
+                service_ids.add(sid)
+        # Also check cached updates (pending state changes)
+        for key_bytes, value in self.store._updates.items():
+            if value is None:
+                continue
+            if (len(key_bytes) >= 31 and key_bytes[0] == 255 and
+                key_bytes[2] == 0 and key_bytes[4] == 0 and
+                key_bytes[6] == 0 and key_bytes[8] == 0 and
+                all(b == 0 for b in key_bytes[9:31])):
+                sid = int.from_bytes(bytes([key_bytes[1], key_bytes[3], key_bytes[5], key_bytes[7]]), 'little')
+                service_ids.add(sid)
+        return sorted(ServiceId(s) for s in service_ids)
+
 
 class StorageView:
     def __init__(self, id: ServiceId, store: StateStorage):
