@@ -7,6 +7,10 @@ import shutil
 from typing import TYPE_CHECKING
 from dotenv import load_dotenv
 
+from jam.telemetry.events import ServiceId
+from jam.types import Hash, AccountData, LookupTable, BlobLength, Timestamps, TimeSlot
+from jam.types.state.delta import ServiceCodeHash
+
 if TYPE_CHECKING:
     from jam.finality.finality import Finality
     from jam.log_setup import setup_logging
@@ -112,7 +116,18 @@ async def main(
         # Set genesis state
         dev_spec = json.load(open("dev-spec.json"))
         # Regardless whether we are starting from genesis or not - b/c we'll be doing full sync
+
+        # TODO: Remove this after testing
         state = setup_state(settings.state_db, "dev-spec.json")
+        service_id = ServiceId(34)
+        code = bytes("fjsghfajklsdhfjkalsf", 'utf-8')
+        code_hash = Hash.blake2b(code)
+        state.delta[service_id] = AccountData()
+        state.delta[service_id].service.code_hash = code_hash
+        state.delta[service_id].preimages[code_hash] = code
+        lookup_key = LookupTable(hash=ServiceCodeHash(code_hash), length=BlobLength(len(code)))
+        state.delta[service_id].lookup[lookup_key] = Timestamps([TimeSlot(0)])
+
 
         # FIX: setup ticket queue
         setup_ticket_queue()
