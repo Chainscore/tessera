@@ -119,15 +119,7 @@ async def main(
 
         # TODO: Remove this after testing
         state = setup_state(settings.state_db, "dev-spec.json")
-        service_id = ServiceId(34)
-        code = bytes("fjsghfajklsdhfjkalsf", 'utf-8')
-        code_hash = Hash.blake2b(code)
-        state.delta[service_id] = AccountData()
-        state.delta[service_id].service.code_hash = code_hash
-        state.delta[service_id].preimages[code_hash] = code
-        lookup_key = LookupTable(hash=ServiceCodeHash(code_hash), length=BlobLength(len(code)))
-        state.delta[service_id].lookup[lookup_key] = Timestamps([TimeSlot(0)])
-
+       
 
         # FIX: setup ticket queue
         setup_ticket_queue()
