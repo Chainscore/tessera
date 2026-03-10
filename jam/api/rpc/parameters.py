@@ -28,15 +28,20 @@ from jam.utils.constants import (
     MAX_IMPORT_ITEM,  # W_M
     MAX_AUTH_CODE_SIZE,  # W_A
     MAX_EXPORT_ITEM,  # W_X
-    CORE_COUNT, # C
-    SLOT_PERIOD, # P
+    CORE_COUNT,  # C
+    SLOT_PERIOD, #P
+    TRANSFER_MEMO_SIZE, #W_T
+    MAX_WORK_REPORT_SIZE, #W_R
+    ERASURE_PIECES_PER_SEGMENT, #W_P
+    TICKET_SUBMISSION_END, #Y
 )
 
 parameters = {
     # Canonical JAM parameters
-    "deposit_per_account": BASIC_MINIMUM_BALANCE,  # B_S
     "deposit_per_item": ADDITIONAL_BALANCE_PER_ITEM,  # B_I
     "deposit_per_byte": ADDITIONAL_BALANCE_PER_OCTET,  # B_L
+    "deposit_per_account": BASIC_MINIMUM_BALANCE,  # B_S
+    "core_count": CORE_COUNT, #C
     "min_turnaround_period": PREIMAGE_EVICTION_TIMESLOTS,  # D
     "epoch_period": EPOCH_LENGTH,  # E
     "max_accumulate_gas": ACCUMULATION_GAS,  # G_A
@@ -50,22 +55,20 @@ parameters = {
     "max_lookup_anchor_age": LOOKUP_ANCHOR_MAX_AGE,  # L
     "tickets_attempts_number": TICKET_ENTRIES_PER_VALIDATOR,  # N
     "auth_window": MAX_AUTH_POOL_ITEMS,  # O
+    "slot_period_sec": SLOT_PERIOD, #P
     "auth_queue_len": MAX_AUTH_QUEUE_ITEMS,  # Q
     "rotation_period": ROTATION_PERIOD,  # R
     "max_extrinsics": EXTRINSIC_COUNT,  # T
     "availability_timeout": UNAVAILABLE_WORK_EXPIRY,  # U
     "val_count": VALIDATOR_COUNT,  # V
+    "max_authorizer_code_size": MAX_AUTH_CODE_SIZE, # W_A
     "max_input": MAX_ENCODED_WORK_PACKAGE_SIZE,  # W_B
+    "max_service_code_size": MAX_SERVICE_CODE_SIZE, # W_C
     "basic_piece_len": BASIC_ERASURE_SIZE,  # W_E
     "max_imports": MAX_IMPORT_ITEM,  # W_M
+    "segment_piece_count": ERASURE_PIECES_PER_SEGMENT, #W_P
+    "max_report_elective_data": MAX_WORK_REPORT_SIZE, #W_R
+    "transfer_memo_size": TRANSFER_MEMO_SIZE, #W_T
     "max_exports": MAX_EXPORT_ITEM,  # W_X
-    "core_count": CORE_COUNT, #C
-    "slot_period_sec": SLOT_PERIOD, #P
-    "max_authorizer_code_size": MAX_AUTH_CODE_SIZE, # W_A
-    "max_service_code_size": MAX_SERVICE_CODE_SIZE, # W_C
-    # Additional parameters
-    "segment_piece_count": 1026,
-    "max_report_elective_data": 49152,
-    "transfer_memo_size": 128,
-    "epoch_tail_start": 10
+    "epoch_tail_start": TICKET_SUBMISSION_END, #Y
 }
