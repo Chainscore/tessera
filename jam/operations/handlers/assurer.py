@@ -1,13 +1,16 @@
+from typing import TYPE_CHECKING
+
+from jam.operations.dispatcher import NodeDispatcher
 from jam.utils.task_utils import create_safe_task
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from jam.block.extrinsics.assurances import AvailAssurance
 from jam.block.extrinsics.guarantees import ReportGuarantee
-from jam.log_setup import node_logger as logger
 
 from tsrkit_types import Bytes, U32, TypedVector
 
 from jam.types.protocol.crypto import Hash
+from jam.types.protocol.core import CoreIndex
 from jam.types.work.manifest import Assurers, Justification
 from jam.types.work.shard import SegmentsShard, ShardKey, ShardIndex
 
@@ -16,40 +19,48 @@ from jam.storage.da.segments import SegmentShardsDA
 
 from jam.utils.merkle import BMRFunctions
 from jam.utils.chainspec import chain_config
-from jam.utils.constants import CORE_COUNT
+from jam.utils.constants import CORE_COUNT, VALIDATOR_COUNT
+
+if TYPE_CHECKING:
+    from jam.jam_node import JamNode
 
 
-class Assurer:
+class Assurer(NodeDispatcher):
     _collected: list[bool]
 
-    def __init__(self) -> None:
+    def __init__(self, jam: "JamNode") -> None:
+        super().__init__(jam)
         self._collected = [False] * CORE_COUNT
 
     def record_shard_assr(self, core_index: int):
         self._collected[core_index] = True
-        logger.debug("Recorded shard for core", core_index=core_index)
+        self.logger.debug("Recorded shard for core", core_index=core_index)
 
-    async def run(self, time_slot: int, state=None, settings=None):
-        if not settings:
-            from jam.settings import settings
-        if not state:
-            from jam.state.state import state
+    def get_shard_index(self, core_index: CoreIndex):
+        vi = self.settings.validator_index(self.state)
+        shard_index = ShardIndex(
+            (core_index * chain_config.recovery_threshold + vi) % VALIDATOR_COUNT
+        )
 
-        settings.update(state)
+        return shard_index
+
+    async def run(self, time_slot: int):
+
+        settings = self.settings
+        state = self.state
+        logger = self.logger
+
+        settings.update(self.state)
         pref = Bytes("jam_available", "utf-8")
 
-        from jam.network.protocols.ce_141 import CE141Data, AssuranceDistribution
-        from jam.finality.finality import Finality
-        from jam.network.protocols.ce_141 import Assurance
-        # from jam.state.state import state
-
+        from jam.network.protocols.ce_141 import CE141Data, Assurance
         from jam.block.extrinsics.assurances import AvailBitField
         from jam.types.protocol.crypto import Ed25519Signature, HeaderHash, Hash
 
         try:
             # This block must be the same as for which req shard is being called upon
             # All the assurances must be recorded and transmitted for the reports mentioned in block
-            latest_block = Finality.load_latest(kv=settings.main_db)
+            latest_block = self.grandpa.load_latest()
 
             # TODO: Fix Assurances Check Per Block
             pending_reps = state.rho.pending_reps()
@@ -58,7 +69,7 @@ class Assurer:
                 self.clear()
                 return
 
-            bitfield= AvailBitField(self._collected)
+            bitfield = AvailBitField(self._collected)
             if any(self._collected):
                 header_hash = latest_block.header.hash()
                 sign_data = header_hash.encode() + bitfield.encode()
@@ -67,34 +78,33 @@ class Assurer:
                     pref + Hash.blake2b(sign_data).encode()
                 )
 
-                CE141 = AssuranceDistribution()
                 assurance = Assurance(
                     anchor_hash=HeaderHash(header_hash),
                     bitfield=bitfield,
                     ed25519_signature=Ed25519Signature(signr),
                 )
 
+                val_index = settings.validator_index(state)
+
                 assr_ext = AvailAssurance(
                     anchor=HeaderHash(header_hash),
                     bitfield=bitfield,
-                    validator_index=settings.validator_index,
+                    validator_index=val_index,
                     signature=Ed25519Signature(signr),
                 )
 
-                logger.info(
-                    "Storing self assurance",
-                    validator=settings.validator_index,
-                    assurance=assr_ext.to_json(),
-                )
+                logger.info("Storing self assurance", validator=val_index)
 
                 # Store self-assurance
-                from jam.block.extrinsics.assurances import asr_store
-                asr_store.store(assr_ext)
+                self.pool.assurances.store(assr_ext)
 
                 data = CE141Data(assurance=assurance, len=U32(len(assurance.encode())))
-                create_safe_task(CE141.transmit(data=data), name="assurance_transmit")
+                create_safe_task(
+                    self.router.dispatch(141, data),
+                    name="Assurance Transmit"
+                )
             else:
-                logger.info("No shards collected. Skipping assurances.", slot=state.tau)
+                logger.debug("No shards collected. Skipping assurances.", slot=state.tau)
         except Exception as e:
             logger.error("Failed to transmit assurance", error=e, time_slot=time_slot)
         self.clear()
@@ -103,8 +113,11 @@ class Assurer:
         self._collected = [False] * CORE_COUNT
 
     async def _req_shard(self, data: ReportGuarantee):
-        from jam.settings import settings
-        validator_index = settings.validator_index
+        settings = self.settings
+        state = self.state
+        logger = self.logger
+
+        validator_index = settings.validator_index(state)
 
         slot = data.slot
         signatures = data.signatures
@@ -116,27 +129,21 @@ class Assurer:
         if validator_index not in assurers:
             er_root = report.package_spec.erasure_root
 
-            shard_index = settings.get_shard_index(report.core_index)
+            shard_index = self.get_shard_index(report.core_index)
 
-            from jam.network.protocols.ce_137 import (
-                ShardDistributionProtocol,
-                CE137Data,
-                Query,
-            )
-
-            CE137 = ShardDistributionProtocol()
+            from jam.network.protocols.ce_137 import CE137Data, Query
 
             try:
                 query = Query(shard_index=shard_index, erasure_root=er_root)
                 data = CE137Data(len=U32(len(query.encode())), query=query)
 
-                logger.info(
+                logger.debug(
                     "Requesting Shard",
                     shard_index=shard_index,
                     erasure_root=er_root.hex()[:16] + "...",
                 )
 
-                responses = await CE137.transmit(data=data, assurers=assurers)
+                responses = await self.router.dispatch(137, data, assurers=assurers)
                 for shard in responses:
                     # Save Shard
                     if shard is not None:
@@ -154,13 +161,9 @@ class Assurer:
                         shards_key = ShardKey(bundle_shard_hash, segments_shard_root)
                         s = Bytes(shards_key.encode())
 
-                        logger.info(
-                            "Shard verification debug",
+                        logger.debug(
+                            "Shard verification",
                             shard_index=shard_index,
-                            bundle_shard_hash=bundle_shard_hash.hex()[:16],
-                            segments_shard_root=segments_shard_root.hex()[:16],
-                            segments_shard_len=len(segments_shard),
-                            leaf_hash=Hash.blake2b(s).hex()[:16],
                             er_root=er_root.hex()[:16],
                         )
 
@@ -223,10 +226,8 @@ class Assurer:
             )
 
             # saving justification for shard assigned to itself
-            from jam.settings import settings
-
             er_root = report.package_spec.erasure_root
-            shard_index = settings.get_shard_index(report.core_index)
+            shard_index = self.get_shard_index(report.core_index)
             d3l = settings.d3l
             audit = settings.audit_da
 
@@ -238,7 +239,7 @@ class Assurer:
             ss_da = SegmentShardsDA(d3l)
             ss_dict = ss_da.get(er_root)
             if shard_index not in ss_dict:
-                raise "Shard not found"
+                raise ValueError("Shard not found")
 
             bundle_shard_indices = bs_dict.keys()
             segment_shard_indices = ss_dict.keys()
@@ -268,5 +269,3 @@ class Assurer:
             justification_da = JustificationsDA(audit)
             justification_da.put(er_root, shard_index, justification)
 
-
-assurer = Assurer()

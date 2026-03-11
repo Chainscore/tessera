@@ -1,43 +1,103 @@
 import asyncio
 import math
 import time
-from typing import List, Tuple, Type, cast, Optional
+from dataclasses import dataclass
+from typing import Optional, TYPE_CHECKING
 
-from jam.log_setup import node_logger as logger
+from jam.operations import WPBuilder
 from jam.utils.task_utils import create_safe_task
-from jam.operations.handlers import WPBuilder, assurer, BlockProducer, Conductor, Forwarding
-from jam.operations.dispatcher import NodeDispatcher
+from jam.incore.doer import Doer
+from jam.operations.handlers.assurer import Assurer
+from jam.operations.handlers.bp_engine import BlockProducer
+from jam.operations.handlers.conductor import Conductor
+from jam.operations.handlers.forwarding import Forwarding
+from jam.operations.handlers.monitor import Monitor
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, TICKET_SUBMISSION_END
-from jam.finality.finality import Finality
 
-from jam.state.state import State
+if TYPE_CHECKING:
+    from jam.jam_node import JamNode
 
 
-class OperatorService:
-    # TODO: add node config and network service
-    def __init__(self, settings, state):
-        self.settings = settings
-        self.state: Optional[State] = state
+@dataclass
+class OperatorConfig:
+    """Configuration for which operator handlers to initialize."""
+    author: bool = True
+    assurer: bool = True
+    conductor: bool = True
+    postman: bool = True
+    builder: bool = False
+    monitor: bool = True
+
+
+class OperatorService(Doer):
+    def __init__(self, jam: "JamNode", config: Optional[OperatorConfig] = None):
+        super().__init__(jam)
         self._running = False
         self._task = None
-        self._initial_connection_made = False
+        self._active_tasks: set[asyncio.Task] = set()
+        self._config = config or OperatorConfig()
 
-    def dispatch_fns(self) -> List[Tuple[int, Type[NodeDispatcher] | None]]:
-        return [
-            (0, BlockProducer),
-            (2, None),  # audit
-            (4, cast(Type[NodeDispatcher], assurer)),  # transmit assurances
-        ]
+        # Handler instances
+        self._assurer: Optional[Assurer] = Assurer(jam) if self._config.assurer else None
+        self._builder: Optional[WPBuilder] = WPBuilder(jam) if self._config.builder else None
+        self._author: Optional[BlockProducer] = BlockProducer(jam) if self._config.author else None
+        self._conductor: Optional[Conductor] = Conductor(jam) if self._config.conductor else None
+        self._postman: Optional[Forwarding] = Forwarding(jam) if self._config.postman else None
+        self._monitor: Optional[Monitor] = Monitor(jam) if self._config.monitor else None
 
-    async def schedule_run(self, sch_ts: int, runner: Type[NodeDispatcher], *args) -> None:
-        await asyncio.sleep(sch_ts)
-        # Note: We might need to pass dependencies to runners if they were relying on globals
-        await runner.run(*args)
+    # -- Overrides --
+
+    @property
+    def operator(self):
+        return self
+
+    @property
+    def assurer(self) -> Optional[Assurer]:
+        return self._assurer
+
+    @property
+    def builder(self) -> Optional[WPBuilder]:
+        return self._builder
+
+    @property
+    def author(self) -> Optional[BlockProducer]:
+        return self._author
+
+    @property
+    def conductor(self) -> Optional[Conductor]:
+        return self._conductor
+
+    @property
+    def postman(self) -> Optional[Forwarding]:
+        return self._postman
+
+    # -- Scheduling --
+
+    def _dispatchers(self):
+        """Return (offset_seconds, handler) pairs for per-slot tasks."""
+        dispatchers = []
+        if self._author:
+            dispatchers.append((0, self._author))
+        if self._assurer:
+            dispatchers.append((4, self._assurer))
+        if self._monitor:
+            dispatchers.append((0, self._monitor))
+        return dispatchers
+
+    def _tracked_task(self, coro, name: str = None) -> asyncio.Task:
+        """Create a fire-and-forget task that is tracked for shutdown cleanup."""
+        task = create_safe_task(coro, name=name)
+        self._active_tasks.add(task)
+        task.add_done_callback(self._active_tasks.discard)
+        return task
+
+    @staticmethod
+    async def _schedule_run(delay: float, handler, *args):
+        if delay > 0:
+            await asyncio.sleep(delay)
+        await handler.run(*args)
 
     async def run_loop(self):
-        """
-        Starts a never ending 6-sec loop
-        """
         curr_time = time.time()
         ts = math.ceil((curr_time - GENESIS_TS) / 6)
         conductor_ts = max((EPOCH_LENGTH // 60), 1)
@@ -47,74 +107,60 @@ class OperatorService:
 
         while self._running:
             try:
-                # If we not yet in ts timeslot, sleep for a while
+                # Wait until this timeslot starts
                 ts_start_time = GENESIS_TS + ts * 6
                 curr_time = time.time()
                 if curr_time < ts_start_time:
                     await asyncio.sleep(ts_start_time - curr_time)
 
-                # TODO: add network checks
+                state = self.state
+                settings = self.settings
+                grandpa = self.grandpa
 
-                # Schedule tasks to run immediately
-                main_db = self.settings.main_db
-                finality_block = Finality.load_final(main_db)
+                finality_block = grandpa.load_final()
                 finality_time_slot = finality_block.header.slot
 
-                if conductor_ts <= (finality_time_slot % EPOCH_LENGTH) < (
-                        TICKET_SUBMISSION_END // 2) and not ticket_generated:
-                    if self.state:
-                        create_safe_task(self.schedule_run(0, Conductor, ts, finality_time_slot, self.state), name="conductor")
-                        ticket_generated = True
+                # Conductor: generate tickets at the right epoch window
+                if (self._conductor
+                        and conductor_ts <= (finality_time_slot % EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2)
+                        and not ticket_generated):
+                    self._tracked_task(
+                        self._schedule_run(0, self._conductor, ts, finality_time_slot),
+                        name="conductor",
+                    )
+                    ticket_generated = True
 
-                if forwarding_s <= (finality_time_slot % EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2):
-                    create_safe_task(
-                        self.schedule_run(0, Forwarding, finality_time_slot % EPOCH_LENGTH, finality_time_slot), name="forwarding")
+                # Postman: forward tickets
+                if (self._postman
+                        and forwarding_s <= (finality_time_slot % EPOCH_LENGTH) < (TICKET_SUBMISSION_END // 2)):
+                    self._tracked_task(
+                        self._schedule_run(0, self._postman, finality_time_slot % EPOCH_LENGTH, finality_time_slot),
+                        name="postman",
+                    )
 
-                for dispatch in self.dispatch_fns():
-                    (task_ts, runner) = dispatch
-                    if not runner:
-                        continue
+                # Per-slot dispatchers (block producer, assurer)
+                for offset, handler in self._dispatchers():
+                    name = type(handler).__name__
+                    self._tracked_task(
+                        self._schedule_run(offset, handler, ts),
+                        name=f"dispatch_{name}",
+                    )
 
-                    # Get name from class or instance
-                    runner_name = getattr(runner, '__name__', type(runner).__name__)
-
-                    if runner == BlockProducer:
-                        if self.state:
-                            create_safe_task(
-                                self.schedule_run(
-                                    task_ts,
-                                    runner,
-                                    ts,
-                                    self.state,
-                                    self.settings
-                                ),
-                                name=f"dispatch_{runner_name}"
-                            )
-                    elif isinstance(runner, type(assurer)):  # check if it is Assurer instance
-                        create_safe_task(self.schedule_run(task_ts, runner, ts, self.state, self.settings), name=f"dispatch_{runner_name}")
-                    else:
-                        create_safe_task(self.schedule_run(task_ts, runner, ts), name=f"dispatch_{runner_name}")
-
+                # Epoch boundary cleanup
                 if ts % EPOCH_LENGTH == 11:
                     ticket_generated = False
-                    # TODO: Inject these dependencies instead of inline import if possible,
-                    # but they are likely singletons/globals in their own modules.
-                    from jam.block.extrinsics.disputes import dpt_store
-                    from jam.block.extrinsics.tickets import ticket_store
-                    ticket_store.clear()
-                    dpt_store.clear()
+                    self.pool.tickets.clear()
+                    self.pool.disputes.clear()
 
-                # TODO: add connect to peers logic here
                 if ts % EPOCH_LENGTH == 0:
-                    self.settings.update(self.state)
+                    settings.update(state)
 
             except asyncio.CancelledError:
                 self._running = False
                 break
             except Exception as e:
-                logger.error(f"Error in operate loop", error=str(e), exc_info=True, time_slot=ts)
+                self.logger.error("Error in operate loop", error=str(e), exc_info=True, time_slot=ts)
 
-            # Move on to next timeslot and sleep
             ts += 1
 
     async def start(self):
@@ -129,3 +175,10 @@ class OperatorService:
                 await self._task
             except asyncio.CancelledError:
                 pass
+        # Cancel any in-flight dispatch tasks (block producer, assurer, conductor, etc.)
+        for t in list(self._active_tasks):
+            if not t.done():
+                t.cancel()
+        if self._active_tasks:
+            await asyncio.gather(*self._active_tasks, return_exceptions=True)
+        self._active_tasks.clear()

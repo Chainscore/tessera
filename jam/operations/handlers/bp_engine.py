@@ -1,26 +1,31 @@
+import structlog
+from typing import TYPE_CHECKING
+
 from jam.utils.task_utils import create_safe_task
 
 from dot_ring import IETF_VRF, Bandersnatch
+from tsrkit_types import U32, U64, Bytes32
 
-from jam.block.extrinsics.tickets import TicketEnvelope
 from jam.operations.dispatcher import NodeDispatcher
-from jam.finality.finality import Finality
 
-from jam.state.ghost import GhostState
 from jam.state.transitions.safrole.safrole import Safrole
 
-from jam.types.protocol.core import TimeSlot, ValidatorIndex
+from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.ticket import TicketBody
 
-from jam.utils.benchmark import write_json
+from jam.network.protocols.up_0 import Announcement, Final
+from jam.telemetry import emit_event
+from jam.telemetry.events import Authoring, Authored, BlockOutline
+
 from jam.utils.constants import (
     EPOCH_LENGTH,
-    SLOT_PERIOD,
-    TICKET_SUBMISSION_END,
     X,
 )
-from jam.log_setup import block_logger as logger
+
 from jam.utils.util_fns import outside_in
+
+if TYPE_CHECKING:
+    from jam.jam_node import JamNode
 
 
 class BlockProducer(NodeDispatcher):
@@ -29,36 +34,33 @@ class BlockProducer(NodeDispatcher):
     If it is our chance to produce a block, we produce a block and announce it to the network.
     """
 
-    # TODO: add node and finality service
-    @classmethod
-    async def run(cls, time_slot: int, state=None, settings=None):
-        """
-        Starts the block producer engine in asyncio loop.
-        Assumes that the node is initialized and the latest synchronized state is stored in the db.
-        """
-        if not settings:
-            from jam.settings import settings
-        if not state:
-            from jam.state.state import state
-        from jam.network.start import node
-        # from jam.settings import settings
-        from jam.network.protocols.up_0 import BlockAnnouncement
-        # from jam.state.state import state
+    def __init__(self, jam: "JamNode") -> None:
+        super().__init__(jam)
+        self._logger = structlog.get_logger("block")
 
-        up0 = BlockAnnouncement()
+    @property
+    def logger(self):
+        return self._logger
+
+    async def run(self, time_slot: int):
+        node = self.node
+        settings = self.settings
+        state = self.state
+        grandpa = self.grandpa
 
         if not node or len(node.all_connected) == 0:
-            logger.debug("Network not initialized - skipping block production")
+            self.logger.debug("Network not initialized - skipping block production")
             return
 
-        latest = Finality.load_latest(settings.main_db)
-        if not latest:
-            logger.error("Latest not found, node is not configrued", ts=time_slot)
+        latest_head = grandpa.load_best_head()
+
+        if not latest_head:
+            self.logger.error("Latest not found, node is not configured", ts=time_slot)
             return
 
         # If we have already imported a block for this slot
         if state.tau > TimeSlot(time_slot):
-            return 
+            return
 
         slot_index = time_slot % EPOCH_LENGTH
         entry = state.gamma.s.unwrap()[slot_index]
@@ -69,10 +71,9 @@ class BlockProducer(NodeDispatcher):
                 entry = outside_in(state.gamma.a)[slot_index]
             else:
                 entry = Safrole.arrange_fallback(state.eta[1], state.gamma.p).unwrap()[slot_index]
-        
+
         if isinstance(entry, TicketBody):
             eta = state.eta[2] if time_slot % EPOCH_LENGTH == 0 else state.eta[3]
-            # Use dot_ring for IETF VRF proof and output
             ietf_proof = IETF_VRF[Bandersnatch].prove(
                 X.TICKET.value + eta + entry.attempt.encode(),
                 settings.bandersnatch_private,
@@ -81,30 +82,24 @@ class BlockProducer(NodeDispatcher):
             our_id = ietf_proof.proof_to_hash(ietf_proof.output_point)[:32]
             entry_id = entry.id
             if our_id != entry_id:
-                logger.debug("⏭ Skipping BP: Not our ticket", sig=entry.id.hex(), our_id=our_id.hex(), entry_id=entry_id.hex())
-                return 
+                self.logger.debug("⏭ Skipping BP: Not our ticket", sig=entry.id.hex(), our_id=our_id.hex(), entry_id=entry_id.hex())
+                return
             else:
                 ticket = entry
         elif entry != settings.bandersnatch_public:
-            logger.debug("⏭ Skipping BP: Not our fallback", expected=entry.hex(), our_key=settings.bandersnatch_public.hex())
+            self.logger.debug("⏭ Skipping BP: Not our fallback", expected=entry.hex(), our_key=settings.bandersnatch_public.hex())
             return
 
         # Telemetry: Authoring
-        from jam.telemetry import emit_event
-        from jam.telemetry.events import Authoring, Authored, BlockOutline
-        from tsrkit_types import U32, U64, Bytes32
-        
-        emit_event(Authoring(slot=U32(time_slot), parent_hash=Bytes32(latest.header.hash().encode())))
+        emit_event(Authoring(slot=U32(time_slot), parent_hash=Bytes32(latest_head.header.hash().encode())))
 
-        block = latest.produce(TimeSlot(time_slot), state, settings, ticket)
+        block = latest_head.produce(TimeSlot(time_slot), state, ticket)
 
         is_valid = state._force_transition(block)
 
         if is_valid:
-            logger.info(f"⛏ Produced block ({'T' if ticket else 'F'}) {block.header.hash().hex()[:8]+".."}|{time_slot}")
-            
-            # Telemetry: Authored
-            # Construct BlockOutline
+            self.logger.info(f"⛏ Produced block ({'T' if ticket else 'F'}) {block.header.hash().hex()[:8]+'..'}|{time_slot}")
+
             outline = BlockOutline(
                 size=U32(len(block.encode())),
                 header_hash=Bytes32(block.header.hash().encode()),
@@ -114,13 +109,21 @@ class BlockProducer(NodeDispatcher):
                 num_guarantees=U32(len(block.extrinsic.guarantees)),
                 num_assurances=U32(len(block.extrinsic.assurances)),
                 num_disputes=U32(
-                    len(block.extrinsic.disputes.verdicts) + 
-                    len(block.extrinsic.disputes.culprits) + 
+                    len(block.extrinsic.disputes.verdicts) +
+                    len(block.extrinsic.disputes.culprits) +
                     len(block.extrinsic.disputes.faults)
                 )
             )
             emit_event(Authored(event_id=U64(0), block=outline))
-            
-            create_safe_task(up0.transmit(BlockAnnouncement.block_to_announcement(block, settings)), name="block_announce")
+
+            # Build announcement
+            final_block = grandpa.load_final()
+            final = Final(header_hash=final_block.header.hash(), time_slot=final_block.header.slot)
+            announcement = Announcement(header=block.header, final=final)
+
+            create_safe_task(
+                self.router.dispatch(0, announcement),
+                name="Transmit Block Announcement",
+            )
         else:
-            logger.info("😓 Failed to produce a valid block", slot=time_slot, block=block.to_json())
+            self.logger.info("Failed to produce a valid block", slot=time_slot, header=block.header.to_json())

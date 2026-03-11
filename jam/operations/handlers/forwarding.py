@@ -1,41 +1,65 @@
 from asyncio import sleep
+from collections import deque
 from time import time
 from math import ceil
+from typing import TYPE_CHECKING
+
 from jam.operations.dispatcher import NodeDispatcher
+from jam.utils.task_utils import create_safe_task
 from jam.types.protocol.core import TimeSlot
 from tsrkit_types import U32
-from jam.log_setup import node_logger as logger
 from jam.utils.constants import TICKET_SUBMISSION_END, GENESIS_TS
-from jam.network.protocols.ce_132 import SafroleTicketDistribution, CE132Data
+from jam.network.protocols.ce_132 import CE132Data
+
+if TYPE_CHECKING:
+    from jam.jam_node import JamNode
 
 
 class Forwarding(NodeDispatcher):
 
-    @classmethod
-    async def run(cls, slot: U32, time_slot: TimeSlot):
+    def __init__(self, jam: "JamNode") -> None:
+        super().__init__(jam)
+        self._queue: deque = deque()
+
+    def enqueue(self, item):
+        self._queue.append(item)
+
+    def dequeue(self):
+        if self.is_empty():
+            return None
+        return self._queue.popleft()
+
+    def is_empty(self) -> bool:
+        return len(self._queue) == 0
+
+    def pending(self) -> int:
+        return len(self._queue)
+
+    async def run(self, slot: U32, time_slot: TimeSlot):
         try:
-            from jam.operations.ticket_queue import ticket_queue
-            if not ticket_queue.is_empty():
-                ts = time_slot
-                ticket_submission_end = TICKET_SUBMISSION_END // 2
+            if self.is_empty():
+                return
 
-                if ticket_submission_end != slot:
-                    slots_available = ticket_submission_end - slot
-                    tickets_per_slot = ceil(ticket_queue.length() / slots_available)
+            ts = time_slot
+            ticket_submission_end = TICKET_SUBMISSION_END // 2
 
-                    for i in range(tickets_per_slot):
-                        ticket = ticket_queue.pop()
-                        if ticket:
-                            CE132 = SafroleTicketDistribution()
-                            data = CE132Data(epoch_ticket_len=ticket.epoch_ticket_len, epoch_ticket=ticket.epoch_ticket)
-                            responses = await CE132.transmit(data)
-                            ts += 1
-                            curr_time = time()
-                            next_time_slot_time = ts * 6 + GENESIS_TS
-                            if curr_time < next_time_slot_time:
-                                await sleep(next_time_slot_time - curr_time)
+            if ticket_submission_end != slot:
+                slots_available = ticket_submission_end - slot
+                tickets_per_slot = ceil(self.pending() / slots_available)
+
+                for i in range(tickets_per_slot):
+                    ticket = self.dequeue()
+                    if ticket:
+                        data = CE132Data(epoch_ticket_len=ticket.epoch_ticket_len, epoch_ticket=ticket.epoch_ticket)
+                        create_safe_task(
+                            self.router.dispatch(132, data),
+                            name="Transmit Ticket Forward",
+                        )
+                        ts += 1
+                        curr_time = time()
+                        next_time_slot_time = ts * 6 + GENESIS_TS
+                        if curr_time < next_time_slot_time:
+                            await sleep(next_time_slot_time - curr_time)
 
         except Exception as e:
-            logger.error("Failed to forward ticket", error=e, time_slot=time_slot)
-
-
+            self.logger.error("Failed to forward ticket", error=e, time_slot=time_slot)

@@ -1,5 +1,6 @@
 import os
 from jam.operations.dispatcher import NodeDispatcher
+from jam.utils.task_utils import create_safe_task
 from tsrkit_types import Bytes, U16, Uint
 
 from tsrkit_pvm import Code
@@ -7,64 +8,47 @@ from jam.types import WorkPackage
 from jam.types.protocol.crypto import Hash
 from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpec
 from jam.types.work.manifest import Extrinsics, Extrinsic
-from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD, GENESIS_TS
-from jam.log_setup import node_logger as logger
+from jam.utils.constants import EPOCH_LENGTH
 from jam.utils.dummy.dummy_package import create_dummy_package
-from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
-from jam.network.protocols.ce_133 import WorkPackageCore
+from jam.network.protocols.ce_133 import CE133Data, WorkPackageCore
 from jam.types.protocol.core import CoreIndex, Gas, ServiceId, SegmentRoot
-
 
 
 class WPBuilder(NodeDispatcher):
     """
     WP Engine: Continuously produces work packages and transmits them.
-    Work Package is shared $SLOT_PERIOD seconds apart.
-    A builder node produces a work package and share it with the guarantors.
+    Work Package is shared per slot.
+    A builder node produces a work package and shares it with the guarantors.
     """
 
-    @classmethod
-    async def run(cls, time_slot: int):
-        """
-        Starts the WP producer engine in asyncio loop.
-        Assumes that the node is initialized and the latest synchronized state is stored in the db.
-        """
+    async def run(self, time_slot: int):
         try:
-            from jam.network.start import node
-
-            CE133 = WorkPackageSubmission()
+            node = self.node
+            state = self.state
 
             wp_iter = time_slot % 4
-
             curr_ts = time_slot
             curr_ep = int(curr_ts // EPOCH_LENGTH)
 
-            # TODO: Remove hard-coded transmission. Use desired guarantors' connections.
-            if not node:
-                logger.debug(
+            if not node or len(node.all_connected) == 0:
+                self.logger.debug(
                     "Network not initialized - skipping work package production",
-                    # node_name=node.name,
                     iteration=wp_iter,
                 )
                 return
 
-            # Get state from db
-            from jam.state.state import state
-
-            logger.debug(
+            self.logger.debug(
                 "Work package production cycle",
-                # node_name=node.name,
                 iteration=wp_iter,
                 curr_timeslot=curr_ts,
                 curr_epoch=curr_ep,
                 gamma_mode=state.gamma.s._choice_key,
             )
 
-            wp = cls._build_package(wp_iter)
+            wp = self._build_package(wp_iter)
 
             wc = WorkPackageCore(wp, CoreIndex(1))
             ext = Extrinsics([Extrinsic(b"") for i in range(len(wp.items))])
-
 
             package_len = Uint[32](len(wc.encode()))
             ext_len = Uint[32](len(ext.encode()))
@@ -72,7 +56,7 @@ class WPBuilder(NodeDispatcher):
                 package_len=package_len, package_data=wc, extrinsics_len=ext_len, extrinsics=ext
             )
 
-            logger.info(
+            self.logger.info(
                 "Producing work package",
                 iteration=wp_iter,
                 core_index=1,
@@ -80,12 +64,12 @@ class WPBuilder(NodeDispatcher):
                 curr_timeslot=curr_ts,
             )
 
-            responses = await CE133.transmit(data)
-            logger.debug("Work package transmitted",
-                         # node_name=node.name,
-                         iteration=wp_iter)
+            create_safe_task(
+                self.router.dispatch(133, data),
+                name="Transmit Work Package",
+            )
         except Exception as e:
-            logger.error("Failed in WPBuilder.run()", error=str(e), exc_info=True, time_slot=time_slot)
+            self.logger.error("Failed in WPBuilder.run()", error=str(e), exc_info=True, time_slot=time_slot)
 
     @staticmethod
     def _build_package(wp_iter: int) -> WorkPackage:
@@ -93,65 +77,10 @@ class WPBuilder(NodeDispatcher):
 
         pc = bytes(
             [
-                0,
-                0,
-                22,
-                124,
-                121,
-                81,
-                25,
-                1,
-                7,
-                40,
-                2,
-                0,
-                149,
-                17,
-                255,
-                70,
-                1,
-                1,
-                100,
-                23,
-                51,
-                8,
-                1,
-                50,
-                0,
-                69,
-                147,
-                18,
+                0, 0, 22, 124, 121, 81, 25, 1, 7, 40, 2, 0, 149, 17, 255,
+                70, 1, 1, 100, 23, 51, 8, 1, 50, 0, 69, 147, 18,
             ]
         )
-        c0_authorized_code = [
-            0,
-            0,
-            21,
-            124,
-            121,
-            81,
-            9,
-            6,
-            40,
-            2,
-            0,
-            149,
-            17,
-            255,
-            70,
-            1,
-            1,
-            100,
-            23,
-            51,
-            8,
-            1,
-            50,
-            0,
-            165,
-            73,
-            9,
-        ]
         code = Code(code=pc, read=b"", r_write=b"", z=0, s=100)
         bytecode = code.encode()
         service_code = Bytes(b"").encode() + bytecode
@@ -162,111 +91,14 @@ class WPBuilder(NodeDispatcher):
 
         wi_pc = bytes(
             [
-                0,
-                0,
-                90,
-                51,
-                12,
-                149,
-                27,
-                0,
-                112,
-                254,
-                124,
-                117,
-                6,
-                40,
-                2,
-                200,
-                199,
-                3,
-                149,
-                51,
-                7,
-                200,
-                203,
-                4,
-                130,
-                57,
-                123,
-                73,
-                149,
-                204,
-                8,
-                172,
-                92,
-                240,
-                100,
-                194,
-                40,
-                2,
-                200,
-                203,
-                7,
-                51,
-                8,
-                20,
-                9,
-                255,
-                255,
-                255,
-                255,
-                255,
-                0,
-                0,
-                0,
-                51,
-                10,
-                5,
-                51,
-                11,
-                51,
-                12,
-                10,
-                18,
-                86,
-                23,
-                255,
-                9,
-                200,
-                114,
-                2,
-                40,
-                6,
-                51,
-                7,
-                40,
-                2,
-                149,
-                23,
-                0,
-                112,
-                254,
-                100,
-                40,
-                10,
-                19,
-                149,
-                23,
-                0,
-                112,
-                254,
-                51,
-                8,
-                50,
-                0,
-                133,
-                148,
-                164,
-                146,
-                74,
-                1,
-                164,
-                138,
-                84,
-                161,
-                66,
-                1,
+                0, 0, 90, 51, 12, 149, 27, 0, 112, 254, 124, 117, 6, 40, 2,
+                200, 199, 3, 149, 51, 7, 200, 203, 4, 130, 57, 123, 73, 149,
+                204, 8, 172, 92, 240, 100, 194, 40, 2, 200, 203, 7, 51, 8,
+                20, 9, 255, 255, 255, 255, 255, 0, 0, 0, 51, 10, 5, 51, 11,
+                51, 12, 10, 18, 86, 23, 255, 9, 200, 114, 2, 40, 6, 51, 7,
+                40, 2, 149, 23, 0, 112, 254, 100, 40, 10, 19, 149, 23, 0,
+                112, 254, 51, 8, 50, 0, 133, 148, 164, 146, 74, 1, 164, 138,
+                84, 161, 66, 1,
             ]
         )
 
@@ -288,15 +120,6 @@ class WPBuilder(NodeDispatcher):
             ),
             index=U16(0),
         )
-
-        if wp_iter % 4 == 0:
-            import_specs = []
-        elif wp_iter % 4 == 1:
-            import_specs = [import_spec1]
-        elif wp_iter % 4 == 2:
-            import_specs = [import_spec2]
-        else:  # wp_iter % 4 == 3
-            import_specs = [import_spec1, import_spec2]
 
         import_specs = []
 

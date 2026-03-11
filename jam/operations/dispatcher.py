@@ -1,11 +1,8 @@
-class NodeDispatcher:
-    """
-    Interface defining how a dispatch function should be.
+from jam.incore.doer import Doer
 
-    Overwrite the run fn, please them in ./handlers
 
-    """
+class NodeDispatcher(Doer):
+    """Base class for per-slot operator handlers. Subclass and override `run`."""
 
-    @classmethod
-    async def run(cls, time_slot: int):
+    async def run(self, time_slot: int):
         ...

@@ -1,4 +1,3 @@
-import asyncio
 from jam.operations.dispatcher import NodeDispatcher
 from tsrkit_types import U32
 from jam.types.protocol.ticket import TicketAttempt
@@ -6,52 +5,43 @@ from jam.block.extrinsics.tickets import TicketEnvelope
 from jam.types.protocol.crypto import BandersnatchRingVrfSignature
 from jam.types.protocol.core import TimeSlot
 from dot_ring import RingVRF, Bandersnatch
-from jam.log_setup import node_logger as logger
 from jam.utils.constants import EPOCH_LENGTH, X, TICKET_ENTRIES_PER_VALIDATOR
-from jam.network.protocols.ce_131 import SafroleTicketProxyDistribution, CE131Data, EpochTicket
+from jam.utils.gather import gather_with_exceptions
+from jam.network.protocols.ce_131 import CE131Data, EpochTicket
 
 
 class Conductor(NodeDispatcher):
 
-    # TODO: pass node as parameter
-    @classmethod 
-    async def run(cls, time_slot: TimeSlot, finality_time_slot: TimeSlot, state=None):
+    async def run(self, time_slot: TimeSlot, finality_time_slot: TimeSlot):
         try:
-            from jam.network.start import node
-            CE131 = SafroleTicketProxyDistribution()
+            state = self.state
             tasks = []
-            # generating & transmitting all the tickets allowed per validator
+
             for i in range(TICKET_ENTRIES_PER_VALIDATOR):
-                if not state:
-                    from jam.state.state import state
-                ticket_envelope = cls.generate_ticket(state, i)
+                ticket_envelope = self.generate_ticket(state, i)
                 epoch_index = U32(finality_time_slot // EPOCH_LENGTH)
 
                 if ticket_envelope is not None:
                     epoch_ticket = EpochTicket(epoch_index=epoch_index, ticket=ticket_envelope)
                     epoch_ticket_len = U32(len(epoch_ticket.encode()))
-
                     data = CE131Data(epoch_ticket_len=epoch_ticket_len, epoch_ticket=epoch_ticket)
 
-                    task = CE131.transmit(data, state)
-                    tasks.append(task)
+                    tasks.append(self.router.dispatch(131, data))
                 else:
                     raise ValueError("Ticket generation failed")
 
-            ack = await asyncio.gather(*tasks)
+            await gather_with_exceptions(tasks, name="Transmit Tickets")
 
         except Exception as e:
-            logger.error("Failed to generate & transmit ticket", error=e, time_slot=time_slot)
-    
-    @classmethod
-    def generate_ticket(cls, state, attempt: int) -> TicketEnvelope | None:
-        from jam.settings import settings
+            self.logger.error("Failed to generate & transmit ticket", error=e, time_slot=time_slot)
+
+    def generate_ticket(self, state, attempt: int) -> TicketEnvelope | None:
+        settings = self.settings
 
         eta = state.eta[2]
         vals = [bytes(k.bandersnatch) for k in state.gamma.p]
 
         try:
-            # Use dot_ring for proof generation (consistent with validation)
             ring_proof = RingVRF[Bandersnatch].prove(
                 alpha=X.TICKET.value + eta + bytes([attempt]),
                 ad=b"",
@@ -64,4 +54,4 @@ class Conductor(NodeDispatcher):
                 signature=BandersnatchRingVrfSignature(ring_proof.to_bytes()),
             )
         except Exception as e:
-            logger.error("Failed to generate ticket", error=e)
+            self.logger.error("Failed to generate ticket", error=e)
