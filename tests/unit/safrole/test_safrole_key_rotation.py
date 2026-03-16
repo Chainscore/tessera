@@ -1,5 +1,7 @@
 import pytest
 
+pytestmark = pytest.mark.unit
+
 from jam.state.transitions import Safrole
 from tsrkit_types.bytes import Bytes
 from jam.types.state.eta import Eta

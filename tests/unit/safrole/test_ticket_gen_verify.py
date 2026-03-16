@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.unit
+
 # import pytest
 # from dot_ring.vrf.ring.ring_vrf import RingVrf
 # from py_ark_vrf import secret_from_seed, verify_ring, public_from_le_secret

@@ -3,7 +3,7 @@ import os
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from py_ark_vrf.py_ark_vrf import secret_from_seed
 
-from jam.state.ghost import GhostState
+from jam.types.state.sigma import Sigma
 from jam.types import Hash
 from jam.types.state.eta import Eta
 from jam.state.state import State
@@ -19,8 +19,8 @@ from jam.types.protocol.validators import ValidatorData, ValidatorMetadata, IPAd
 from jam.utils.dummy.dummy_state import create_dummy_state
 
 
-def deepcopy(state: GhostState):
-    return GhostState.from_json(state.to_json())
+def deepcopy(state: Sigma):
+    return Sigma.from_json(state.to_json())
 
 
 

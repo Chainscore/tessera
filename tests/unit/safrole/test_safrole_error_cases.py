@@ -1,4 +1,6 @@
 import pytest
+
+pytestmark = pytest.mark.unit
 from jam.state.transitions import SafroleError, SafroleErrorCode
 from jam.state.transitions import Safrole
 from jam.types.state.eta import Eta

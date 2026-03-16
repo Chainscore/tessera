@@ -1,9 +1,8 @@
 from py_ark_vrf import vrf_output
 import pytest
-import os
+
+pytestmark = pytest.mark.unit
 from tsrkit_types.bytes import Bytes
-from jam.operations.handlers.conductor import Conductor
-from jam.settings import setup_setting
 from jam.state.transitions import SafroleError, SafroleErrorCode
 from jam.state.transitions import Safrole
 from jam.types.state.eta import Eta
@@ -109,62 +108,8 @@ def test_safrole_entropy_accumulation():
     assert new_state.eta[2] == initial_state.eta[2]
     assert new_state.eta[3] == initial_state.eta[3]
 
-@pytest.mark.asyncio
-@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_safrole_ticket_accumulation(db_path):
-    """Test that Safrole correctly accumulates ticket.py during the submission period"""
-    # Create initial state with some ticket.py already in gamma_a
-    initial_state = create_state(
-        tau=U32(5),  # Assume this is within ticket submission period
-        eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
-        lambda_=Lambda_(create_validator_data_from_keys()),
-        kappa=Kappa(create_validator_data_from_keys()),
-        gamma_p=GammaP(create_validator_data_from_keys()),
-        iota=Iota(create_validator_data_from_keys()),
-        gamma_a=GammaA([]),
-        gamma_s=GammaS(
-            GammaSFallback([keys.bandersnatch for keys in create_validator_data_from_keys() * 2])
-        ),
-        gamma_z=GammaZ(
-            Safrole.compute_ring_root(
-                [keys.bandersnatch for keys in create_validator_data_from_keys()]
-            )
-        ),
-        offenders=PsiO([]),
-    )
-
-    pubkeys = [val.bandersnatch for val in initial_state.kappa]
-
-    setup_setting(db_path, 1)
-
-    # Create a block with ticket during submission period
-    # Assume slot 6 is within ticket submission period (less than TICKET_SUBMISSION_END)
-    slot_within_submission = U32(5 - (5 % EPOCH_LENGTH) + TICKET_SUBMISSION_END - 1)
-    # Create ticket extrinsics for a block
-    ticket_envelope = Conductor.generate_ticket(
-        initial_state, 0
-    )  # This will create a ticket with default values
-    ticket_body = TicketBody(
-        id=TicketId(vrf_output(ticket_envelope.signature)), attempt=ticket_envelope.attempt
-    )
-    new_block = create_block(slot=slot_within_submission, tickets=[ticket_envelope])
-
-    # Apply the transition
-    new_state = Safrole.transition(
-        deepcopy(initial_state),
-        deepcopy(initial_state),
-        new_block,
-        Bytes[32](create_dummy_bytes(32)),
-    )
-
-    # Check that the new ticket was accumulated
-    assert len(new_state.gamma.a) == 1
-    assert ticket_body in new_state.gamma.a
-
-
-def test_safrole_ticket_submission_outside_period(db_path):
-    """Test that Safrole rejects ticket.py outside the submission period"""
-    # Create initial state
+async def test_safrole_ticket_accumulation(jam_node):
+    """Test that Safrole correctly accumulates tickets during the submission period"""
     initial_state = create_state(
         tau=U32(5),
         eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
@@ -183,15 +128,53 @@ def test_safrole_ticket_submission_outside_period(db_path):
         ),
         offenders=PsiO([]),
     )
-    setup_setting(db_path, 1)
 
-    # Create a block with ticket.py after the submission period
-    # Calculate a slot that is after TICKET_SUBMISSION_END
+    conductor = jam_node.operator.conductor
+
+    slot_within_submission = U32(5 - (5 % EPOCH_LENGTH) + TICKET_SUBMISSION_END - 1)
+    ticket_envelope = conductor.generate_ticket(initial_state, 0)
+    ticket_body = TicketBody(
+        id=TicketId(vrf_output(ticket_envelope.signature)), attempt=ticket_envelope.attempt
+    )
+    new_block = create_block(slot=slot_within_submission, tickets=[ticket_envelope])
+
+    new_state = Safrole.transition(
+        deepcopy(initial_state),
+        deepcopy(initial_state),
+        new_block,
+        Bytes[32](create_dummy_bytes(32)),
+    )
+
+    assert len(new_state.gamma.a) == 1
+    assert ticket_body in new_state.gamma.a
+
+
+async def test_safrole_ticket_submission_outside_period(jam_node):
+    """Test that Safrole rejects tickets outside the submission period"""
+    initial_state = create_state(
+        tau=U32(5),
+        eta=Eta([Bytes[32](bytes(32)) for _ in range(4)]),
+        lambda_=Lambda_(create_validator_data_from_keys()),
+        kappa=Kappa(create_validator_data_from_keys()),
+        gamma_p=GammaP(create_validator_data_from_keys()),
+        iota=Iota(create_validator_data_from_keys()),
+        gamma_a=GammaA([]),
+        gamma_s=GammaS(
+            GammaSFallback([keys.bandersnatch for keys in create_validator_data_from_keys() * 2])
+        ),
+        gamma_z=GammaZ(
+            Safrole.compute_ring_root(
+                [keys.bandersnatch for keys in create_validator_data_from_keys()]
+            )
+        ),
+        offenders=PsiO([]),
+    )
+
+    conductor = jam_node.operator.conductor
     slot_after_submission = U32(5 - (5 % EPOCH_LENGTH) + TICKET_SUBMISSION_END + 1)
-    ticket_envelope = Conductor.generate_ticket(initial_state, 0)
+    ticket_envelope = conductor.generate_ticket(initial_state, 0)
     new_block = create_block(slot=slot_after_submission, tickets=[ticket_envelope])
 
-    # Verify that the transition raises the expected error
     with pytest.raises(SafroleError) as excinfo:
         Safrole.transition(
             deepcopy(initial_state),
