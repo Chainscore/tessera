@@ -42,6 +42,7 @@ data/main
 data/d3l
 data/audit
 perf/
+.benchmarks/
 benchmarks/
 vectors/
 
