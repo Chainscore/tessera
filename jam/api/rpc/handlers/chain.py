@@ -100,7 +100,7 @@ class ChainHandler(BaseHandler):
         by = params[1] if len(params) > 1 else "hash"
         try:
             if by == "slot":
-                block = Block.load_w_ts(TimeSlot(identifier), settings.main_db)
+                block = Block.load_w_ts(TimeSlot(identifier), settings.main_db, self.jam.ledger)
                 if isinstance(block, list):
                     block = block[0]
             else:
