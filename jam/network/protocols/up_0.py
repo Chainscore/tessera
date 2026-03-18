@@ -1,13 +1,10 @@
 from jam.utils.task_utils import create_safe_task
-from typing import cast, TYPE_CHECKING
 
-from tsrkit_types import Uint, U32, U8, U64, Bool
+from tsrkit_types import U32, U8
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
-from jam.log_setup import network_logger as logger
-
-from jam.network.connection import NodeConnection
+from jam.network.connection import PeerConnection, PeerStatus
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
 from jam.network.protocols.ce_128 import BlockRequest, CE128Data, Direction
@@ -15,15 +12,13 @@ from jam.block import Block, Header
 
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import HeaderHash
-from jam.types.protocol.validators import ValidatorData
-from jam.api.rpc.subscription_handlers import subscribe_sync_status
 from jam.telemetry import emit_event
 from jam.telemetry.events import (
     BlockAnnouncementStreamOpened, BlockAnnounced, Importing,
     BlockVerified, BlockVerificationFailed, SyncStatusChanged,
-    BlockOutline, Bytes32
+    BlockOutline
 )
-from tsrkit_types import Bytes, Bytes32
+from tsrkit_types import Bytes32
 
 @structure
 class Leaf:
@@ -74,37 +69,20 @@ class BlockAnnouncement(NetworkProtocol):
     Source:
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#up-0-block-announcement
     """
+
     _processed_headers: set[HeaderHash] = set()
+    _prefix = PrefixType.UP0
 
-    def __init__(self):
-        super().__init__()
-        self._prefix = PrefixType.UP0
+    def handshake(self, stream_id: int, conn: PeerConnection, prefix = False):
+        grandpa = self.jam.grandpa
 
-    @staticmethod
-    def handshake(stream_id: int, conn: NodeConnection, prefix = False):
-        # TODO: replace settings & finality import
-        from jam.settings import settings
-        from jam.finality.finality import Finality
-        from jam.types.protocol.crypto import Hash
-
-        db = settings.main_db
-        finality = Finality()
-        
         data = b""
         if prefix:
             data += PrefixType.UP0.encode()
 
-        try:
-            final_block = finality.load_final(db)
-        except Exception as e:
-            logger.error(f"Error occurred while loading final block {e}")
-            final_block = Block.genesis()
-        
-        if not final_block:
-            logger.error("No final block found, using genesis block.")
-            final_block = Block.genesis()
+        final_block = grandpa.load_final()
 
-        header_hash = Hash.blake2b(final_block.header.encode())
+        header_hash = final_block.header.hash()
         block_slot = final_block.header.slot
 
         final = Final(header_hash=header_hash, time_slot=block_slot)
@@ -118,23 +96,24 @@ class BlockAnnouncement(NetworkProtocol):
         data += h
 
         # Handshake Message
-        logger.debug("Handshake started", final=final.header_hash.hex(), slot=final.time_slot, leaves=leaves.to_json())
+        self.logger.debug(
+            "Handshake started",
+            final=final.header_hash.hex(),
+            slot=final.time_slot, leaves=leaves.to_json()
+        )
+
         conn.stream_and_keep_open(data, stream_id)
-    
-    @classmethod
-    def block_to_announcement(cls, block: Block, settings=None) -> Announcement:
+
+    def block_to_announcement(self, block: Block) -> Announcement:
         """
         Convert a Block to an Announcement.
         """
-        from jam.finality.finality import Finality
-        from jam.types.protocol.crypto import Hash
-        if not settings:
-            from jam.settings import settings
+        grandpa = self.jam.grandpa
 
-        finality = Finality()
-        final_block = finality.load_final(settings.main_db)
+        final_block = grandpa.load_final()
+
         if not final_block:
-            logger.error("No final block found, using genesis block.")
+            self.logger.error("No final block found, using genesis block.")
             final_block = Block.genesis()
 
         header_hash = final_block.header.hash()
@@ -146,14 +125,14 @@ class BlockAnnouncement(NetworkProtocol):
 
     async def transmit(self, announcement: Announcement):
         """Announce Block to Peers (servers)"""
-        from jam.network.start import node
+        node = self.jam.router.node
         if not node:
-            logger.error("Node not found to transmit")
+            self.logger.error("Node not found to transmit")
             return
 
         message = announcement.encode()
         if announcement.header.hash() not in self._processed_headers: 
-            logger.info(f"Announcing new block ({announcement.header.hash().hex()[:8]+".."}) to peers")
+            self.logger.info(f"Announcing new block ({announcement.header.hash().hex()[:8]+".."}) to peers")
 
         announced_count = 0
         chunk = U32(len(message)).encode() + message
@@ -171,66 +150,49 @@ class BlockAnnouncement(NetworkProtocol):
             conn.stream_and_keep_open(chunk, conn.up0_stream)
             announced_count += 1
             
-            logger.debug(
+            self.logger.debug(
                 "📣 Block announced to peer",
                 block_slot=int(announcement.header.slot),
                 stream_id=conn.up0_stream,
             )
-        logger.debug(
+        self.logger.debug(
             "Block announcement completed",
             announced_to=announced_count,
             block_slot=int(announcement.header.slot),
         )
 
-    def req_intercept(self, stream_id: int, conn: NodeConnection, data: bytes):
+    async def req_intercept(self, stream_id: int, conn: PeerConnection, data: bytes):
         """Intercepting & Process new blocks from peers."""
-        logger.debug("Intercepting UP0 stream", len=len(data), stream_id=stream_id)
-
-        # conn = node._protocols[peer.metadata.port]
-        # if node.is_builder and not server.peer_handshake:
-        #     up_stream = stream_id
-        #     node.peer_conn[peer] = stream_id, conn
-
-        # if stream_id != conn.up0_stream:
-        #     logger.warning("UP0 Stream ID updated", stream_id=stream_id, old_stream=conn.up0_stream)
-        #     # Update the stream ID
-        #     conn.up0_stream = stream_id
-
-        # # Handle handshake message
-        # if conn.is_initialized and conn.has_pending_handshake:
-        #     # Reverse Handshake on Server
-        #     logger.info("Doing reverse handshake")
-        #     self.handshake(stream_id, conn)
-        #     conn.has_pending_handshake = False
-
-
-        if not conn.handshake_completed :
+        self.logger.debug("Intercepting UP0 stream", len=len(data), stream_id=stream_id)
+        if not conn.up0_handshake_completed:
             # Parse received Handshake
             h_len= U32.decode(data[0:4])
             if len(data[4:]) != h_len:
-                logger.error("Got Handshake with incorrect length", expected=h_len, got=len(data[4:]))
+                self.logger.error("Got Handshake with incorrect length", expected=h_len, got=len(data[4:]))
                 return 
 
             h = Handshake.decode(data[4:])
 
             # TODO: Process Handshake
-            logger.debug("Received UP0 handshake", h=h.to_json())
+            self.logger.debug("Received UP0 handshake", h=h.to_json())
 
-            conn.handshake_completed = True
+            conn.up0_handshake_completed = True
 
-            if conn.is_initiating:
+            if conn.is_initiator:
                 self.handshake(stream_id, conn, False)
                 conn.up0_stream = stream_id
 
-            # Start synchornization
+
+            # Start synchronization
             create_safe_task(self.synchronise(h), name="up0_sync")
 
         # Handle announcement
         else:
+
             a_len = U32.decode(data[0:4])
             if len(data[4:]) != a_len:
                 # TODO: Create a buffer to handle large headers 
-                logger.error(
+                self.logger.error(
                     "Received Announcement with incorrect length",
                     expected_length=a_len,
                     received_length=len(data[4:]),
@@ -245,23 +207,26 @@ class BlockAnnouncement(NetworkProtocol):
                 self._processed_headers.add(hh)
                 # Process goes here
                 create_safe_task(self._process_header(anc=anc, node=conn), name="up0_process_header")
-            logger.debug(
-                "Block announcement 📣 processed successfully", stream_id=stream_id,
+            self.logger.debug(
+                "Block announcement  processed successfully", stream_id=stream_id,
                 block_slot=int(anc.final.time_slot),
                 header_hash=anc.header.hash().hex()[:16] + "...",
                 root=anc.header.parent_state_root.hex()[:16] + "..."
             )
 
-    def res_intercept(self, stream_id: int, client):
+    async def res_intercept(self, stream_id: int, client):
         raise NotImplementedError("Client Intercept not available for UP protocols")
 
-    async def _process_header(self, anc: Announcement, node: NodeConnection|None = None):
-        from jam.state.state import state
+    async def _process_header(self, anc: Announcement, node: PeerConnection | None = None):
+        state = self.jam.state
         header = anc.header
 
-        logger.debug("Fetching block to import", slot=header.slot)
-        create_safe_task(subscribe_sync_status("InProgress"), name="sync_status")
-        blocks = await BlockRequest().transmit(
+        self.logger.debug("Fetching block to import", slot=header.slot)
+        create_safe_task(
+            self.publisher.publish_sync_status("InProgress"),
+            name="sync_status"
+        )
+        blocks = await BlockRequest(self.jam).transmit(
             CE128Data(
                 header=HeaderHash(header.hash()),
                 dir=Direction.DesInc,
@@ -271,24 +236,36 @@ class BlockAnnouncement(NetworkProtocol):
         )
         if not blocks or len(blocks) == 0 or blocks[0] is None or len(blocks[0]) == 0 or blocks[0][0] is None:
             if node is None:
-                logger.error("No blocks received for header", header=header.hash().hex()[:16] + "...")
+                self.logger.error("No blocks received for header", header=header.hash().hex()[:16] + "...")
                 return None
             return await self._process_header(anc, None)
 
+        block: Block = blocks[0][0]
         _valid = state._force_transition(blocks[0][0])
         if _valid:
-            create_safe_task(self.transmit(anc), name="up0_transmit")
-            create_safe_task(subscribe_sync_status("Completed"), name="sync_status")
+            create_safe_task(
+                self.transmit(anc), name="up0_transmit"
+            )
+            create_safe_task(
+                self.publisher.publish_sync_status("Completed"),
+                name="sync_status"
+            )
 
-    @classmethod
-    async def synchronise(cls, h: Handshake):
-        from jam.state.state import state
-        create_safe_task(subscribe_sync_status( "InProgress"), name="sync_status")
+    async def synchronise(self, h: Handshake):
+        state = self.jam.state
+
+        create_safe_task(
+            self.publisher.publish_sync_status( "InProgress"),
+            name="sync_status"
+        )
 
         # To know how many blocks to fetch
         # (h.final.slot - state.tau)
         if h.final.time_slot <= state.tau:
-            create_safe_task(subscribe_sync_status("Completed"), name="sync_status")
+            create_safe_task(
+                self.publisher.publish_sync_status("Completed"),
+                name="sync_status"
+            )
             return
 
         data_req = CE128Data(
@@ -297,13 +274,16 @@ class BlockAnnouncement(NetworkProtocol):
             max_blocks=U32(h.final.time_slot - state.tau),
         )
 
-        logger.debug("Requesting Blocks to Sync", num=data_req.max_blocks)
-        blocks_to_import = (await BlockRequest().transmit(data_req))[0]
-        logger.debug(f"Received {len(blocks_to_import)} blocks. Importing...")
+        self.logger.debug("Requesting Blocks to Sync", num=data_req.max_blocks)
+        blocks_to_import = (await BlockRequest(self.jam).transmit(data_req))[0]
+        self.logger.debug(f"Received {len(blocks_to_import)} blocks. Importing...")
 
         for block in reversed(blocks_to_import):
             state._force_transition(block)
 
-        logger.info("Sync complete!", state_root=state.root)
-        create_safe_task(subscribe_sync_status("Completed"), name="sync_status")
+        self.logger.info("Sync complete!", state_root=state.root)
+        create_safe_task(
+            self.publisher.publish_sync_status("Completed"),
+            name="sync_status"
+        )
         return

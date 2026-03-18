@@ -3,11 +3,9 @@ from typing import cast, Tuple
 
 from tsrkit_types import structure, Uint, TypedVector, Bytes, U8
 
-from jam.log_setup import network_logger as logger
-
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
-from jam.network.connection import NodeConnection
+from jam.network.connection import PeerConnection
 
 from jam.types.protocol.core import ErasureRoot
 from jam.types.work.manifest import Justification, Assurers
@@ -77,20 +75,17 @@ class ShardDistributionProtocol(NetworkProtocol):
         https://docs.jamcha.in/advanced/simple-networking/spec#ce-137-shard-distribution
     """
 
-
-    def __init__(self):
-        super().__init__()
-        self._prefix = PrefixType.CE137
+    _prefix = PrefixType.CE137
 
     async def transmit(self, data: CE137Data, assurers: Assurers = None):
         """Transmit Erasure-Root and Shard Index Query from Assurer to Guarantor"""
-        from jam.network.start import node
+        node = self.jam.router.node
         query = data.query
         msg_a = query.encode()
         len_a = data.len.encode()
 
         req_from = len(assurers) if assurers is not None else len(node.all_connected)
-        logger.info(f"Requesting shard from {req_from} guarantors")
+        self.logger.info(f"Requesting shard from {req_from} guarantors")
 
         tasks = TypedVector([])
         try:
@@ -101,7 +96,7 @@ class ShardDistributionProtocol(NetworkProtocol):
                 if Uint[16](client.validator_index) not in assurers:
                     continue
 
-                logger.debug(
+                self.logger.trace(
                     "Requesting full shard",
                     peer=client,
                     er_root=query.erasure_root.hex(),
@@ -128,13 +123,13 @@ class ShardDistributionProtocol(NetworkProtocol):
                 return responses
 
         except Exception as e:
-            logger.error(
+            self.logger.error(
                 "Failed to request shard.", error=str(e), error_type=type(e).__name__
             )
 
-    def req_intercept(self, stream_id: int, server: NodeConnection):
+    async def req_intercept(self, stream_id: int, server: PeerConnection):
         """Intercept & Process Erasure-Root and Shard Index Query on Guarantor"""
-        from jam.settings import settings
+        settings = self.jam.settings
 
         buffer = server.stream_buffer[stream_id][1:]
 
@@ -142,22 +137,15 @@ class ShardDistributionProtocol(NetworkProtocol):
             data = CE137Data.decode(buffer)
             data = cast(CE137Data, data)
 
-            logger.debug(
-                "Received shard request",
-                erasure_root=data.query.erasure_root.hex()[:16] + "...",
-                shard_index=data.query.shard_index,
-                peer=server,
-            )
-
             if not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
             erasure_root = data.query.erasure_root
             shard_index = data.query.shard_index
 
-            logger.info(
-                "CE137 Shard request received",
-                erasure_root=erasure_root.hex()[:16],
+            self.logger.info(
+                "Shard request received",
+                erasure_root=erasure_root.hex()[:16]+"...",
                 shard_index=shard_index,
             )
 
@@ -200,7 +188,7 @@ class ShardDistributionProtocol(NetworkProtocol):
                 
                 # Debug logging for requested shard
                 if i == shard_index:
-                    logger.info(
+                    self.logger.info(
                         "CE137 Guarantor shard debug",
                         shard_index=shard_index,
                         bundle_shard_hash=bundle_shard_hash.hex()[:16],
@@ -234,7 +222,7 @@ class ShardDistributionProtocol(NetworkProtocol):
             # Stop Streaming
             server.stop_stream(stream_id, 1)
 
-            logger.error(
+            self.logger.error(
                 "Error processing shard request",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
@@ -242,8 +230,8 @@ class ShardDistributionProtocol(NetworkProtocol):
                 error_type=type(e).__name__,
             )
 
-    def res_intercept(
-        self, stream_id: int, client: NodeConnection
+    async def res_intercept(
+        self, stream_id: int, client: PeerConnection
     ) -> Tuple[BundleShard, SegmentsShard, Justification] | None:
         """Intercept Bundle Shard, [Segment Shard] and Justification"""
         buffer = client.stream_buffer[stream_id]
@@ -255,10 +243,10 @@ class ShardDistributionProtocol(NetworkProtocol):
             if not data or not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            logger.debug("Full Shard received", peer=client)
+            self.logger.debug("Full Shard received", peer=client)
 
             return data.bundle_shard, data.segments_shard, data.justification
 
         except Exception as e:
-            logger.error(Code.BAD_RESPONSE, error=str(e))
+            self.logger.error(Code.BAD_RESPONSE, error=str(e))
             return None

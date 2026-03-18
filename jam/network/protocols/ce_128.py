@@ -1,13 +1,9 @@
 import asyncio
-import enum
-from math import e
 from typing import List
 
 from tsrkit_types import TypedArray, Enum
 
-from jam.log_setup import network_logger as logger
-from jam.network.base.error import NetworkingErrorCode
-from jam.network.connection import NodeConnection
+from jam.network.connection import PeerConnection
 from jam.types import HeaderHash 
 
 
@@ -15,7 +11,6 @@ from tsrkit_types.integers import U32, U64
 from tsrkit_types.struct import structure
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.types.protocol.core import TimeSlot
-from jam.utils.constants import GENESIS_HASH
 from jam.utils.gather import gather_with_exceptions
 from jam.telemetry import emit_event
 from jam.telemetry.events import (
@@ -53,17 +48,19 @@ class BlockRequest(NetworkProtocol):
         https://github.com/zdave-parity/jam-np/blob/main/simple.md#ce-128-block-request
     """
 
-    def __init__(self):
-        super().__init__()
-        self._prefix = PrefixType.CE128
+    _prefix = PrefixType.CE128
 
-    async def transmit(self, data: CE128Data, peers: List[NodeConnection]|None = None):
+    async def transmit(self, data: CE128Data, peers: List[PeerConnection] | None = None):
         """Transmit Block Request"""
-        from jam.network.start import node 
+        node = self.jam.router.node
         if not node: return
 
         stream_data = U32(len(data.encode())).encode() + data.encode()
-        logger.debug("Transmitting block request to node", num=len(node.connection_ids), max_blocks=data.max_blocks)
+        self.logger.trace(
+            "Transmitting block request to node",
+            num=len(node.connection_ids),
+            max_blocks=data.max_blocks
+        )
 
         header_hash = data.header.hex()[:16] + "..."
         transmitted_count = 0
@@ -101,18 +98,19 @@ class BlockRequest(NetworkProtocol):
                 # Emit BlockRequestSent event
                 emit_event(BlockRequestSent(event_id=U64(event_id)))
 
-                logger.debug(
+                self.logger.debug(
                     "Block request transmitted",
+                    client=client.peer_id,
                     stream_id=stream_id,
                     header_hash=header_hash,
                 )
             except Exception as e:
                 # Emit BlockRequestFailed event
                 emit_event(BlockRequestFailed(event_id=U64(event_id), reason=String(str(e)[:100])))
-                logger.error("Failed to transmit state request", error=e)
+                self.logger.error("Failed to transmit state request", error=e)
 
         responses = await gather_with_exceptions(tasks)
-        logger.debug(
+        self.logger.debug(
             "Block request transmission completed",
             transmitted_to=transmitted_count,
             header_hash=header_hash,
@@ -120,15 +118,17 @@ class BlockRequest(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: NodeConnection):
+    async def req_intercept(self, stream_id: int, server: PeerConnection):
         """Process Block Request"""
+        node = self.jam.router.node
+        settings = self.jam.settings
+
         buffer = server.stream_buffer[stream_id][1:]
 
-        from jam.settings import settings
         from jam.block.block import Block
 
         # Get peer_id for telemetry
-        peer_id_bytes = getattr(server, 'peer_id', bytes(32))
+        peer_id_bytes = getattr(server, 'ed25519_public', bytes(32))
         if not isinstance(peer_id_bytes, bytes) or len(peer_id_bytes) != 32:
             peer_id_bytes = bytes(32)
         
@@ -138,9 +138,10 @@ class BlockRequest(NetworkProtocol):
         data = CE128Data.decode(buffer[4:])
         event_id = id(data) & 0xFFFFFFFFFFFFFFFF
 
-        logger.debug(
+        self.logger.debug(
             "Processing block request",
             stream_id=stream_id,
+            requester_id=server.peer_id,
             header_hash=data.header.hex(),
             direction=data.dir,
             max_blocks=data.max_blocks,
@@ -157,7 +158,7 @@ class BlockRequest(NetworkProtocol):
         # Get the start block
         start_block = Block.load(data.header, settings.main_db)
         if not start_block:
-            logger.debug("Block not found", hh=data.header.hex()[:16]+"...")
+            self.logger.debug("Block not found", hh=data.header.hex()[:16]+"...")
             server.stream_and_close(b"", stream_id)
             return
 
@@ -189,7 +190,7 @@ class BlockRequest(NetworkProtocol):
             if _data:
                 all_blocks.append(Block.decode(_data))
             else:
-                logger.error("Block not found against recorded header_hash", header_hash=hh.hex())
+                self.logger.error("Block not found against recorded header_hash", header_hash=hh.hex())
                 break
 
         if data.dir == Direction.DesInc:
@@ -235,19 +236,20 @@ class BlockRequest(NetworkProtocol):
                 server.stream_and_keep_open(chunk, stream_id)
             offset += len(chunk)
         
-        logger.debug(
+        self.logger.debug(
             "Blocks request completed successfully. Closed stream",
             stream_id=stream_id,
             len=len(all_blocks),
         )
 
-    def res_intercept(self, stream_id: int, client: NodeConnection):
+    async def res_intercept(self, stream_id: int, client: PeerConnection):
         """Intercept Acknowledgement"""
         from jam.block.block import Block
 
         buffer = client.stream_buffer[stream_id]
 
-        logger.debug("Block request ack received", stream_id=stream_id, buffer_size=len(buffer))
+        self.logger.trace(
+            "Block request ack received.", stream_id=stream_id, buffer_size=len(buffer))
 
         # try:
         b_len = U32.decode(buffer)

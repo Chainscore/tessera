@@ -1,16 +1,17 @@
-from typing import cast
+import asyncio
+from typing import cast, TYPE_CHECKING
 from tsrkit_types import structure, Bool, U32, U8
 
-from jam.log_setup import network_logger as logger
-
+from jam.state.transitions import SafroleError, SafroleErrorCode
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.block.extrinsics.tickets import TicketEnvelope
-import asyncio
-from jam.network.connection import NodeConnection
-from jam.utils.constants import TICKET_SUBMISSION_END, GENESIS_TS, EPOCH_LENGTH
-from jam.finality.finality import Finality
+from jam.utils.constants import TICKET_SUBMISSION_END, EPOCH_LENGTH
 from jam.utils.gather import gather_with_exceptions
+
+if TYPE_CHECKING:
+    from jam.network.connection import PeerConnection
+
 
 @structure
 class EpochTicket:
@@ -42,43 +43,50 @@ class SafroleTicketDistribution(NetworkProtocol):
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-131132-safrole-ticket-distribution
     """
 
-    def __init__(self):
-        super().__init__()
-        self._prefix = PrefixType.CE132
+    _prefix = PrefixType.CE132
+
 
     async def transmit(self, data: CE132Data):
         """Transmit Safrole ticket from Validator to validator"""
 
-        from jam.network.start import node
+        node = self.jam.router.node
         if not node: return
 
         try:
             # check finality using received epoch index
-            from jam.settings import settings
-            main_db = settings.main_db
-            finality_block = Finality.load_final(main_db)
+            grandpa = self.jam.grandpa
+
+            finality_block = grandpa.load_final()
             finality_time_slot = finality_block.header.slot
 
             expected_epoch_index = finality_time_slot // EPOCH_LENGTH
             received_epoch_index = data.epoch_ticket.epoch_index
 
             if int(expected_epoch_index) != int(received_epoch_index):
-                logger.error("Finality lagging", current=received_epoch_index, final=expected_epoch_index)
-                raise ValueError("Finality lagging")
+                self.logger.error(
+                    "Finality lagging",
+                    current=received_epoch_index,
+                    final=expected_epoch_index
+                )
+                raise NetworkingError(Code.SYNC_ERROR)
 
-            if finality_time_slot%EPOCH_LENGTH < TICKET_SUBMISSION_END:
+            if finality_time_slot % EPOCH_LENGTH < TICKET_SUBMISSION_END:
                 # storing ticket extrinsic
-                from jam.block.extrinsics.tickets import ticket_store
-                ticket_store.store(data.epoch_ticket.ticket)
+                self.pool.tickets.store(data.epoch_ticket.ticket)
 
             else:
-                raise ValueError("Tickets are not allowed after TICKET_SUBMISSION_END")
+                self.logger.error("Tickets are not allowed after TICKET_SUBMISSION_END")
+                raise SafroleError(
+                    SafroleErrorCode.UNEXPECTED_TICKET,
+                    "Tickets are not allowed after TICKET_SUBMISSION_END",
+                )
 
             stream_data = data.epoch_ticket_len.encode() + data.epoch_ticket.encode()
             tasks = []
-            logger.info(f"Transmitting ticket ({data.epoch_ticket.ticket.signature.hex()[:6]+".."}) to proxy")
+            self.logger.debug(f"Transmitting ticket ({data.epoch_ticket.ticket.signature.hex()[:6]+".."}) to proxy")
+
             for client in node.all_connected:
-                logger.debug("Transmitting ticket", client=str(client.port))
+                self.logger.trace("Transmitting ticket", client=str(client.port))
 
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
                 client.stream_prefix[stream_id] = U8(self._prefix)
@@ -87,21 +95,22 @@ class SafroleTicketDistribution(NetworkProtocol):
                 task = asyncio.create_task(res)
                 tasks.append(task)
 
-                logger.debug(
+                self.logger.debug(
                     "Ticket transmitted to validator",
-                    client=str(client.port),
+                    client=client.peer_id,
                     stream_id=stream_id,
                 )
 
             res = await gather_with_exceptions(tasks)
-            logger.debug(
+            self.logger.info(
                 "Ticket transmission completed",
-                node=str(node.port),
+                ticket=data.epoch_ticket.ticket.signature.hex()[:6]+"..",
             )
+
             return res
 
         except Exception as e:
-            logger.error(
+            self.logger.error(
                 "Failed to transmit ticket to validator",
                 node=str(node.port),
                 error=str(e),
@@ -109,12 +118,12 @@ class SafroleTicketDistribution(NetworkProtocol):
             )
 
 
-    def req_intercept(self, stream_id: int, server: NodeConnection):
+    async def req_intercept(self, stream_id: int, server: "PeerConnection"):
         """Intercept & Process ticket"""
         buffer = server.stream_buffer[stream_id][1:]
 
         try:
-            logger.debug(
+            self.logger.debug(
                 "Received ticket",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
@@ -127,26 +136,38 @@ class SafroleTicketDistribution(NetworkProtocol):
                 raise NetworkingError(Code.INVALID_DATA)
 
             # check finality using received epoch index
-            from jam.settings import settings
-            main_db = settings.main_db
-            finality_block = Finality.load_final(main_db)
+            grandpa = self.jam.grandpa
+
+            finality_block = grandpa.load_final()
             finality_time_slot = finality_block.header.slot
 
             expected_epoch_index = finality_time_slot // EPOCH_LENGTH
             received_epoch_index = data.epoch_ticket.epoch_index
 
             if int(expected_epoch_index) != int(received_epoch_index):
-                logger.error("Finality lagging", current=received_epoch_index, final=expected_epoch_index)
-                raise ValueError("Finality lagging")
+                self.logger.error(
+                    "Finality lagging",
+                    current=received_epoch_index,
+                    final=expected_epoch_index
+                )
+                raise NetworkingError(Code.SYNC_ERROR)
 
             # Tickets are not allowed after ticket submission ends
-            if finality_time_slot%EPOCH_LENGTH < TICKET_SUBMISSION_END:
+            if finality_time_slot % EPOCH_LENGTH < TICKET_SUBMISSION_END:
                 # storing ticket extrinsic
-                from jam.block.extrinsics.tickets import ticket_store
-                ticket_store.store(data.epoch_ticket.ticket)
+                self.pool.tickets.store(data.epoch_ticket.ticket)
+
+                self.logger.info(
+                    "Received ticket.",
+                    ticket=data.epoch_ticket.ticket.signature.hex()[:6] + "..",
+                )
+
             else:
-                logger.error("Tickets are not allowed after TICKET_SUBMISSION_END")
-                raise ValueError("Tickets are not allowed after TICKET_SUBMISSION_END")
+                self.logger.error("Tickets are not allowed after TICKET_SUBMISSION_END")
+                raise SafroleError(
+                    SafroleErrorCode.UNEXPECTED_TICKET,
+                    "Tickets are not allowed after TICKET_SUBMISSION_END",
+                )
 
             # Return acknowledgment to validator
             ack = b""
@@ -154,7 +175,7 @@ class SafroleTicketDistribution(NetworkProtocol):
 
         except Exception as e:
             server.stop_stream(stream_id, 1)
-            logger.error(
+            self.logger.error(
                 "Error in ticket submission",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
@@ -162,11 +183,12 @@ class SafroleTicketDistribution(NetworkProtocol):
                 error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: NodeConnection) -> Bool:
+    async def res_intercept(self, stream_id: int, client: "PeerConnection") -> Bool:
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
+
         if buffer == b"":
-            logger.debug(
+            self.logger.debug(
                 "Ticket acknowledgement received",
                 stream_id=stream_id,
                 buffer_size=len(buffer),

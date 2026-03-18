@@ -1,14 +1,13 @@
 import asyncio
+from typing import cast
 from tsrkit_types import TypedVector, Uint, structure, Choice, U8
-from jam.utils.task_utils import create_safe_task
-from typing import TYPE_CHECKING, cast
-from tsrkit_types import TypedVector, Uint, structure, Choice
 
 from jam.utils.gather import gather_with_exceptions
+from jam.utils.task_utils import create_safe_task
 
-from jam.log_setup import network_logger
+from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-from jam.network.connection import NodeConnection
+from jam.network.connection import PeerConnection
 from jam.types.protocol.core import CoreIndex, ValidatorIndex, TrancheIndex
 from jam.types.protocol.crypto import (
     HeaderHash,
@@ -16,12 +15,6 @@ from jam.types.protocol.crypto import (
     Ed25519Signature,
     WorkReportHash,
 )
-from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
-
-
-# Module-specific logger
-logger = network_logger
-
 
 @structure
 class CoreReportHash:
@@ -100,35 +93,34 @@ class AuditAnnouncement(NetworkProtocol):
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-144-audit-announcement
     """
 
-    def __init__(self):
-        super().__init__()
-        self._prefix = PrefixType.CE144
+    _prefix = PrefixType.CE144
 
     async def transmit(self, data: CE144Data):
         """Transmit Announcement of assign Work report for auditing from Auditor to Other Validators(Auditors)"""
 
-        from jam.network.start import node
+        node = self.jam.router.node
 
         len_a = data.len_a.encode()
         msg_a = data.tranche_announcement.encode()
         len_b = data.len_b.encode()
         msg_b = data.evidence.encode()
 
-        logger.info(
+        peers = node.all_connected
+
+        self.logger.info(
             f"Transmitting Work-report Announcement to other Auditors",
             announcement=data.tranche_announcement,
             evidence=data.evidence,
             stream_a_size=data.len_a,
             stream_b_size=data.len_b,
+            count=len(peers)
         )
 
         tasks = []
 
-        logger.info("Transmitting Audit announcement", count=len(node.all_connected))
-
-        for client in node.all_connected:
+        for client in peers:
             try:
-                logger.debug("Transmitting Announcement to", peer=client)
+                self.logger.trace("Transmitting Announcement to", peer=client)
 
                 # send protocol prefix
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
@@ -138,7 +130,7 @@ class AuditAnnouncement(NetworkProtocol):
                 client.stream_buffer[stream_id] = b""
 
             except Exception as e:
-                logger.error(
+                self.logger.error(
                     "Failed to initialize stream for client",
                     peer=client,
                     error=str(e),
@@ -156,14 +148,14 @@ class AuditAnnouncement(NetworkProtocol):
                 task = asyncio.create_task(res)
                 tasks.append(task)
 
-                logger.debug(
+                self.logger.debug(
                     "Assign Work Reports announcement transmitted successfully",
                     stream_id=stream_id,
                     port=client.port,
                     validator=client,
                 )
             except Exception as e:
-                logger.error(
+                self.logger.error(
                     "Failed to transmitting Announcement",
                     error=str(e),
                     error_type=type(e).__name__,
@@ -173,7 +165,7 @@ class AuditAnnouncement(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: NodeConnection):
+    async def req_intercept(self, stream_id: int, server: PeerConnection):
         """Intercept lost of Work Report Announcement from other Auditors for their assigned Work Reports"""
         from jam.storage.tranche_audit_store import tranche_store
         from jam.types.audit.audit_tranche import Tranche
@@ -181,14 +173,14 @@ class AuditAnnouncement(NetworkProtocol):
         buffer = server.stream_buffer[stream_id][1:]
 
         if not buffer:
-            logger.warning("Empty buffer in req_intercept", stream_id=stream_id, server=server)
+            self.logger.warning("Empty buffer in req_intercept", stream_id=stream_id, server=server)
             return
 
         try:
             data = CE144Data.decode(buffer)
             data = cast(CE144Data, data)
 
-            logger.debug(
+            self.logger.debug(
                 f"Received Audit's Announcement from other Auditors {server.validator_index}",
                 stream_id=stream_id,
                 peer=server,
@@ -199,7 +191,7 @@ class AuditAnnouncement(NetworkProtocol):
         except Exception as e:
             # explicit decode error handling
             server.stop_stream(stream_id, 1)
-            logger.error(
+            self.logger.error(
                 "Failed to decode CE144Data",
                 stream_id=stream_id,
                 server=server,
@@ -229,7 +221,7 @@ class AuditAnnouncement(NetworkProtocol):
 
             ack = b""
             server.stream_and_close(ack, stream_id)
-            logger.debug(
+            self.logger.debug(
                 "Processed audit announcement",
                 server=server,
                 stream_id=stream_id,
@@ -238,19 +230,19 @@ class AuditAnnouncement(NetworkProtocol):
 
         except NetworkingError as ne:
             server.stop_stream(stream_id, 1)
-            logger.error(
+            self.logger.error(
                 "Networking error while handling announcement", error=str(ne), exc_info=True
             )
         except Exception as ex:
             server.stop_stream(stream_id, 1)
-            logger.error("Unexpected error in req_intercept", error=str(ex), exc_info=True)
+            self.logger.error("Unexpected error in req_intercept", error=str(ex), exc_info=True)
 
-    def res_intercept(self, stream_id: int, client: NodeConnection):
+    async def res_intercept(self, stream_id: int, client: PeerConnection):
         """Intercept Announcement Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
 
         if buffer == b"":
-            logger.info(
+            self.logger.debug(
                 "Announcement acknowledge received",
                 client_index=client.validator_index,
                 stream_id=stream_id,

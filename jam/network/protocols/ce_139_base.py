@@ -3,21 +3,19 @@ from typing import cast
 
 from tsrkit_types import structure, TypedVector, Uint, U8
 
-from jam.log_setup import network_logger as logger
-from jam.network.connection import NodeConnection
+from jam.network.connection import PeerConnection
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
 from jam.types.work.manifest import (
     SegmentIndex,
     Justification,
-    Justifications,
     Assurers,
 )
 from jam.types.work.shard import ShardIndex, SegmentsShard
 
-from jam.network.base.protocol import NetworkProtocol, PrefixType
+from jam.network.base.protocol import NetworkProtocol
 
-from jam.types.protocol.core import ErasureRoot, ValidatorIndex
+from jam.types.protocol.core import ErasureRoot
 from jam.utils.gather import gather_with_exceptions
 
 
@@ -81,18 +79,19 @@ CE140Data = CE139Data
 
 class SegmentShardRequestBase(NetworkProtocol):
 
-    def __init__(self, prefix: PrefixType):
-        super().__init__()
-        self._prefix = prefix
-
     async def transmit(self, data: CE139Data, peers: Assurers = None):
         """Transmit Erasure-Root and Shard Index from Guarantor to Assurer"""
-        from jam.network.start import node
+        node = self.jam.router.node
 
         msg_a = data.queries.encode()
         len_a = data.len.encode()
 
-        logger.info(f"Transmitting segment shard request")
+        if not peers:
+            peers = node.all_connected
+
+        self.logger.info(
+            f"Requesting audit shard from {len(peers)} assurers."
+        )
 
         tasks = []
         try:
@@ -100,7 +99,7 @@ class SegmentShardRequestBase(NetworkProtocol):
                 if client and client.validator_index not in peers:
                     continue
 
-                logger.debug(
+                self.logger.debug(
                     "Requesting segment shard",
                     peer=client,
                     queries=len(data.queries),
@@ -126,7 +125,7 @@ class SegmentShardRequestBase(NetworkProtocol):
                 return responses
 
         except Exception as e:
-            logger.error(
+            self.logger.error(
                 "Failed to request shards", error=str(e), error_type=type(e).__name__
             )
 
@@ -140,8 +139,8 @@ class SegmentShardRequestBase(NetworkProtocol):
 
         return data
 
-    def req_intercept(self, stream_id: int, server: NodeConnection):
+    async def req_intercept(self, stream_id: int, server: PeerConnection):
         ...
 
-    def res_intercept(self, stream_id: int, client: NodeConnection):
+    async def res_intercept(self, stream_id: int, client: PeerConnection):
         ...

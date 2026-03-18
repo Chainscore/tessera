@@ -2,19 +2,15 @@ from typing import Tuple
 from jam.types.protocol.crypto import Hash
 from tsrkit_types import U32, Uint, Bytes, TypedVector
 
-from jam.network.connection import NodeConnection
-from jam.network.protocols.ce_139_base import (
-    SegmentShardRequestBase,
-    Justifications,
-    Justification,
-)
+from jam.network.connection import PeerConnection
+from jam.network.protocols.ce_139_base import (SegmentShardRequestBase)
 from jam.network.base.protocol import PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.log_setup import network_logger as logger
 from jam.utils.merkle import BMRFunctions
 
 from jam.types.work.shard import SegmentsShard, SegmentShard
+from jam.types.work.manifest import Justifications, Justification
 
 from jam.storage.da.segments import SegmentShardsDA
 from jam.storage.da.audits import JustificationsDA, AuditShardsDA
@@ -38,12 +34,11 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-139140-segment-shard-request
     """
 
-    def __init__(self):
-        super().__init__(PrefixType.CE140)
+    _prefix = PrefixType.CE140
 
-    def req_intercept(self, stream_id: int, server: NodeConnection):
+    async def req_intercept(self, stream_id: int, server: PeerConnection):
         """Intercept & Process Erasure-Root, Shard Index & Segment Indices on Assurer"""
-        from jam.settings import settings
+        settings = self.jam.settings
 
         buffer = server.stream_buffer[stream_id]
 
@@ -52,6 +47,7 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
 
             d3l = settings.d3l
             audit = settings.audit_da
+
             ss_da = SegmentShardsDA(d3l)
             audits_da = AuditShardsDA(audit)
             justification_da = JustificationsDA(audit)
@@ -59,7 +55,7 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
             # Fetching segments...
             shards = SegmentsShard([])
 
-            bmrfunctions = BMRFunctions()
+            bmr_functions = BMRFunctions()
             justifications = Justifications([])
 
             for query in request.queries:
@@ -82,7 +78,7 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
 
                         for index in query.seg_indexes:
                             trace = Justification(
-                                bmrfunctions.trace_fn(values=s, index=index).unwrap()
+                                bmr_functions.trace_fn(values=s, index=index).unwrap()
                             )
                             justification.extend(bundle_shard_hash)
                             justification.extend(trace)
@@ -97,7 +93,7 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
                         raise KeyError("Shard index not found")
 
                 except Exception as e:
-                    logger.error(
+                    self.logger.error(
                         "Error processing some shard index",
                         error=str(e),
                         error_type=type(e).__name__,
@@ -126,14 +122,14 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
             # Stop Streaming
             server.stop_stream(stream_id, 1)
 
-            logger.error(
+            self.logger.error(
                 "Failed to handle shard request via CE140",
                 error=str(e),
                 error_type=type(e).__name__,
             )
 
-    def res_intercept(
-        self, stream_id: int, client: NodeConnection
+    async def res_intercept(
+        self, stream_id: int, client: PeerConnection
     ) -> Tuple[SegmentsShard, Justifications] | None:
         """Intercept [Segment Shard] and Justification"""
         buffer = client.stream_buffer[stream_id]
@@ -155,7 +151,7 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
                 offset += off
                 segments.append(segment)
                 cnt += 1
-                logger.debug(
+                self.logger.trace(
                     "Parsed segment", cnt=cnt, stream_id=stream_id, peer=client
                 )
 
@@ -166,12 +162,12 @@ class SegmentShardRequestWithJustifications(SegmentShardRequestBase):
                 justifications.append(justification)
                 justifications_buf = justifications_buf[length + 4 :]
 
-            logger.debug(
+            self.logger.debug(
                 "Segment Shards and Justifications received via CE140", peer=client
             )
 
             return segments, justifications
 
         except Exception as e:
-            logger.error(Code.BAD_RESPONSE, error=e)
+            self.logger.error(Code.BAD_RESPONSE, error=e)
             return None

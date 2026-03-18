@@ -3,9 +3,7 @@ from typing import cast, Tuple
 
 from tsrkit_types import Uint, structure, TypedVector, Bytes, U8
 
-from jam.log_setup import network_logger as logger
-
-from jam.network.connection import NodeConnection
+from jam.network.connection import PeerConnection
 from jam.network.protocols.ce_137 import CE137Data
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
@@ -57,29 +55,27 @@ class AuditShardRequestProtocol(NetworkProtocol):
         https://docs.jamcha.in/advanced/simple-networking/spec#ce-138-shard-distribution
     """
 
-    def __init__(self):
-        super().__init__()
-        self._prefix = PrefixType.CE138
+    _prefix = PrefixType.CE138
 
     async def transmit(self, data: CE138Data, assurers: Assurers = None):
         """Transmit Erasure-Root and Shard Index from Auditor to Assurer"""
-
-        from jam.network.start import node
+        node = self.jam.router.node
         query = data.query
         msg_a = data.query.encode()
         len_a = data.len.encode()
+        peers = node.all_connected
 
-        logger.info(
-            f"Transmitting shard index & erasure root to {len(assurers)} assurer"
+        self.logger.info(
+            f"Requesting audit shard from {len(assurers) if assurers else len(peers)} assurers."
         )
 
         tasks = TypedVector([])
         try:
-            for client in node.all_connected:
+            for client in peers:
                 if client.validator_index not in assurers:
                     continue
 
-                logger.debug(
+                self.logger.debug(
                     "Requesting audit shard",
                     peer=client,
                     er_root=query.erasure_root.hex(),
@@ -103,7 +99,7 @@ class AuditShardRequestProtocol(NetworkProtocol):
             return await gather_with_exceptions(tasks)
 
         except Exception as e:
-            logger.error(
+            self.logger.error(
                 "Failed to request audit shard.",
                 er_root=query.erasure_root.hex(),
                 s_ind=query.shard_index,
@@ -111,13 +107,13 @@ class AuditShardRequestProtocol(NetworkProtocol):
                 error_type=type(e).__name__,
             )
 
-    def req_intercept(self, stream_id: int, server: NodeConnection):
+    async def req_intercept(self, stream_id: int, server: PeerConnection):
         """Intercept & Process Erasure-Root and Shard Index on Assurer"""
-        from jam.settings import settings
+        settings = self.jam.settings
 
         buffer = server.stream_buffer[stream_id][1:]
 
-        logger.debug("Received Shard index & erasure root")
+        self.logger.trace("Received Shard index & erasure root")
 
         try:
             data = CE138Data.decode(buffer)
@@ -171,12 +167,12 @@ class AuditShardRequestProtocol(NetworkProtocol):
             # Stop Streaming
             server.stop_stream(stream_id, 1)
 
-            logger.error(
+            self.logger.error(
                 "Failed to find audit shard.", error=str(e), error_type=type(e).__name__
             )
 
-    def res_intercept(
-            self, stream_id: int, client: NodeConnection
+    async def res_intercept(
+            self, stream_id: int, client: PeerConnection
     ) -> Tuple[BundleShard, Justification] | None:
         """Intercept Bundle Shard and Justification"""
         buffer = client.stream_buffer[stream_id]
@@ -188,10 +184,10 @@ class AuditShardRequestProtocol(NetworkProtocol):
             if not data or not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            logger.debug("Audit Shard received", peer=client)
+            self.logger.debug("Audit Shard received", peer=client)
 
             return data.bundle_shard, data.justification
 
         except Exception as e:
-            logger.error(Code.BAD_RESPONSE, error=str(e))
+            self.logger.error(Code.BAD_RESPONSE, error=str(e))
             return None

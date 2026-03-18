@@ -1,8 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import Any, TYPE_CHECKING
 
+import structlog
+
 if TYPE_CHECKING:
-    from jam.network.connection import NodeConnection
+    from jam.network.connection import PeerConnection
+    from jam.jam_node import JamNode
 
 from tsrkit_types import Uint
 
@@ -32,6 +35,9 @@ class PrefixType:
     CE143 = U8(143)
     CE144 = U8(144)
     CE145 = U8(145)
+    CE146 = U8(146)
+    CE147 = U8(147)
+    CE148 = U8(148)
     CE201 = U8(201)
 
 
@@ -49,6 +55,22 @@ class NetworkProtocol(ABC):
 
     _prefix: PrefixType
     max_buffer_size: int
+    jam: "JamNode"
+
+    def __init__(self, node: "JamNode"):
+        self.jam = node
+        self.logger = structlog.get_logger("network").bind(prefix=self._prefix)
+
+    @property
+    def pool(self):
+        return self.jam.pool
+
+    @property
+    def publisher(self):
+        if self.jam.responder:
+            return self.jam.responder.publisher
+
+        raise AttributeError("RPC Endpoint not initialized yet!")
 
     @abstractmethod
     async def transmit(self, data: Any):
@@ -59,7 +81,7 @@ class NetworkProtocol(ABC):
         ...
 
     @abstractmethod
-    def req_intercept(self, stream_id: int, server: "NodeConnection"):
+    async def req_intercept(self, stream_id: int, server: "PeerConnection"):
         """
         Function to intercept & process data / query from connected node.
         And sends acknowledgement / response to the node.
@@ -68,7 +90,7 @@ class NetworkProtocol(ABC):
         ...
 
     @abstractmethod
-    def res_intercept(self, stream_id: int, client: "NodeConnection"):
+    async def res_intercept(self, stream_id: int, client: "PeerConnection"):
         """
         Function to intercept & process returned data from connected node.
         Must be implemented by subclasses.

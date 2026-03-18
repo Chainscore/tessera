@@ -5,7 +5,7 @@ from typing import cast
 from tsrkit_types import structure, Uint, U8, U32
 from jam.types.protocol.core import ValidatorIndex, EpochIndex
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-from jam.network.connection import NodeConnection
+from jam.network.connection import PeerConnection
 from jam.log_setup import network_logger
 from jam.types.protocol.crypto import Ed25519Signature, Ed25519Public
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
@@ -13,7 +13,6 @@ from jam.utils.gather import gather_with_exceptions
 from jam.types.work.report import WorkReportHash
 from jam.utils.constants import EPOCH_LENGTH
 from jam.types.audit.audit_tranche import Tranche
-from jam.state.state import state
 
 logger = network_logger
 
@@ -54,31 +53,29 @@ class JudgmentPublication(NetworkProtocol):
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-145-judgment-publication
     """
 
-    def __init__(self):
-        super().__init__()
-        self._prefix = PrefixType.CE145
+    _prefix = PrefixType.CE145
 
     async def transmit(self, data: CE145Data):
         """Transmit Judgments for the particular Work Report to other Auditors"""
-
-        from jam.network.start import node
+        node = self.jam.router.node
 
         len_a = data.len_a.encode()
         msg_a = data.judgment.encode()
 
-        logger.info(
-            "Transmitting Work-report judgement to other Auditors",
-            judgment=data.judgment,
-            len_a=data.len_a,
-        )
-
         tasks = []
         transmitted_count = 0
 
-        try:
-            logger.info(f"Transmitting Judgment to {len(node.all_connected)} validators")
+        peers = node.all_connected
 
-            for client in node.all_connected:
+        try:
+            self.logger.info(
+                f"Transmitting Work-report judgement to other Auditors",
+                peers=len(peers),
+                judgment=data.judgment,
+                judgement_len=data.len_a,
+            )
+
+            for client in peers:
                 try:
                     # send protocol prefix
                     stream_id = client.stream_and_keep_open(message=self._prefix.encode())
@@ -96,14 +93,14 @@ class JudgmentPublication(NetworkProtocol):
                     task = asyncio.create_task(res)
                     tasks.append(task)
 
-                    logger.debug(
+                    self.logger.debug(
                         "Judgment transmitted successfully",
                         stream_id=stream_id,
                         port=client.port,
                         validator=client,
                     )
                 except Exception as e:
-                    logger.error(
+                    self.logger.error(
                         "Failed to transmit to client",
                         client=client,
                         error=str(e),
@@ -114,28 +111,28 @@ class JudgmentPublication(NetworkProtocol):
             return responses
 
         except Exception as e:
-            logger.error(
+            self.logger.error(
                 "Failed to transmitting judgment",
                 error=str(e),
                 error_type=type(e).__name__,
             )
 
-    def req_intercept(self, stream_id: int, server: NodeConnection):
+    async def req_intercept(self, stream_id: int, server: PeerConnection):
         """Intercept individual Judgment from other Auditors for their assigned Work Reports"""
-        from jam.state.state import state
-        from jam.settings import settings
+        state = self.jam.state
+        settings = self.jam.settings
 
         buffer = server.stream_buffer[stream_id][1:]
 
         if not buffer:
-            logger.warning("Empty buffer in req_intercept", stream_id=stream_id, server=server)
+            self.logger.warning("Empty buffer in req_intercept", stream_id=stream_id, server=server)
             return
 
         try:
             data = CE145Data.decode(buffer)
             data = cast(CE145Data, data)
 
-            logger.debug(
+            self.logger.debug(
                 f"Received Judgment from auditor {server.validator_index}",
                 stream_id=stream_id,
                 peer=server,
@@ -144,7 +141,7 @@ class JudgmentPublication(NetworkProtocol):
             )
         except Exception as e:
             server.stop_stream(stream_id, 1)
-            logger.error(
+            self.logger.error(
                 "Failed to decode CE145Data",
                 stream_id=stream_id,
                 server=server,
@@ -162,14 +159,15 @@ class JudgmentPublication(NetworkProtocol):
             ed25519_signature = data.judgment.ed25519_signature
 
             # epoch compare
+            val_index = settings.validator_index(state)
             curr_epoch_index = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
             if curr_epoch_index == epoch_index:
-                ed25519_key = state.kappa[settings.validator_index].ed25519
-                logger.info("Same epoch judgment received")
+                ed25519_key = state.kappa[val_index].ed25519
+                self.logger.info("Same epoch judgment received")
             else:
                 if curr_epoch_index - EpochIndex(1) == epoch_index:
-                    ed25519_key = state.lambda_[settings.validator_index].ed25519
-                    logger.info("Judgments received for last epoch")
+                    ed25519_key = state.lambda_[val_index].ed25519
+                    self.logger.info("Judgments received for last epoch")
                 else:
                     raise KeyError("Judgment age is not valid; work report is too old.")
 
@@ -188,7 +186,7 @@ class JudgmentPublication(NetworkProtocol):
         except Exception as e:
             # Stop Streaming
             server.stop_stream(stream_id, 1)
-            logger.error(
+            self.logger.error(
                 "Error while intercepting Judgement",
                 auditor=server,
                 stream_id=stream_id,
@@ -196,12 +194,12 @@ class JudgmentPublication(NetworkProtocol):
                 err_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: NodeConnection):
+    async def res_intercept(self, stream_id: int, client: PeerConnection):
         """Intercept judgment Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
 
         if buffer == b"":
-            logger.info(
+            self.logger.info(
                 "Judgment acknowledge received",
                 client_index=client.validator_index,
                 stream_id=stream_id,
@@ -242,15 +240,17 @@ class JudgmentPublication(NetworkProtocol):
 
     async def negative_judgments(self, judgment: Judgment, tranche: Tranche):
         """this handle only negative judgments, do refine and transmit judgments."""
-        from jam.settings import settings
         from jam.storage.tranche_audit_store import tranche_store
         from jam.audit.audit import Audit
         from jam.audit.utils import Utils
 
+        state = self.jam.state
+        settings = self.jam.settings
+
         audit = Audit()
         utils = Utils()
 
-        validator_index = settings.validator_index
+        validator_index = settings.validator_index(state)
         wr_hash = judgment.work_report_hash
 
         # process refine results

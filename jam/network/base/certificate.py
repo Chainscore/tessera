@@ -1,6 +1,6 @@
 import os
 import base64
-
+import structlog
 from datetime import datetime, timedelta, timezone
 
 from cryptography import x509
@@ -14,14 +14,21 @@ from cryptography.hazmat.primitives.serialization import (
     NoEncryption,
     PublicFormat,
 )
+
+from typing import TYPE_CHECKING
+
+from cryptography.x509.verification import VerificationError
+
 from tsrkit_types import Uint
 
-from jam.log_setup import network_logger as logger
-from jam.types.protocol.crypto import Hash
+
+if TYPE_CHECKING:
+    from jam.settings import Settings
 
 ASN1_PREFIX = bytes.fromhex("302e020100300506032b657004220420")
 ZERO_SEED = b"\x00" * 32
 
+logger = structlog.get_logger("network")
 
 def base32_encode(data):
     return base64.b32encode(data).decode("utf-8").lower().replace("=", "")
@@ -47,13 +54,13 @@ def generate_san(pubkey: bytes) -> str:
     return "e" + b(n, 52)
 
 
-def generate_keys(port: int) -> str:
+def generate_keys(settings: "Settings") -> str:
     """
     Generate keys for a node running on a given port
         - Goes to /seeds/keys.json to read the secret key
         - Generates the certificate in /seeds/{port}/cert.pem and the public key in /seeds/{port}/pub_key.pem
     Args:
-        port (int): Port number
+        settings (Settings): Node Settings
 
     Raises:
         ValueError: If the seed is not 32 bytes long
@@ -61,18 +68,47 @@ def generate_keys(port: int) -> str:
     Returns:
         str: SAN of the certificate
     """
+    port = settings.port
+
     if port == 0:
         return ""
-    from jam.settings import settings
 
-    seed = settings.seed
-    # Create the private key from seed and
+    seed_dir = f"seeds/{port}"
+    key_path = f"{seed_dir}/key.pem"
+    pub_path = f"{seed_dir}/pub_key.pem"
+    cert_path = f"{seed_dir}/cert.pem"
+
+    # Validate Existing Files
+    if os.path.exists(seed_dir) and all(os.path.exists(p) for p in [key_path, pub_path, cert_path]):
+        try:
+            with open(cert_path, "rb") as f:
+                cert = x509.load_pem_x509_certificate(f.read())
+
+            # Validate certificate
+            is_valid = verify_certificate(cert)
+
+            # Verify Certificate Public Key matches Settings Public Key
+            cert_pub_bytes = cert.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
+            matches_settings = (cert_pub_bytes == bytes(settings.ed25519_public))
+
+            if is_valid and matches_settings:
+                san_ext = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName)
+                return san_ext.value.get_values_for_type(x509.DNSName)[0]
+
+        except Exception:
+            # Any failure in validation (IO, parsing, or mismatch) triggers regeneration
+            pass
+
+    # Regeneration Logic
     # Store private key in /seeds/{port}/key.pem
     # And public key in /seeds/{port}/pub_key.pem
 
-    # JIP-5 Sync
-    ed25519_secret = Hash.blake2b(bytes("jam_val_key_ed25519", "utf-8") + seed)
-    private_key = Ed25519PrivateKey.from_private_bytes(bytes(ed25519_secret))
+    # If seeds/{port} doesn't exist, create it
+    os.makedirs(seed_dir, exist_ok=True)
+
+    # Use pre-computed keys from settings
+    private_key = Ed25519PrivateKey.from_private_bytes(bytes(settings.ed25519_private))
+    public_key = private_key.public_key()
 
     private_key_pem = private_key.private_bytes(
         encoding=Encoding.PEM,
@@ -80,35 +116,24 @@ def generate_keys(port: int) -> str:
         encryption_algorithm=NoEncryption(),
     )
 
-    # If seeds/{port} doesn't exist, create it
-    if not os.path.exists(f"seeds/{port}"):
-        os.makedirs(f"seeds/{port}")
-
     with open(f"seeds/{port}/key.pem", "wb") as f:
         f.write(private_key_pem)
-
-    public_key = private_key.public_key()
 
     public_key_pem = public_key.public_bytes(
         encoding=Encoding.PEM, format=PublicFormat.SubjectPublicKeyInfo
     )
 
-    # If seeds/{port}/pub_key.pem doesn't exist, create it
     with open(f"seeds/{port}/pub_key.pem", "wb") as f:
         f.write(public_key_pem)
 
     # Create the certificate
     # Store it in /seeds/{port}/cert.pem
-    public_key_der = base64.b64decode(public_key_pem.split(b"\n")[1])
-    decoded_public_key = public_key_der[-32:]
-
-    san = generate_san(decoded_public_key)
-
+    san = generate_san(settings.ed25519_public)
     valid_from = datetime.now(timezone.utc)
     valid_to = valid_from + timedelta(days=365)
 
     subject = issuer = x509.Name(
-        [x509.NameAttribute(x509.NameOID.COMMON_NAME, "JAM Client Ed25519 Cert")]
+        [x509.NameAttribute(x509.NameOID.COMMON_NAME, "TesseraJAM Node Ed25519 Cert")]
     )
 
     cert_builder = (
@@ -123,7 +148,6 @@ def generate_keys(port: int) -> str:
     )
 
     certificate = cert_builder.sign(private_key=private_key, algorithm=None)
-
     with open(f"seeds/{port}/cert.pem", "wb") as f:
         f.write(certificate.public_bytes(Encoding.PEM))
 
@@ -135,15 +159,15 @@ def verify_certificate(cert: x509.Certificate):
         now = datetime.now(timezone.utc)
 
         if cert.not_valid_before_utc > now:
-            raise ValueError("Certificate not yet valid.")
+            raise VerificationError("Certificate not yet valid.")
 
         if cert.not_valid_after_utc < now:
-            raise ValueError("Certificate expired.")
+            raise VerificationError("Certificate expired.")
 
         pk = cert.public_key()
 
         if not isinstance(pk, Ed25519PublicKey):
-            raise ValueError("Certificate public key must be Ed25519.")
+            raise VerificationError("Certificate public key must be Ed25519.")
 
         test_san = generate_san(pk.public_bytes_raw())
 
@@ -153,15 +177,15 @@ def verify_certificate(cert: x509.Certificate):
         san = san_extension.value.get_values_for_type(x509.general_name.DNSName)
 
         if len(san) != 1:
-            raise ValueError(
+            raise VerificationError(
                 "Certificate must have exactly one Subject Alternative Name."
             )
 
         if san[0] != test_san:
-            raise ValueError("Subject Alternative Name doesn't match with key.")
+            raise VerificationError("Subject Alternative Name doesn't match with key.")
 
         if cert.signature_algorithm_oid != x509.SignatureAlgorithmOID.ED25519:
-            raise ValueError("Expected Ed25519 signature algorithm.")
+            raise VerificationError("Expected Ed25519 signature algorithm.")
 
         logger.debug("Certificate verification successful!", issuer=cert.issuer)
 

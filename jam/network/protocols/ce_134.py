@@ -2,13 +2,14 @@ import asyncio
 
 from typing import cast
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from tsrkit_types import Option, Uint, structure, U8, U64, String
 
-from jam.log_setup import network_logger as logger
+from jam.storage.da.packages import PackageDA
+from jam.storage.da.mappings import PackageStatus, PackageStatusMap
+from tsrkit_types import Option, Uint, structure, U8, U64, String
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-from jam.network.connection import NodeConnection
+from jam.network.connection import PeerConnection
 from jam.storage.item_extrinsics import ItemExtrinsics
 
 from jam.types.protocol.core import CoreIndex
@@ -24,7 +25,7 @@ from jam.telemetry.events import (
     WorkPackageBeingShared, WorkPackageReceived, WorkPackageFailed,
     WorkPackageOutline
 )
-from tsrkit_types import Bytes, Bytes32
+from tsrkit_types import Bytes32
 
 
 @structure
@@ -90,14 +91,12 @@ class WorkPackageSharing(NetworkProtocol):
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-134-work-package-sharing
     """
 
-    def __init__(self):
-        super().__init__()
-        self._prefix = PrefixType.CE134
+    _prefix = PrefixType.CE134
 
     async def transmit(self, data: CE134Data):
         """Request Work Report from Node"""
-        from jam.network.start import node
-        from jam.state.state import state
+        node = self.jam.router.node
+        state = self.jam.state
 
         msg_a = data.core_segment.encode()
         len_a = data.map_len.encode()
@@ -109,11 +108,14 @@ class WorkPackageSharing(NetworkProtocol):
         # Fetch guarantors mapping
         from jam.utils.assignment import assign_guarantors
 
-        mapping = assign_guarantors()
+        mapping = assign_guarantors(self.jam)
         guarantors = mapping[0][ci]
-        logger.debug("Fetched Assigned Guarantors (134)", mapping=mapping[1], tau=state.tau, root=state.root.hex())
+        self.logger.debug(
+            "Fetched Assigned Guarantors",
+            mapping=mapping[1], tau=state.tau, root=state.root.hex()
+        )
 
-        logger.info(
+        self.logger.info(
             "Transmitting work package bundle to guarantors",
             core=ci,
             guarantors=guarantors,
@@ -123,7 +125,6 @@ class WorkPackageSharing(NetworkProtocol):
         )
 
         tasks = []
-        responses = []
         transmitted_count = 0
         event_id = id(data) & 0xFFFFFFFFFFFFFFFF
 
@@ -133,14 +134,14 @@ class WorkPackageSharing(NetworkProtocol):
                     continue
 
                 # Get peer_id for telemetry
-                peer_id_bytes = getattr(client, 'peer_id', bytes(32))
+                peer_id_bytes = getattr(client, 'peer_ed_key', bytes(32))
                 if not isinstance(peer_id_bytes, bytes) or len(peer_id_bytes) != 32:
                     peer_id_bytes = bytes(32)
                 
                 # Emit SharingWorkPackage event
                 emit_event(SharingWorkPackage(event_id=U64(event_id), peer_id=Bytes32(peer_id_bytes)))
 
-                logger.debug("Transmitting bundle", peer=client)
+                self.logger.trace("Transmitting bundle", peer=client.peer_id)
 
                 # Send Protocol Prefix
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
@@ -162,31 +163,33 @@ class WorkPackageSharing(NetworkProtocol):
                 # Emit BundleSent event
                 emit_event(BundleSent(event_id=U64(event_id), peer_id=Bytes32(peer_id_bytes)))
 
-                logger.debug(
+                self.logger.debug(
                     "Work package bundle transmitted to guarantor",
                     stream_id=stream_id,
                     peer=client,
                     core=ci,
                 )
 
-
             except Exception as e:
                 # Emit WorkPackageSharingFailed event
-                emit_event(WorkPackageSharingFailed(event_id=U64(event_id), peer_id=Bytes32(peer_id_bytes), reason=String(str(e)[:100])))
-                logger.error(
+                emit_event(WorkPackageSharingFailed(
+                    event_id=U64(event_id), peer_id=Bytes32(peer_id_bytes), reason=String(str(e)[:100]))
+                )
+
+                self.logger.error(
                     "Failed to transmit work package bundle to guarantor",
                     error=str(e),
                     error_type=type(e).__name__,
                 )
 
         if transmitted_count > 2:
-            raise ValueError(
+            print(
                 "Trying to transmit work package bundle to more than 2 guarantors"
             )
 
         responses = await gather_with_exceptions(tasks)
 
-        logger.info(
+        self.logger.info(
             "Work package bundle transmission completed",
             transmitted_to=transmitted_count,
             guarantors=guarantors,
@@ -195,14 +198,14 @@ class WorkPackageSharing(NetworkProtocol):
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: NodeConnection):
+    async def req_intercept(self, stream_id: int, server: PeerConnection):
         """Intercept Work Package Bundle & Build Work Report on Core's Guarantors"""
-        from jam.settings import settings
+        settings = self.jam.settings
 
         buffer = server.stream_buffer[stream_id][1:]
 
         try:
-            logger.debug(
+            self.logger.debug(
                 "Received work package bundle",
                 stream_id=stream_id,
                 peer=server,
@@ -217,23 +220,44 @@ class WorkPackageSharing(NetworkProtocol):
 
             bundle = data.work_package_bundle
 
-            logger.debug("Validating Work Package..")
+            self.logger.trace("Validating Work Package..")
             from jam.incore.validator import Validator
+            from jam.incore.error import ValidatorError
 
             validator = Validator()
-            validator.validate_wp(bundle.package)
+            is_valid = validator.validate_wp(bundle.package)
+
+            wp_da = PackageDA(settings.d3l)
+            wp_status_da = PackageStatusMap(settings.d3l)
+            wp_hash = bundle.package.hash()
+
+            status = PackageStatus.empty()
+            if not is_valid:
+                status.status = String("FAILED")
+                status.err = String("Invalid Work Package")
+                wp_status_da.put(wp_hash, status)
+
+                # TODO: Publish failed EVENT
+                # TODO: Store WP as failed
+                raise ValueError("Work Package isn't valid")
+
+            self.logger.trace("Storing WP..", wp_hash=bundle.package.hash().hex()[:16]+"...")
+            wp_da.put(bundle.package)
+
+            status.status = String("REPORTABLE")
+            wp_status_da.put(wp_hash, status)
 
             db = settings.main_db
-            logger.debug("Storing Extrinsics..")
+            self.logger.debug("Storing Extrinsics..")
             extrinsics = bundle.extrinsics
             ext_da = ItemExtrinsics(db)
             ext_da.store_processed(extrinsics)
 
             # Generating report from work package bundle
-            logger.debug("Building Work Report..")
+            self.logger.trace("Building Work Report..")
             from jam.incore.processor import Processor
 
-            processor = Processor()
+            processor = Processor(self.jam)
             wr, wr_hash = processor.process_bundle(
                 core=data.core_segment.core_index,
                 bundle=bundle,
@@ -243,11 +267,11 @@ class WorkPackageSharing(NetworkProtocol):
             ed25519_key = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private)
 
             # Build Guarantee
-            logger.debug("Building guarantee..")
+            self.logger.trace("Building guarantee..")
             payload = X.GUARANTEE.value + wr_hash.encode()
 
             # Sign the Guarantee
-            logger.debug("Signing guarantee..")
+            self.logger.trace("Signing guarantee..")
             sign = Ed25519Signature(ed25519_key.sign(payload))
 
             # Build Credential
@@ -255,7 +279,7 @@ class WorkPackageSharing(NetworkProtocol):
 
             # Return Credential to OG Guarantor
 
-            logger.debug(
+            self.logger.trace(
                 "Sharing guarantee..",
                 wr_hash=wr_hash.hex()[:16] + "...",
                 sign=sign.hex()[:16] + "...",
@@ -268,10 +292,12 @@ class WorkPackageSharing(NetworkProtocol):
             server.stream_and_keep_open(len_a, stream_id)
             server.stream_and_close(msg_a, stream_id)
 
-            logger.debug(
-                "Report credential sent to OG guarantor",
-                guarantor=server,
+            self.logger.info(
+                "Refined work package bundle and shared guarantee with guarantor.",
                 stream_id=stream_id,
+                guarantor=server,
+                wp_hash=wp_hash.hex()[:16] + "...",
+                wr_hash=wr_hash.hex()[:16] + "...",
                 credential_size=len(cred.encode()),
             )
 
@@ -279,7 +305,7 @@ class WorkPackageSharing(NetworkProtocol):
             # Stop Streaming
             server.stop_stream(stream_id, 1)
 
-            logger.error(
+            self.logger.error(
                 "Error processing work package bundle",
                 guarantor=server,
                 stream_id=stream_id,
@@ -288,13 +314,13 @@ class WorkPackageSharing(NetworkProtocol):
                 error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: NodeConnection
-                      ) -> tuple[Credential | None, NodeConnection]:
+    async def res_intercept(self, stream_id: int, client: PeerConnection
+                      ) -> tuple[Credential | None, PeerConnection]:
         """Intercept Report Guarantee from guarantors"""
         buffer = client.stream_buffer[stream_id]
 
         try:
-            logger.debug(
+            self.logger.trace(
                 "Received report credential from guarantor",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
@@ -305,8 +331,8 @@ class WorkPackageSharing(NetworkProtocol):
             if not data or not data.is_valid:
                 raise NetworkingError(Code.INVALID_DATA)
 
-            logger.info(
-                "Received guarantee",
+            self.logger.debug(
+                "Received report guarantee.",
                 stream_id=stream_id,
                 peer=client,
                 wr_hash=data.cred.work_report_hash.hex()[:16] + "...",
@@ -316,7 +342,7 @@ class WorkPackageSharing(NetworkProtocol):
             return data.cred, client
 
         except Exception as e:
-            logger.error(
+            self.logger.error(
                 Code.BAD_RESPONSE,
                 stream_id=stream_id,
                 buffer_size=len(buffer),

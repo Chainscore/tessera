@@ -1,14 +1,10 @@
 import asyncio
-import time
-from typing import cast
+from typing import cast, Optional, TYPE_CHECKING
 
 from tsrkit_types import structure, Uint, U8
-from jam.log_setup import network_logger as logger
 
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
-from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-# from jam.state.transitions.report.guarantee_assignment import assign_fn
 
 from jam.types.protocol.core import CoreIndex
 from jam.types.work.manifest import Extrinsics
@@ -16,6 +12,8 @@ from jam.types.work.package import WorkPackage
 
 from jam.utils.assignment import assign_guarantors
 
+if TYPE_CHECKING:
+    from jam.network.connection import PeerConnection
 
 @structure
 class WorkPackageCore:
@@ -55,14 +53,13 @@ class WorkPackageSubmission(NetworkProtocol):
         https://docs.jamcha.in/knowledge/advanced/simple-networking/spec#ce-133-work-package-submission
     """
 
-    def __init__(self):
-        super().__init__()
-        self._prefix = PrefixType.CE133
+    _prefix = PrefixType.CE133
 
-    async def transmit(self, data: CE133Data) -> tuple[bool, NodeConnection | None] | None:
+    async def transmit(self, data: CE133Data) -> Optional[tuple[bool, Optional["PeerConnection"]]]:
         """Transmit Work Package from Builder to Guarantor"""
-        from jam.network.start import node
-        from jam.state.state import state
+        node = self.jam.router.node
+        state = self.jam.state
+
         if not node: return None
 
         msg_a = data.package_data.encode()
@@ -73,14 +70,16 @@ class WorkPackageSubmission(NetworkProtocol):
         ci = data.package_data.core_index
 
         # Fetch guarantors mapping
-        mapping = assign_guarantors()
+        mapping = assign_guarantors(self.jam)
         guarantors = mapping[0][ci]
-        logger.debug("Assigned Guarantors (133)", mapping=mapping[1], tau=state.tau, root=state.root.hex())
-        # mapping = assign_fn(state)
-        # guarantors = mapping[1]
-        # logger.debug("Fetched Assigned Guarantors (133)", mapping=mapping[0], tau=state.tau, root=state.root.hex())
+        self.logger.debug(
+            "Fetched Assigned Guarantors.",
+            mapping=mapping[1], tau=state.tau, curr_state_root=state.root.hex()
+        )
+
         wp_hash = data.package_data.work_package.hash().hex()
-        logger.info(
+
+        self.logger.debug(
             "Trying transmitting work package",
             core=ci,
             guarantors=guarantors,
@@ -97,7 +96,6 @@ class WorkPackageSubmission(NetworkProtocol):
             try:
                 if client.val not in guarantors:
                     continue
-                logger.debug("Transmitting work package", peer=client)
 
                 # Send Protocol Prefix
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
@@ -111,7 +109,7 @@ class WorkPackageSubmission(NetworkProtocol):
                 client.stream_and_keep_open(message=msg_a, stream_id=stream_id)
                 client.stream_and_keep_open(message=len_b, stream_id=stream_id)
                 res = await client.close_and_wait(message=msg_b, stream_id=stream_id)
-                logger.debug(
+                self.logger.trace(
                     "Work package transmitted",
                     stream_id=stream_id,
                     core=ci,
@@ -122,7 +120,7 @@ class WorkPackageSubmission(NetworkProtocol):
                     transmitted_to = client
                     break
 
-                logger.debug(
+                self.logger.trace(
                     "Couldn't transmit package",
                     stream_id=stream_id,
                     core=ci,
@@ -130,7 +128,7 @@ class WorkPackageSubmission(NetworkProtocol):
                 )
 
             except Exception as e:
-                logger.warning(
+                self.logger.warning(
                     "Work package transmission failed",
                     guarantor=client,
                     error=str(e),
@@ -140,7 +138,7 @@ class WorkPackageSubmission(NetworkProtocol):
         if not transmitted_to:
             raise NetworkingError(Code.NO_PEER_CONN)
         else:
-            logger.info(
+            self.logger.info(
                 "Work package transmission completed",
                 wp_hash=wp_hash[:16] + "...",
                 transmitted_to=transmitted_to,
@@ -149,12 +147,12 @@ class WorkPackageSubmission(NetworkProtocol):
 
         return res
 
-    def req_intercept(self, stream_id: int, server: NodeConnection):
+    async def req_intercept(self, stream_id: int, server: "PeerConnection"):
         """Intercept & Process Work Package on Guarantor"""
         buffer = server.stream_buffer[stream_id][1:]
 
         try:
-            logger.debug(
+            self.logger.trace(
                 "Received work package submission",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
@@ -169,7 +167,7 @@ class WorkPackageSubmission(NetworkProtocol):
             wp = data.package_data.work_package
             ci = data.package_data.core_index
 
-            logger.info(
+            self.logger.info(
                 "Processing work package submission",
                 stream_id=stream_id,
                 core_index=int(ci),
@@ -179,7 +177,7 @@ class WorkPackageSubmission(NetworkProtocol):
 
             # Start Refinement Process
             from jam.incore.processor import Processor
-            processor = Processor()
+            processor = Processor(self.jam)
 
             # wr, wr_hash = processor.process(wp, ci, data.extrinsics)
             refine_task = asyncio.create_task(
@@ -191,7 +189,7 @@ class WorkPackageSubmission(NetworkProtocol):
             ack = b""
             server.stream_and_close(ack, stream_id)
 
-            logger.debug(
+            self.logger.trace(
                 "Acknowledgement sent to builder",
                 stream_id=stream_id,
                 ack_size=len(ack),
@@ -201,7 +199,7 @@ class WorkPackageSubmission(NetworkProtocol):
             # Stop Streaming
             server.stop_stream(stream_id, 1)
 
-            logger.error(
+            self.logger.error(
                 "Error processing work package submission",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
@@ -209,14 +207,14 @@ class WorkPackageSubmission(NetworkProtocol):
                 error_type=type(e).__name__,
             )
 
-    def res_intercept(
-        self, stream_id: int, client: NodeConnection
-    ) -> tuple[(bool | None), NodeConnection]:
+    async def res_intercept(
+        self, stream_id: int, client: "PeerConnection"
+    ) -> tuple[Optional[bool], "PeerConnection"]:
         """Intercept Acknowledgement"""
 
         buffer = client.stream_buffer[stream_id]
         if buffer == b"":
-            logger.debug(
+            self.logger.debug(
                 "Work package acknowledgement received",
                 stream_id=stream_id,
                 buffer_size=len(buffer),
@@ -225,12 +223,11 @@ class WorkPackageSubmission(NetworkProtocol):
 
         return None, client
 
-    @staticmethod
-    def on_done_callback(stream_id, wp, ci):
+    def on_done_callback(self, stream_id, wp, ci):
         def on_done(task: asyncio.Future):
             try:
                 wr, wr_hash = task.result()
-                logger.info(
+                self.logger.info(
                     "Work package processed successfully",
                     stream_id=stream_id,
                     wp_hash=wp.hash().hex()[:16] + "...",
@@ -239,6 +236,6 @@ class WorkPackageSubmission(NetworkProtocol):
                 )
 
             except Exception as e:
-                logger.error("Refine task failed", stream_id=stream_id, error=str(e))
+                self.logger.error("Refine task failed", stream_id=stream_id, error=str(e), exc_info=e)
 
         return on_done

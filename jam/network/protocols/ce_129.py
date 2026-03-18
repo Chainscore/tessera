@@ -2,13 +2,10 @@ from typing import cast, TYPE_CHECKING
 
 from tsrkit_types import Bytes, TypedVector, Dictionary
 
-from jam.log_setup import network_logger as logger
-from jam.network.connection import NodeConnection
-from jam.state.state import state
 from jam.types import HeaderHash
 
 if TYPE_CHECKING:
-    from jam.network.node import Node
+    from jam.network.connection import PeerConnection
 
 from tsrkit_types.integers import U32
 from tsrkit_types.struct import structure
@@ -38,16 +35,16 @@ class StateRequest(NetworkProtocol):
             https://github.com/zdave-parity/jam-np/blob/main/simple.md#ce-129-state-request
     """
 
-    def __init__(self):
-        super().__init__()
-        self._prefix = PrefixType.CE129
+    _prefix = PrefixType.CE129
 
-    async def transmit(self, node: "Node", data: CE129Data):
+
+    async def transmit(self, data: CE129Data):
         """Transmit State Request"""
+        node = self.jam.router.node
 
         stream_data = data.encode()
 
-        logger.info(
+        self.logger.trace(
             "Transmitting state request to node",
             header_hash=data.header,
             start=data.start,
@@ -57,9 +54,7 @@ class StateRequest(NetworkProtocol):
 
         transmitted_count = 0
         responses = []
-        for peer in node.peer_conn:
-            _, client = node.peer_conn[peer]
-
+        for client in node.all_connected:
             try:
                 stream_id = client.stream_and_keep_open(message=self._prefix.encode())
                 data = await client.close_and_wait(
@@ -68,35 +63,38 @@ class StateRequest(NetworkProtocol):
                 transmitted_count += 1
                 responses.append(data)
 
-                logger.debug(
-                    "State request transmitted to node", peer=peer, stream_id=stream_id
+                self.logger.debug(
+                    "State request transmitted to node",
+                    peer=client.peer_id,
+                    stream_id=stream_id
                 )
             except Exception as e:
                 responses.append(None)
-                logger.error(
+                self.logger.error(
                     "Failed to transmit state request",
-                    peer=peer,
+                    peer=client.peer_id,
                     error=str(e),
                     error_type=type(e).__name__,
                 )
 
-        logger.info(
+        self.logger.info(
             "State request transmission completed",
             transmitted_to=transmitted_count,
         )
 
         return responses
 
-    def req_intercept(self, stream_id: int, server: NodeConnection):
+    async def req_intercept(self, stream_id: int, server: PeerConnection):
         """Intercept & Process Work Package on Guarantor (server)"""
-        from jam.settings import settings
+        settings = server.jam.settings
+        state = server.jam.state
 
         buffer = server.stream_buffer[stream_id]
 
         try:
-            logger.info(
+            self.logger.debug(
                 "Received state request",
-                peer=server,
+                peer=server.peer_id,
                 stream_id=stream_id,
                 buffer_size=len(buffer),
             )
@@ -104,7 +102,7 @@ class StateRequest(NetworkProtocol):
             data, offset = CE129Data.decode_from(buffer)
             data = cast(CE129Data, data)
 
-            logger.debug(
+            self.logger.trace(
                 "Processing state request",
                 stream_id=stream_id,
                 header_hash=data.header,
@@ -116,17 +114,17 @@ class StateRequest(NetworkProtocol):
             # TODO: we are ignoring the header hash, to be updated upon #194 [state variants]
 
             # Boundaries
-            boundaries = set(state.TRIE.get_boundaries(data.start[0:31]))
-            end_boundaries = state.TRIE.get_boundaries(data.end[0:31])
+            boundaries = set(state.trie.get_boundaries(data.start[0:31]))
+            end_boundaries = state.trie.get_boundaries(data.end[0:31])
             # Join them, remove duplicates
             boundaries.update(end_boundaries)
 
             boundaries_data = TypedVector[Bytes[64]](list(boundaries)).encode()
             server.stream_and_keep_open(stream_id=stream_id, message=boundaries_data)
 
-            logger.debug(
+            self.logger.trace(
                 "Start and End boundaries shared successfully",
-                peer=server.peer,
+                peer=server.peer_id,
                 stream_id=stream_id,
                 len=len(boundaries_data),
             )
@@ -141,30 +139,32 @@ class StateRequest(NetworkProtocol):
             key_val_data = state_data.encode()
             server.stream_and_close(stream_id, key_val_data)
 
-            logger.debug(
-                "State response complete. Closed stream",
+            self.logger.info(
+                "Returned state data to requester.",
                 stream_id=stream_id,
-                peer=server.peer,
+                peer=server.peer_id,
                 size=len(key_val_data),
             )
 
         except Exception as e:
-            logger.error(
+            self.logger.error(
                 "Error processing state request",
                 stream_id=stream_id,
-                peer=server.peer,
+                peer=server.peer_id,
                 buffer_size=len(buffer),
                 error=str(e),
                 error_type=type(e).__name__,
             )
 
-    def res_intercept(self, stream_id: int, client: NodeConnection):
+    async def res_intercept(self, stream_id: int, client: PeerConnection):
         """Intercept Acknowledgement"""
         buffer = client.stream_buffer[stream_id]
 
-        logger.debug(
-            "State request ack received",
+        # TODO: Decode state from keyvals, store in DB. Whichever required.
+
+        self.logger.debug(
+            "Received requested state key vals.",
             stream_id=stream_id,
-            peer=client.peer,
+            peer=client.peer_id,
             buffer_size=len(buffer),
         )
