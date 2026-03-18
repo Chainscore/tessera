@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.unit
+
 import json
 from pathlib import Path
 from jam.utils.trie.merkle import StateTrie

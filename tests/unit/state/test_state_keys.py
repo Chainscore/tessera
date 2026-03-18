@@ -1,98 +1,82 @@
+"""
+construct_state_key encoding tests.
+
+Pure unit tests — no fixtures, no state, no chain.
+Verifies the interleaved key layout used by the state trie.
+"""
 import pytest
+
 from jam.state.utils import construct_state_key
-from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U8
 from jam.types.protocol.core import ServiceId
 from jam.types.protocol.crypto import Hash
+from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import U8
 
 
 def test_single_u8_index():
-    """Test case 1: Single U8 index -> [i, 0, 0, ...]"""
-    # Test with various U8 values
-    test_cases = [U8(0), U8(1), U8(127), U8(255)]
-
-    for index in test_cases:
+    """U8 index -> [i, 0, 0, ...]"""
+    for index in [U8(0), U8(1), U8(127), U8(255)]:
         result = construct_state_key(index)
         assert isinstance(result, Bytes)
         assert len(result) == 31
         assert int(result[0]) == index
-        # Verify rest is zeros
         assert all(int(b) == 0 for b in result[1:])
 
 
-def test_u32_service_id_pair():
-    """Test case 2: (31, ServiceId) -> [i, n₀, 0, n₁, 0, n₂, 0, n₃, 0, 0, ...]"""
-    # Create test service IDs
-    service_id1 = ServiceId(1)  # Assuming ServiceId takes an integer
-    service_id2 = ServiceId(255)
-
+def test_u8_service_id_pair():
+    """(U8, ServiceId) -> [i, n0, 0, n1, 0, n2, 0, n3, 0, 0, ...]"""
     test_cases = [
-        (U8(0), service_id1),
-        (U8(1), service_id1),
-        (U8(0xFF), service_id1),
-        (U8(0), service_id2),
+        (U8(0), ServiceId(1)),
+        (U8(1), ServiceId(1)),
+        (U8(0xFF), ServiceId(1)),
+        (U8(0), ServiceId(255)),
     ]
 
     for index, service_id in test_cases:
         result = construct_state_key((index, service_id))
         assert isinstance(result, Bytes)
         assert len(result) == 31
+        assert result[0] == index.encode()[0]
 
-        # # Verify index bytes
-        index_bytes = index.encode()
-        assert result[0] == index_bytes[0]
-
-        # Verify service ID encoding pattern
-        service_id_encoded = service_id.encode()
-        for i, byte in enumerate(service_id_encoded):
-            pos = 1 + i * 2  # Skip index bytes and account for zero padding
+        sid_enc = service_id.encode()
+        for i, byte in enumerate(sid_enc):
+            pos = 1 + i * 2
             if pos < 31:
                 assert result[pos] == byte
                 if pos + 1 < 31:
-                    assert result[pos + 1] == 0  # Verify zero padding
+                    assert result[pos + 1] == 0
 
 
 def test_service_id_hash_pair():
-    """Test case 3: (ServiceId, ByteArray32) -> [n₀, h₀, n₁, h₁, n₂, h₂, n₃, h₃, h₄, h₅, ..., h₂₇]"""
-    service_id = ServiceId(1)
-    key_bytes = Bytes([i % 256 for i in range(32)])  # Test pattern
-
-    result = construct_state_key((service_id, key_bytes))
+    """(ServiceId, Bytes32) -> [n0, h0, n1, h1, n2, h2, n3, h3, h4, ...]"""
+    sid = ServiceId(1)
+    key = Bytes([i % 256 for i in range(32)])
+    result = construct_state_key((sid, key))
     assert isinstance(result, Bytes)
     assert len(result) == 31
 
-    service_id_encoded = service_id.encode()
-    hash_bytes = Hash.blake2b(key_bytes)
+    sid_enc = sid.encode()
+    h = Hash.blake2b(key)
+    for i in range(min(len(sid_enc), 4)):
+        assert result[i * 2] == sid_enc[i]
+        assert result[i * 2 + 1] == h[i]
 
-    # Check interleaved pattern for first 4 service ID bytes
-    for i in range(min(len(service_id_encoded), 4)):
-        assert result[i * 2] == service_id_encoded[i]
-        assert result[i * 2 + 1] == hash_bytes[i]
-
-    # Check remaining hash bytes
-    assert result[8:] == hash_bytes[4:-5]
+    assert result[8:] == h[4:-5]
 
 
 def test_invalid_inputs():
-    """Test error cases with invalid inputs"""
     with pytest.raises(ValueError):
-        construct_state_key("invalid")  # String input
-
+        construct_state_key("invalid")
     with pytest.raises(ValueError):
-        construct_state_key((U8(1), U8(2), U8(100)))  # Wrong tuple types
-
+        construct_state_key((U8(1), U8(2), U8(100)))
     with pytest.raises(ValueError):
-        construct_state_key((ServiceId(1), "not_bytes"))  # Wrong second tuple element
+        construct_state_key((ServiceId(1), "not_bytes"))
 
 
 def test_boundary_conditions():
-    """Test boundary conditions and edge cases"""
-    # Test with minimum values
     assert len(construct_state_key(U8(0))) == 31
-    assert len(construct_state_key((U8(0), ServiceId(0)))) == 31
-    assert len(construct_state_key((ServiceId(0), Bytes([0] * 32)))) == 31
-
-    # Test with maximum values
     assert len(construct_state_key(U8(255))) == 31
+    assert len(construct_state_key((U8(0), ServiceId(0)))) == 31
     assert len(construct_state_key((U8(0xFF), ServiceId(255)))) == 31
+    assert len(construct_state_key((ServiceId(0), Bytes([0] * 32)))) == 31
     assert len(construct_state_key((ServiceId(255), Bytes([255] * 32)))) == 31

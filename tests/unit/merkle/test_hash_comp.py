@@ -1,6 +1,8 @@
 import os
 import time
 import pytest
+
+pytestmark = pytest.mark.unit
 from tsrkit_types import Bytes
 
 from jam.types import Hash

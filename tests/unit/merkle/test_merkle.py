@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.unit
+
 from jam.utils.trie.merkle import StateTrie as StateMerkle
 from jam.utils.trie.utils import ZERO_HASH
 from jam.state.utils import construct_state_key

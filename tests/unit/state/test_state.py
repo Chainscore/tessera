@@ -1,146 +1,155 @@
-import pytest
-import os
+"""
+State mutation tests — delta CRUD, stash, settle, root changes.
 
-from jam.block import Block
-from jam.state.ghost import GhostState
-from jam.state.state import setup_state
-from rockstore import RockStore
-from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U32, U64
-from jam.types.protocol.core import Balance, ServiceId, TimeSlot
+Tests direct state manipulation: write to delta, stash, settle,
+verify root changes and data persists. Uses jam_node fixture (genesis only).
+"""
+from jam.types.protocol.core import ServiceId, Balance, TimeSlot
 from jam.types.protocol.crypto import Hash
-from jam.types.state.delta import AccountData, LookupTable, Timestamps, AccountMetadata
-from jam.types.state.tau import Tau
-from jam.utils.dummy.utils import create_dummy_bytes
-from jam.settings import setup_setting
+from jam.types.state.delta import LookupTable, Timestamps
+from tsrkit_types import Bytes, U32, U64
 
 
-def setup_genesis():
-    from jam.finality.finality import Finality
-    from jam.settings import settings
+class TestGenesisState:
 
-    block = Block.genesis()
-    hh = block.save(settings.main_db)
+    async def test_tau_is_zero(self, jam_node):
+        assert jam_node.state.tau == 0
 
-    Finality.set_head(block, settings.main_db)
-    Finality.finalise(block, settings.main_db)
+    async def test_root_is_nonzero(self, jam_node):
+        root = jam_node.state.root
+        assert root != bytes(32)
+        assert len(root) == 32
 
-    return hh
+    async def test_bootstrap_service_exists(self, jam_node):
+        acct = jam_node.state.delta.get(ServiceId(0))
+        assert acct is not None
 
-def test_state_sync(db_path):
-    db = RockStore(db_path)
-    setup_state(db, GhostState.genesis())
-    from jam.state.state import state as updated_state
-
-    assert updated_state.root != Bytes[32]([0] * 32)
-
-@pytest.mark.asyncio
-@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_state_update(db_path, rpc):
-    settings = setup_setting(db_path, None)
-    state = setup_state(settings.state_db, GhostState.genesis())
-    prev_hash = state.root
-    state.tau = Tau(1)
+    async def test_kappa_has_validators(self, jam_node):
+        assert len(jam_node.state.kappa) > 0
 
 
-    hh = setup_genesis()
-    state.stash(hh)
-    state.settle(hh)
-    assert prev_hash != state.root
+class TestDeltaMetadata:
+    """Service metadata write/read through delta."""
 
-@pytest.mark.asyncio
-@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_delta_update(db_path, rpc):
-    settings = setup_setting(db_path, None, "alice", 0, rpc)
-    state = setup_state(settings.state_db, GhostState.genesis())
-    prev_hash = state.root
-    state.delta[ServiceId(1)] = AccountData()
-    state.delta[ServiceId(1)].service = AccountMetadata(
-        code_hash=Bytes[32]([1] * 32),
-        balance=U64(10000000),
-        gas_limit=U64(10000000),
-        min_gas=U64(10000000),
-        num_o=U64(10000000),
-        num_i=U32(100),
-        gratis_offset=Balance(0),
-        created_at=TimeSlot(0),
-        accumulated_at=TimeSlot(0),
-        parent_service=ServiceId(0),
-    )
+    async def test_read_existing_service(self, jam_node):
+        original = jam_node.state.delta[ServiceId(0)].service
+        assert original.code_hash is not None
 
-    hh = setup_genesis()
-    state.stash(hh)
-    state.settle(hh)
+    async def test_update_balance(self, jam_node):
+        state = jam_node.state
+        sid = ServiceId(0)
+        state.delta[sid].service.balance = Balance(9999999)
+        assert state.delta[sid].service.balance == Balance(9999999)
 
-    assert prev_hash != state.root
-    data_post = state.delta[ServiceId(1)].service
-    assert data_post.code_hash == Bytes[32]([1] * 32)
-    assert data_post.balance == U64(10000000)
-    assert data_post.gas_limit == U64(10000000)
-    assert data_post.min_gas == U64(10000000)
-    assert data_post.num_o == U64(10000000)
-    assert data_post.num_i == U32(100)
-    assert data_post.gratis_offset == Balance(0)
-    assert data_post.created_at == TimeSlot(0)
-    assert data_post.accumulated_at == TimeSlot(0)
-    assert data_post.parent_service == ServiceId(0)
+    async def test_full_metadata_roundtrip(self, jam_node):
+        """Write all metadata fields, read them back."""
+        state = jam_node.state
+        sid = ServiceId(0)
+        meta = state.delta[sid].service
+
+        meta.balance = Balance(42)
+        meta.gas_limit = U64(500000)
+        meta.min_gas = U64(100)
+
+        read = state.delta[sid].service
+        assert read.balance == Balance(42)
+        assert read.gas_limit == U64(500000)
+        assert read.min_gas == U64(100)
 
 
-@pytest.mark.asyncio
-@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_preimage_add(db_path, rpc):
-    settings = setup_setting(db_path, None, "alice", 0, rpc)
-    state = setup_state(settings.state_db, GhostState.genesis())
-    prev_hash = state.root
-    data = create_dummy_bytes(100)
-    state.delta[ServiceId(1)] = AccountData()
-    state.delta[ServiceId(1)].preimages[Hash.blake2b(data)] = Bytes(data)
+class TestDeltaStorage:
+    """Storage key-value write/read/delete through delta."""
+
+    async def test_write_read(self, jam_node):
+        state = jam_node.state
+        key = Bytes(b"test_key_storage")
+        val = Bytes(b"test_value_batman")
+
+        state.delta[ServiceId(0)].storage[key] = val
+        assert state.delta[ServiceId(0)].storage[key] == val
+
+    async def test_delete(self, jam_node):
+        state = jam_node.state
+        sid = ServiceId(0)
+        key = Bytes(b"ephemeral_key")
+        val = Bytes(b"ephemeral_val")
+
+        state.delta[sid].storage[key] = val
+        assert state.delta[sid].storage[key] == val
+
+        del state.delta[sid].storage[key]
+        assert state.delta[sid].storage[key] is None
+
+    async def test_overwrite(self, jam_node):
+        state = jam_node.state
+        sid = ServiceId(0)
+        key = Bytes(b"overwrite_key")
+
+        state.delta[sid].storage[key] = Bytes(b"first")
+        state.delta[sid].storage[key] = Bytes(b"second")
+        assert state.delta[sid].storage[key] == Bytes(b"second")
 
 
-    hh = setup_genesis()
-    state.stash(hh)
-    state.settle(hh)
+class TestDeltaPreimages:
+    """Preimage store/read through delta."""
 
-    assert prev_hash != state.root
-    assert state.delta[ServiceId(1)].preimages[Hash.blake2b(data)] == Bytes(data)
+    async def test_write_read(self, jam_node):
+        state = jam_node.state
+        blob = b"hello from state preimage test"
+        blob_hash = Hash.blake2b(blob)
 
-@pytest.mark.asyncio
-@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_storage_add(db_path, rpc):
-    settings = setup_setting(db_path, None, "alice", 0, rpc)
-    state = setup_state(settings.state_db, GhostState.genesis())
-    prev_hash = state.root
-    data = create_dummy_bytes(100)
-    state.delta[ServiceId(1)] = AccountData()
-    state.delta[ServiceId(1)].storage[Hash.blake2b(data)] = Bytes(data)
+        state.delta[ServiceId(0)].preimages[blob_hash] = Bytes(blob)
+        assert state.delta[ServiceId(0)].preimages[blob_hash] == Bytes(blob)
+
+    async def test_nonexistent_is_none(self, jam_node):
+        fake = Hash.blake2b(b"nonexistent")
+        assert jam_node.state.delta[ServiceId(0)].preimages[fake] is None
 
 
-    hh = setup_genesis()
-    state.stash(hh)
-    state.settle(hh)
+class TestDeltaTimestamps:
+    """Lookup table timestamp write/read through delta."""
 
-    assert prev_hash != state.root
-    assert state.delta[ServiceId(1)].storage[Hash.blake2b(data)] == Bytes(data)
+    async def test_write_read(self, jam_node):
+        state = jam_node.state
+        data = b"timestamps_test_data"
+        key = LookupTable(hash=Hash.blake2b(data), length=len(data))
+        ts = Timestamps([U32(100), U32(200)])
 
-@pytest.mark.asyncio
-@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_timestamps_add(db_path, rpc):
-    settings = setup_setting(db_path, None, "alice", 0, rpc)
-    state = setup_state(settings.state_db, GhostState.genesis())
+        state.delta[ServiceId(0)].lookup[key] = ts
+        assert state.delta[ServiceId(0)].lookup[key] == ts
 
-    prev_hash = state.root
-    data = create_dummy_bytes(100)
-    state.delta[ServiceId(1)] = AccountData()
-    state.delta[ServiceId(1)].lookup[LookupTable(hash=Hash.blake2b(data), length=100)] = Timestamps(
-        []
-    )
+    async def test_empty_timestamps(self, jam_node):
+        """Empty timestamps = solicitation."""
+        state = jam_node.state
+        data = b"solicited_data"
+        key = LookupTable(hash=Hash.blake2b(data), length=len(data))
+
+        state.delta[ServiceId(0)].lookup[key] = Timestamps([])
+        assert state.delta[ServiceId(0)].lookup[key] == Timestamps([])
 
 
-    hh = setup_genesis()
-    state.stash(hh)
-    state.settle(hh)
+class TestStashSettle:
+    """Stash records changes, settle commits them — root changes."""
 
-    assert prev_hash != state.root
-    assert state.delta[ServiceId(1)].lookup[
-        LookupTable(hash=Hash.blake2b(data), length=100)
-    ] == Timestamps([])
+    async def test_root_changes_after_stash_settle(self, jam_node):
+        state = jam_node.state
+        root_before = state.root.hex()
+
+        state.tau = TimeSlot(1)
+
+        hh = jam_node.grandpa.load_final().header.hash()
+        state.stash(hh)
+        state.settle(hh)
+
+        assert state.root.hex() != root_before
+
+    async def test_delta_persists_after_settle(self, jam_node):
+        state = jam_node.state
+        sid = ServiceId(0)
+        state.delta[sid].service.balance = Balance(7777)
+
+        hh = jam_node.grandpa.load_final().header.hash()
+        state.stash(hh)
+        state.settle(hh)
+
+        assert state.delta[sid].service.balance == Balance(7777)

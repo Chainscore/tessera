@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.unit
+
 from copy import deepcopy
 
 from jam.utils.trie.merkle import StateTrie

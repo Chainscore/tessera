@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.unit
+
 from tsrkit_types import TypedVector, Bytes
 
 from jam.types import ErasureRoot, ExportsRoot

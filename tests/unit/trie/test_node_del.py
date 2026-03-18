@@ -1,4 +1,6 @@
-from copy import deepcopy
+import pytest
+
+pytestmark = pytest.mark.unit
 
 from jam.utils.trie.merkle import StateTrie
 from tsrkit_types.bytes import Bytes

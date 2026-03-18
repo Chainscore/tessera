@@ -1,62 +1,26 @@
-from jam.state.ghost import GhostState as State
+"""
+Sigma (state) structure tests — encode/decode roundtrip.
+
+Pure unit tests — no fixtures, no chain.
+"""
+from jam.types.state.sigma import Sigma
+from jam.utils.dummy.dummy_state import create_dummy_state
 
 
-def test_structure():
-    state = State.genesis()
+def test_encode_decode_roundtrip():
+    state = create_dummy_state()
     encoded = state.encode()
-    decoded_state, _ = State.decode_from(encoded)
-    assert state == decoded_state
+    decoded, _ = Sigma.decode_from(encoded)
+    assert state == decoded
 
 
-# def test_transform_tree():
-#     state = State.genesis()
-#     state.delta = Delta.from_json({
-#         1: {
-#             "service": {
-#                 "code_hash": create_dummy_bytes32(),
-#                 "min_memo_gas": 0,
-#                 "min_item_gas": 0,
-#                 "balance": 0,
-#                 "items": 0,
-#                 "bytes": 0
-#             },
-#             "storage": [
-#                 {
-#                     "key": create_dummy_bytes32(),
-#                     "value": create_dummy_bytes(10)
-#                 }
-#             ],
-#             "preimages": [
-#                 {
-#                     "hash": create_dummy_bytes32(),
-#                     "blob": create_dummy_bytes(10)
-#                 }
-#             ],
-#             "lookup_meta": [
-#                 # create_dummy_bytes32(): []
-#             ],
-#         },
-#         # Dict accepts either a list or dict
-#         2: {
-#             "service": {
-#                 "code_hash": create_dummy_bytes32(),
-#                 "min_memo_gas": 0,
-#                 "min_item_gas": 0,
-#                 "balance": 0,
-#                 "items": 0,
-#                 "bytes": 0
-#             },
-#             "storage": {
-#                     create_dummy_bytes32(): create_dummy_bytes(10)
-#             },
-#             "preimages": {
-#                     create_dummy_bytes32(): create_dummy_bytes(10)
-#             },
-#             "lookup_meta": {
-#                 # create_dummy_bytes32(): []
-#             },
-#         }
-#     })
-#     tree = state.transform()
-#
-#     StateTrie().merkelize(tree)
+def test_sigma_has_fields():
+    s = create_dummy_state()
+    for field in ['tau', 'kappa', 'gamma', 'eta', 'rho', 'pi', 'beta', 'delta']:
+        assert hasattr(s, field)
+
+
+def test_encoded_is_nonzero():
+    enc = create_dummy_state().encode()
+    assert len(enc) > 0
+    assert enc != bytes(len(enc))

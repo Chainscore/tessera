@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.unit
+
 from jam.utils.trie.merkle import StateTrie
 from jam.utils.trie.utils import ZERO_HASH
 from tsrkit_types.bytes import Bytes

@@ -13,7 +13,7 @@ from jam.block.block import Block
 from jam.types.protocol.crypto import HeaderHash
 
 
-VECTORS_DIR = Path(__file__).parents[2] / "vectors" / "extracted"
+VECTORS_DIR = Path(__file__).parents[2] / "chain"
 
 
 def load_test_blocks():

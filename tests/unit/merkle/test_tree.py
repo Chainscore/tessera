@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.unit
+
 from tsrkit_types import Vector, TypedVector, Bytes
 
 from jam.utils.merkle.binary_merkle import (

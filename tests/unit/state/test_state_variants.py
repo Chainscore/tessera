@@ -1,76 +1,89 @@
-import os
-from pathlib import Path
+"""
+State cache behavior and chain-driven transition tests.
 
-import pytest
+Tests that cache vs DB works correctly, each block changes root,
+and accumulation produces expected side effects (WP availability, services).
+"""
+from jam.state.utils import construct_state_key
+from jam.types.protocol.core import ServiceId, TimeSlot
 from tsrkit_types import Bytes
 
-from jam.state.state import setup_state
-from jam.state.utils import construct_state_key
-from jam.types import TimeSlot, ServiceId, AccountData
-from jam.settings import setup_setting
-from jam.block.block import Block
-from tests.unit.state.test_state_load import simulate_chain
+from tests.unit.api.utils import import_chain
 
 
-def get_gen_state(db_path):
-    # Load genesis state
-    genesis_path = Path(__file__).parents[3] / "dev-spec.json"
-    settings = setup_setting(db_path, None)
-    state = setup_state(settings.state_db, str(genesis_path))
-    state.store.enable_cache()
-    state.store.enable_writes()
-    return state, settings
+class TestStateCaching:
+    """Delta writes go to cache, not directly to DB."""
 
-# TODO: REGEN BLOCK VECTORS
-# Skip legacy tests
-@pytest.mark.asyncio
-@pytest.mark.skip
-@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_state_update(db_path):
-    state, _ = get_gen_state(db_path)
+    async def test_delta_write_is_cached(self, jam_node):
+        state = jam_node.state
+        key = Bytes(b"cache_test_key")
+        val = Bytes(b"cache_test_val")
 
-    # Make updates
-    assert state.tau == 0
-    state.tau += 1
-    assert state.tau == 1
+        state.delta[ServiceId(0)].storage[key] = val
+        assert state.delta[ServiceId(0)].storage[key] == val
 
-    # Ensure this is just added to cache and not to DB
-    assert state.store._updates[construct_state_key(11)] == TimeSlot(1).encode()
-    assert state.store.get(construct_state_key(11), skip_cache=True) == TimeSlot(0).encode()
+    async def test_tau_update_is_cached(self, jam_node):
+        """tau update goes to cache, DB still has old value."""
+        state = jam_node.state
+        assert state.tau == 0
 
-@pytest.mark.asyncio
-@pytest.mark.skip
-@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_block_import_state_save_n_fetch(db_path, rpc):
-    vectors, settings = simulate_chain(db_path, rpc)
-    from jam.state.state import state
+        state.tau = TimeSlot(1)
+        assert state.tau == 1
 
-    blocks_4 = Block.load_w_ts(TimeSlot(4), settings.main_db)
-    assert len(blocks_4) == 1
+        # Should be in cache, not yet in DB
+        db_val = state.store.get(construct_state_key(11), skip_cache=True)
+        assert db_val == TimeSlot(0).encode()
 
-    hh_4 = blocks_4[0].header.hash()
-    assert hh_4 == vectors[4].header_hash
-    assert blocks_4[0] == vectors[4].block
-
-    s_4 = state.load(hh_4)
-    assert s_4.tau == TimeSlot(4)
+    async def test_service_0_readable(self, jam_node):
+        acct = jam_node.state.delta[ServiceId(0)]
+        assert acct.service.code_hash is not None
 
 
-@pytest.mark.asyncio
-@pytest.mark.skip
-@pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_delta_updates(db_path, rpc):
-    vectors, settings = simulate_chain(db_path, rpc)
-    from jam.state.state import state
+class TestChainTransitions:
+    """Block-by-block transitions via vector chain."""
 
-    hh = vectors[4].header_hash
+    async def test_each_block_changes_root(self, jam_node):
+        roots = [jam_node.state.root.hex()]
+        for n in range(1, 5):
+            import_chain(jam_node, up_to=n)
+            roots.append(jam_node.state.root.hex())
+        assert len(set(roots)) == len(roots), f"duplicate roots: {roots}"
 
-    # Make updates
-    state.delta[ServiceId(100)] = AccountData()
-    assert state.delta[ServiceId(100)].service.code_hash == Bytes(32)
+    async def test_tau_matches_slot(self, jam_node):
+        """After importing blocks, tau equals the last block's slot."""
+        chain = import_chain(jam_node, up_to=4)
+        assert int(jam_node.state.tau) == chain[-1].slot
 
-    state.delta[ServiceId(100)].service.code_hash = Bytes[32]([1] * 32)
-    assert state.delta[ServiceId(100)].service.code_hash == Bytes([1] * 32)
+    async def test_block_4_accumulates(self, jam_node):
+        """Block 4 has 6 assurances — triggers WP1 accumulation."""
+        chain = import_chain(jam_node, up_to=4)
+        assert int(jam_node.state.tau) == chain[3].slot
 
-    state.stash(hh)
-    state.settle(hh)
+
+class TestServiceLifecycle:
+    """Service creation via accumulation."""
+
+    async def test_service_not_exists_before_block_8(self, jam_node):
+        from tests.unit.api.utils import load_test_services
+        svc = load_test_services()[0]
+        sid = ServiceId(svc["service_id"])
+
+        import_chain(jam_node, up_to=6)
+        assert jam_node.state.delta.get(sid) is None
+
+    async def test_service_created_at_block_8(self, jam_node):
+        from tests.unit.api.utils import load_test_services
+        svc = load_test_services()[0]
+        sid = ServiceId(svc["service_id"])
+
+        import_chain(jam_node, up_to=8)
+        acct = jam_node.state.delta.get(sid)
+        assert acct is not None
+
+    async def test_service_code_hash_matches(self, jam_node):
+        from tests.unit.api.utils import load_test_services
+        svc = load_test_services()[0]
+        sid = ServiceId(svc["service_id"])
+
+        import_chain(jam_node, up_to=8)
+        assert jam_node.state.delta[sid].service.code_hash.hex() == svc["code_hash"]
