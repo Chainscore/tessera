@@ -1,4 +1,3 @@
-import time
 from typing import Any, Tuple
 from jam.execution.host_call import HostCallReturn, PsiH
 from jam.execution.invocations.protocol import Context, DispatchFunction

@@ -32,7 +32,10 @@ class InvocationProtocol(Protocol):
             registers[7] = HostStatus.WHAT.value
             return ExecutionStatus.CONTINUE, gas - 10, registers, memory, x
 
+        # hc = "-" * 20, f"HOST({host_call})", "-" * 20
+        # logger.info(str(hc))
         # print("-" * 20, f"HOST({host_call})", "-" * 20)
+
         # Direct unpacking and execution
         dispatch_fn_calls, args = table_entry
         

@@ -1,3 +1,4 @@
+from jam.log_setup import pvm_logger as logger
 from tsrkit_types import structure, Dictionary, Uint, Bytes, U64, ByteArray
 
 from jam.execution.invocations.functions.protocol import (
@@ -22,6 +23,8 @@ from tsrkit_pvm import (
     HostStatus,
     PvmError,
 )
+from tsrkit_pvm.recompiler.vm_context import VMContext
+
 from jam.types.protocol.core import Gas, Register, ProgramCounter
 from jam.types.protocol.core import ServiceId, TimeSlot
 from jam.types.state.delta import Delta
@@ -70,6 +73,7 @@ class RefineFunctions(INVF):
 
         # Must be able to read the 32-byte hash
         if not memory.is_accessible(h, 32):
+            logger.debug("PANIC FROM HERE", hc=6, h=h)
             raise PvmError(PANIC)
 
         # No such account → signal “none” as the u64 sentinel (not an enum object!)
@@ -92,7 +96,7 @@ class RefineFunctions(INVF):
 
         # Two-phase contract: if o==0, it's a size probe — don't write, just return total length.
         if o != 0 and l > 0:
-            if not memory.is_accessible(o, l, True):
+            if not memory.is_accessible(o, l, Accessibility.WRITE):
                 raise PvmError(PANIC)
             memory.write(o, v[f : f + l])
 
@@ -112,7 +116,7 @@ class RefineFunctions(INVF):
         p = registers[7]
         z = min(registers[8], SEGMENT_SIZE)
         # FIX: Check readability (for_write=False), not writability
-        if memory.is_accessible(address=p, length=z, for_write=False):
+        if memory.is_accessible(address=p, length=z):
             from jam.incore.utils import Utils
 
             x = Utils.zero_padding(
@@ -137,6 +141,7 @@ class RefineFunctions(INVF):
         if memory.is_accessible(p_o, p_z):
             p = memory.read(p_o, p_z)
         else:
+            logger.debug("PANIC FROM HERE", hc=8, o=p_o, z=p_z)
             raise PvmError(PANIC)
         # Finding the lowest Natural number not existing in the commitment_map iterating from 1 and goes on...
         # 2nd approach by using sorted list...
@@ -145,9 +150,15 @@ class RefineFunctions(INVF):
         while n in context.m:
             n += 1
 
-        u = Memory()
         try:
-            Program.decode_from(p)
+            program = Program.decode_from(p)[0]
+
+            if _PVM_MODE == "recompiler":
+                vm_size = VMContext.calculate_size(len(program.jump_table))
+                u = Memory(vm_size)
+            else:
+                u = Memory()
+
             # TODO: Updating the commitment map, need to see how the dict is appended
             context.m[n] = IntegratedPVM(program_code=p, memory=u, instruction_counter=i)
             registers[7] = n
@@ -161,7 +172,8 @@ class RefineFunctions(INVF):
     @INVF.register(9, gas_cost=10)
     def peek(gas: Gas, registers: list, memory: Memory, context: RefineContext):
         [n, o, s, z] = registers[7:11]
-        if not memory.is_accessible(o, z, True):
+        if not memory.is_accessible(o, z, Accessibility.WRITE):
+            logger.debug("PANIC FROM HERE", hc=o, o=o, z=z)
             raise PvmError(PANIC)
         elif n not in context.m:
             registers[7] = HostStatus.WHO.value
@@ -181,11 +193,12 @@ class RefineFunctions(INVF):
         [n, s, o, z] = registers[7:11]
 
         if not memory.is_accessible(s, z):
+            logger.debug("PANIC FROM HERE", hc=10, s=s, z=z)
             raise PvmError(PANIC)
         elif n not in context.m:
             registers[7] = HostStatus.WHO.value
             return CONTINUE, gas, registers, memory, context
-        elif not context.m[n].memory.is_accessible(o, z, True):
+        elif not context.m[n].memory.is_accessible(o, z, Accessibility.WRITE):
             registers[7] = HostStatus.OOB.value
             return CONTINUE, gas, registers, memory, context
         else:
@@ -214,13 +227,17 @@ class RefineFunctions(INVF):
                 if r < 3:
                     u.zero_memory_range(start_p, num_p)
 
+                # Convert page indices to byte addresses for alter_accessibility
+                start_addr = start_p * PVM_MEMORY_PAGE_SIZE
+                byte_len = num_p * PVM_MEMORY_PAGE_SIZE
+
                 # Void
                 if r == 0:
-                    u.alter_accessibility(start_p, num_p, Accessibility.NULL)
+                    u.alter_accessibility(start_addr, byte_len, Accessibility.NULL)
                 elif r == 1 or r == 3:
-                    u.alter_accessibility(start_p, num_p, Accessibility.READ)
+                    u.alter_accessibility(start_addr, byte_len, Accessibility.READ)
                 elif r == 2 or r == 4:
-                    u.alter_accessibility(start_p, num_p, Accessibility.WRITE)
+                    u.alter_accessibility(start_addr, byte_len, Accessibility.WRITE)
 
                 context.m[n].memory = u
                 registers[7] = HostStatus.OK.value
@@ -233,7 +250,8 @@ class RefineFunctions(INVF):
     @INVF.register(12, gas_cost=10)
     def invoke(gas: Gas, registers: list, memory: Memory, context: RefineContext):
         [n, o] = registers[7:9]
-        if not memory.is_accessible(o, 112, True):
+        if not memory.is_accessible(o, 112, Accessibility.WRITE):
+            logger.debug("PANIC FROM HERE", hc=12, o=o, z=112)
             raise PvmError(PANIC)
         if n not in context.m:
             registers[7] = HostStatus.WHO.value
@@ -243,40 +261,52 @@ class RefineFunctions(INVF):
         m_array = [m_bytes[i : i + 8] for i in range(0, len(m_bytes), 8)]
         g, _ = U64.decode_from(bytes(m_array[0]))
         w = [U64.decode_from(bytes(m_array[i]))[0] for i in range(1, 14)]
+        # Cache decoded program per machine to avoid re-decoding on every HOST(12) call
+        if not hasattr(context.m[n], '_program') or context.m[n]._program is None:
+            context.m[n]._program, _ = Program.decode_from(context.m[n].program_code)
+        program = context.m[n]._program
         [c, i_dash, g_dash, w_dash, u_dash] = PVM.execute(
-            context.m[n].program_code,
+            program,
             context.m[n].instruction_counter,
             g,
             w,
             context.m[n].memory,
         )
 
-        # TODO: Test this fix #487
-        program, _ = Program.decode_from(context.m[n].program_code)
         skip_cntr = program.skip(i_dash)
 
-        memory.write(o, g_dash.encode() + w_dash.encode())
+        memory.write(
+            o,
+            U64(g_dash & 0xFFFFFFFFFFFFFFFF).encode() + b"".join(U64(i & 0xFFFFFFFFFFFFFFFF).encode() for i in w_dash)
+        )
         context.m[n].memory = u_dash
-        if c == ExecutionStatus.HOST:
-            context.m[n].instruction_counter = i_dash + skip_cntr + 1
-            registers[7] = U64(ExecutionStatus.HOST)  # NOTE: Saving the ExecValue on register[7]
-            registers[8] = c.value.register
-            return CONTINUE, gas, registers, memory, context
-        else:
-            context.m[n].instruction_counter = i_dash
-            if c == ExecutionStatus.PAGE_FAULT:
-                registers[7] = U64(ExecutionStatus.PAGE_FAULT)
+        try:
+            if c == ExecutionStatus.HOST:
+                context.m[n].instruction_counter = i_dash + skip_cntr + 1
+                registers[7] = U64(ExecutionStatus.HOST.value.code)  # NOTE: Saving the ExecValue on register[7]
                 registers[8] = c.value.register
                 return CONTINUE, gas, registers, memory, context
-            elif c == ExecutionStatus.OUT_OF_GAS:
-                registers[7] = U64(ExecutionStatus.OUT_OF_GAS)
-                return CONTINUE, gas, registers, memory, context
-            elif c == ExecutionStatus.PANIC:
-                registers[7] = U64(ExecutionStatus.PANIC)
-                return CONTINUE, gas, registers, memory, context
-            elif c == ExecutionStatus.HALT:
-                registers[7] = U64(ExecutionStatus.HALT)
-                return CONTINUE, gas, registers, memory, context
+            else:
+                context.m[n].instruction_counter = i_dash
+                if c == ExecutionStatus.PAGE_FAULT:
+                    registers[7] = U64(ExecutionStatus.PAGE_FAULT.value.code)
+                    # Page-align the fault address: the GP defines F(p) where p is the page index.
+                    # The CoreVM service uses this value directly as the poke destination for PAGE_SIZE bytes,
+                    # so it must be page-aligned to avoid crossing page boundaries.
+                    registers[8] = c.value.register & ~0xFFF
+                    return CONTINUE, gas, registers, memory, context
+                elif c == ExecutionStatus.OUT_OF_GAS:
+                    registers[7] = U64(ExecutionStatus.OUT_OF_GAS.value.code)
+                    return CONTINUE, gas, registers, memory, context
+                elif c == ExecutionStatus.PANIC:
+                    registers[7] = U64(ExecutionStatus.PANIC.value.code)
+                    return CONTINUE, gas, registers, memory, context
+                elif c == ExecutionStatus.HALT:
+                    registers[7] = U64(ExecutionStatus.HALT.value.code)
+                    return CONTINUE, gas, registers, memory, context
+        except Exception as e:
+            logger.error("INVOKE ERROR", err=str(e))
+            raise e
 
     @staticmethod
     @INVF.register(13, gas_cost=10)

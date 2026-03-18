@@ -1,8 +1,7 @@
-import time
+import structlog
 from typing import Any, Tuple
 from jam.execution.invocations.protocol import Context, DispatchFunction
 import os
-from jam.log_setup import pvm_logger as logger
 from tsrkit_pvm import (
         ExecutionStatus,
         CONTINUE,
@@ -27,6 +26,7 @@ else:
 
 HostCallReturn = Tuple[ExecutionStatus, int, int, list, Memory, Context]
 
+logger = structlog.get_logger("pvm")
 
 class PsiH:
     @staticmethod
@@ -43,13 +43,15 @@ class PsiH:
         current_pc = pc
 
         host_calls = set()
-        
+
         while True:
             # Direct PVM execution call
+            logger.debug("TYPES", pr=type(program), pc=type(current_pc), gs=type(current_gas),
+                         rg=type(registers), rgs=registers)
             status, current_pc, remaining_gas, registers, memory = PVM.execute(
                 program, current_pc, current_gas, registers, memory, logger
             )
-            
+
             if status == ExecutionStatus.HALT:
                 return status, current_pc, remaining_gas, registers, memory, context
             elif status == ExecutionStatus.PANIC:
@@ -66,7 +68,7 @@ class PsiH:
                     status, remaining_gas, registers, memory, context = dispatch_fn(
                         host_register, remaining_gas, registers, memory, context
                     )
-                    
+
                     if remaining_gas < 0:
                         return ExecutionStatus.OUT_OF_GAS, current_pc, remaining_gas, registers, memory, context
 
@@ -75,7 +77,7 @@ class PsiH:
                         # Continue loop directly
                     else:
                         return status, current_pc, remaining_gas, registers, memory, context
-                        
+
                 except PvmError as e:
                     return e.code, current_pc, remaining_gas - 10, registers, memory, context
             else:

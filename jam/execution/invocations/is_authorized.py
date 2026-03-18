@@ -1,19 +1,25 @@
+from typing import TYPE_CHECKING
+
 from jam.execution.invocations.functions.general_fns import GeneralFunctions
 from jam.execution.invocations.arg_invoke import PsiM
 from jam.execution.invocations.protocol import InvocationProtocol
 from jam.types.protocol.core import CoreIndex, ProgramCounter
 from jam.types.protocol.crypto import OpaqueHash
-from jam.types.work import WorkPackage
+from jam.types.work.execution import WorkExecResult
+from jam.types.work.package import WorkPackage
+
 from jam.utils.constants import IS_AUTHORIZED_GAS, MAX_AUTH_CODE_SIZE
 from tsrkit_pvm import HostStatus
-from jam.types.work.execution import WorkExecResult
 from tsrkit_types.null import Null
 
+if TYPE_CHECKING:
+    from jam.jam_node import JamNode
 
 class PsiI(InvocationProtocol):
-    def __init__(self, p: WorkPackage, c: CoreIndex):
+    def __init__(self, p: WorkPackage, c: CoreIndex, jam: "JamNode"):
         self.work_package = p
         self.core = c
+        self.jam = jam
         self.table = self.build_table()
 
     def build_table(self):
@@ -38,7 +44,7 @@ class PsiI(InvocationProtocol):
         }
 
     def execute(self):
-        from jam.state.state import state
+        state = self.jam.state
 
         # pc == pu
         _, pc = self.work_package.m_c(state.delta)
@@ -47,7 +53,7 @@ class PsiI(InvocationProtocol):
             return WorkExecResult(Null, key="bad_code"), 0
         elif len(pc) > MAX_AUTH_CODE_SIZE:
             return WorkExecResult(Null, key="code_oversize"), 0
-        
+
         u, r, _ = PsiM.execute(
             blob=pc,
             pc=0,

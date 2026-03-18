@@ -1,7 +1,9 @@
-from typing import Tuple
+from typing import Tuple, TYPE_CHECKING
+
+import structlog
 
 from tsrkit_types import Bytes, Null
-import time 
+import time
 from jam.execution.invocations.functions.general_fns import GeneralFunctions
 from jam.execution.invocations.arg_invoke import PsiM
 from jam.execution.invocations.functions.refine_fns import (
@@ -19,6 +21,10 @@ from jam.types.protocol.core import ProgramCounter, Gas
 from jam.types.protocol.crypto import OpaqueHash, Hash
 from jam.utils.constants import REFINE_GAS
 
+if TYPE_CHECKING:
+    from jam.jam_node import JamNode
+
+logger = structlog.get_logger("pvm")
 
 class PsiR(InvocationProtocol):
     def __init__(
@@ -29,6 +35,7 @@ class PsiR(InvocationProtocol):
         auth_trace: bytes,
         i_segments: list[list[bytes]],
         e_offset: int,
+        jam: "JamNode"
     ):
         self.core_index = core_index
         self.item_index = Uint[16](item_index)
@@ -36,6 +43,7 @@ class PsiR(InvocationProtocol):
         self.auth_trace = auth_trace
         self.i_segments = i_segments
         self.e_offset = e_offset
+        self.jam = jam
         self.table = self.build_table()
 
     @property
@@ -44,9 +52,9 @@ class PsiR(InvocationProtocol):
 
 
     def build_table(self):
-        from jam.state.state import state
         from jam.storage.item_extrinsics import ItemExtrinsics
-        from jam.settings import settings
+        state = self.jam.state
+        settings = self.jam.settings
 
         return {
             0: (GeneralFunctions, {}),
@@ -84,13 +92,22 @@ class PsiR(InvocationProtocol):
         }
 
     def execute(self) -> Tuple[WorkExecResult, Segments, Gas]:
-        from jam.state.state import state
+        state = self.jam.state
+        t0 = time.time()
 
-        _, pc = decode_code_hash(
-            state.delta[self.wi.service].historical_lookup(
-                self.work_package.context.lookup_anchor_slot, self.wi.code_hash
-            )
+        account = state.delta[self.wi.service]
+        if account is None:
+            raise ValueError(f"Service {int(self.wi.service)} not found in state")
+
+        code = account.historical_lookup(
+            self.work_package.context.lookup_anchor_slot, self.wi.code_hash
         )
+        if code is None:
+            raise ValueError(f"Code not found via historical_lookup for service {int(self.wi.service)}")
+        t1 = time.time()
+
+        _, pc = decode_code_hash(code)
+        t2 = time.time()
 
         args = (
             Uint(self.core_index).encode()
@@ -99,14 +116,28 @@ class PsiR(InvocationProtocol):
             + self.wi.payload.encode()
             + bytes(Hash.blake2b(self.work_package.encode()))
         )
-        start = time.time()
-        u, r, context = PsiM.execute(
-            pc,
-            0,
-            REFINE_GAS,
-            args,
-            self.dispatch,
-            RefineContext(m=RefinementMap({}), e=Segments([])),
+
+        try:
+            u, r, context = PsiM.execute(
+                pc,
+                0,
+                REFINE_GAS,
+                args,
+                self.dispatch,
+                RefineContext(m=RefinementMap({}), e=Segments([])),
+            )
+        except Exception as e:
+            logger.error("REFINE INVOCATION ERR", err=str(e))
+            raise e
+        t3 = time.time()
+
+        logger.trace("REFINE_TIMING",
+            lookup_ms=int((t1 - t0) * 1000),
+            decode_ms=int((t2 - t1) * 1000),
+            execute_ms=int((t3 - t2) * 1000),
+            total_ms=int((t3 - t0) * 1000),
+            code_size=len(code) if code else 0,
+            service=int(self.wi.service),
         )
 
         if r == PANIC:
