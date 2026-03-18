@@ -1,7 +1,12 @@
 import asyncio
-from typing import Tuple
+from typing import Tuple, TYPE_CHECKING
 import time
-from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, TypedVector, U32
+import traceback
+
+from jam.incore.doer import Doer
+from jam.storage.item_extrinsics import ItemExtrinsics
+from jam.utils.task_utils import create_safe_task
+from tsrkit_types import ByteArray, Uint, Null, Bytes, U8, TypedVector, U32, String, Option
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import (
@@ -15,10 +20,9 @@ from jam.block.extrinsics.guarantees import (
     ValidatorSignature,
 )
 
-from jam.network.connection import NodeConnection
+from jam.network.connection import PeerConnection
 from jam.network.protocols.ce_134 import Credential
 
-from jam.log_setup import node_logger as logger
 from jam.execution.invocations.is_authorized import PsiI
 from jam.execution.invocations.refine import PsiR
 
@@ -64,7 +68,9 @@ from jam.incore.error import ProcessorError, ProcessorErrorCode as Code
 from jam.incore.validator import Validator
 
 from jam.storage.da.audits import AuditShardsDA
-from jam.storage.da.mappings import PackageSegmentMap, SegmentErasureMap, ReportHashAssurerMap, ErasureAssurerMap
+from jam.storage.da.packages import PackageDA
+from jam.storage.da.mappings import PackageSegmentMap, SegmentErasureMap, ReportHashAssurerMap, ErasureAssurerMap, \
+    PackageReportMap, PackageStatusMap, PackageStatus
 from jam.storage.da.reports import ReportsDA
 from jam.storage.da.segments import SegmentsDA, SegmentShardsDA
 
@@ -76,18 +82,19 @@ from jam.utils.constants import (
     SEGMENT_SIZE,
     MAX_WORK_REPORT_SIZE,
     SLOT_PERIOD,
-    X, VALIDATOR_COUNT
+    X, VALIDATOR_COUNT, LOOKUP_ANCHOR_MAX_AGE
 )
 
-from tests.unit.incore.types import FullVector
 
-vector: FullVector = FullVector()
+if TYPE_CHECKING:
+    from jam.jam_node import JamNode
 
-class Processor:
+class Processor(Doer):
     """ "Refinement Engine. Synced upto GP v0.7.0"""
-    merklizer: BMRFunctions
+    merklizer: "BMRFunctions"
 
-    def __init__(self):
+    def __init__(self, jam: "JamNode"):
+        super().__init__(jam)
         self.merklizer = BMRFunctions()
 
     async def process(
@@ -97,25 +104,27 @@ class Processor:
         extrinsics: Extrinsics,
         share_guarantee: bool = True,
     ):
-        global vector
-        vector = FullVector()
-        vector.core_index = core
-        vector.work_package = package
-        vector.extrinsics = extrinsics
+        _t_start = time.time()
+        ts = int((_t_start - GENESIS_TS) //  SLOT_PERIOD)
+        settings = self.settings
+        logger = self.logger
 
-        ts = int((time.time() - GENESIS_TS) //  SLOT_PERIOD)
-        from jam.network.protocols.ce_134 import (
-            CoreSegment,
-            WorkPackageSharing,
-            CE134Data,
-        )
-        from jam.network.protocols.ce_135 import WorkReportDistribution, CE135Data
+        from jam.network.protocols.ce_134 import CoreSegment, CE134Data
+        from jam.network.protocols.ce_135 import CE135Data
+
+        from jam.vectors import recorder as vec  # VECTOR
+        if vec.is_active():  # VECTOR
+            vec.record_wp_received(self.jam.state.tau, package.hash(), core, package)  # VECTOR
 
         logger.debug("Validating work package..")
         validator = Validator()
         validator.validate_wp(package)
 
-        bundler = Bundler()
+        bundler = Bundler(self.jam)
+
+        logger.debug("Storing WP..", wp_hash=package.hash().hex()[:16] + "...")
+        wp_da = PackageDA(settings.d3l)
+        wp_da.put(package)
 
         # Build Segment Root Lookup Dictionary
         logger.debug("Building lookup dictionary..")
@@ -124,13 +133,11 @@ class Processor:
         # Build Work Package Bundle
         logger.debug("Building work package bundle..")
         bundle = await bundler.build_bundle(package, extrinsics)
-        vector.bundle = bundle
-        vector.import_segs = bundle.import_segments
+        _t_bundle = time.time()
 
         guarantee_task = None
         if share_guarantee:
             # Distribute Bundle to other Guarantors CE134
-            CE134 = WorkPackageSharing()
             core_segment = CoreSegment(core_index=core, segment_root_map=lookup)
             map_len = U32(len(core_segment.encode()))
             bundle_len = U32(len(bundle.encode()))
@@ -147,34 +154,53 @@ class Processor:
             loop = asyncio.get_running_loop()
             loop.set_task_factory(asyncio.eager_task_factory)
 
-            guarantee_task = loop.create_task(CE134.transmit(data=data))
+            guarantee_task = loop.create_task(
+                self.router.dispatch(134, data)
+            )
+
+        if vec.is_active():  # VECTOR
+            vec.record_bundle(self.jam.state.tau, package.hash(), bundle)  # VECTOR
 
         # Build Report
         logger.debug("Processing work package bundle..")
         wr, wr_hash = self.process_bundle(core, bundle, lookup)
+        _t_report = time.time()
+
+        if vec.is_active():  # VECTOR
+            vec.record_report(self.jam.state.tau, package.hash(), wr_hash, wr)  # VECTOR
 
         if share_guarantee and (guarantee_task is not None):
             # Build Guaranteed WR
             guarantees = await guarantee_task
+            _t_guarantee = time.time()
             logger.debug(f"Processing guarantees..", cnt=len(guarantees))
             guaranteed_wr = self.process_guarantees(wr, wr_hash, guarantees)
 
             # Distribute Guaranteed Work Report to other validators
-            CE135 = WorkReportDistribution()
             r_len = U32(len(guaranteed_wr.encode()))
             data = CE135Data(len=r_len, guaranteed_wr=guaranteed_wr)
 
             logger.debug("Distributing guaranteed work report..")
-            transmit_task = asyncio.create_task(
-                CE135.transmit(data=data)
+            transmit_task = create_safe_task(
+                self.router.dispatch(135, data)
+            )
+            _t_end = time.time()
+
+            logger.info("PROCESS_TIMING",
+                bundle_ms=int((_t_bundle - _t_start) * 1000),
+                refine_ms=int((_t_report - _t_bundle) * 1000),
+                guarantee_ms=int((_t_guarantee - _t_report) * 1000),
+                distribute_ms=int((_t_end - _t_guarantee) * 1000),
+                total_ms=int((_t_end - _t_start) * 1000),
+                slot=ts,
             )
             # acks = await transmit_task
 
+            if vec.is_active():  # VECTOR
+                vec.record_guarantee(self.jam.state.tau, package.hash(), wr_hash, guaranteed_wr)  # VECTOR
+
             logger.debug("Saving guaranteed work report mappings..")
             self.process_guaranteed_report(guaranteed_wr)
-
-        vector.work_rep = wr
-        vector.rep_hash = wr_hash
 
         return wr, wr_hash
 
@@ -239,6 +265,9 @@ class Processor:
             Work Report
         """
 
+        settings = self.settings
+        logger = self.logger
+
         try:
             # Work Package, p
             p = b.package
@@ -246,7 +275,7 @@ class Processor:
             # ------------------------------------------ IS AUTH INVOCATION ------------------------------------------
             # Auth Output o & Gas g
             logger.debug(f"Checking authorization..")
-            o, g = PsiI(p, c).execute()
+            o, g = PsiI(p, c, self.jam).execute()
             # ------------------------------------------ -- ---- ---------- ------------------------------------------
             o = o.unwrap().encode() if isinstance(o, WorkExecResult) else o
             s_result = 0
@@ -269,7 +298,18 @@ class Processor:
 
                 # ------------------------------------------ REFINE INVOCATION ----------------------------------------
                 logger.debug(f"Refining Work Item {j}..", payload=p.items[j].payload.hex())
-                r, e, u = PsiR(c, j, p, o, b.import_segments, l).execute()
+                ext = ItemExtrinsics(settings.main_db).get_all(p)
+                logger.debug("RETRIEVED EXTRINSICS", ext=ext)
+                try:
+                    r, e, u = PsiR(c, j, p, o, b.import_segments, l, self.jam).execute()
+                except Exception as er:
+                    tb = traceback.format_exc()
+                    print("REFINE ERROR", er)
+                    print("--- REFINE TRACEBACK START ---")
+                    print(tb)
+                    print("--- REFINE TRACEBACK END ---")
+                    logger.error("REFINE ERROR OCCURRED", err=str(er), traceback=tb)
+                    raise er
                 logger.debug(f"REFINE RESULT: {r}", item=j, payload=list(p.items[j].payload))
                 # ------------------------------------------ ----------------- ----------------------------------------
 
@@ -353,11 +393,11 @@ class Processor:
         Returns:
             s: Availability specifier
         """
-        global vector
+        logger = self.logger
+        settings = self.settings
 
         from jam.utils.erasure_coding.erasure_code import ErasureCode
         from jam.incore.utils import Utils
-        from jam.settings import settings
 
         utils = Utils()
         try:
@@ -502,13 +542,6 @@ class Processor:
                 exports_root=e.hex(),
             )
 
-            vector.export_segs = justified_segments
-            vector.shards = shards_keys
-            vector.ss_roots = ss_roots
-            vector.bs_hashes = bs_hashes
-            vector.seg_shards = segments_shards
-            vector.bun_shards = bundle_shards
-
             return spec
         except Exception as e:
             logger.error("Failed to build availability specification", error=e)
@@ -521,7 +554,8 @@ class Processor:
         sr_lookup: SegmentRootLookup,
         store: bool = True,
     ) -> Tuple[WorkReport, WorkReportHash]:
-        from jam.settings import settings
+        settings = self.settings
+        logger = self.logger
 
         wp_hash = bundle.package.hash()
         try:
@@ -529,8 +563,8 @@ class Processor:
             logger.debug("Building Work Report..")
             report = self.build_report(bundle, core, sr_lookup, store)
 
-            wr_hash = WorkReportHash(Hash.blake2b(report.encode()))
-            logger.debug(
+            wr_hash = report.hash()
+            logger.info(
                 f"Report compiled", wp_hash=wp_hash.hex(), wr_hash=wr_hash.hex()
             )
 
@@ -553,16 +587,32 @@ class Processor:
             )
             raise
 
-    @staticmethod
-    def process_guaranteed_report(report_guarantee: ReportGuarantee):
-        from jam.settings import settings
+    def process_guaranteed_report(self, report_guarantee: ReportGuarantee):
+        settings = self.settings
+        state = self.state
+        logger = self.logger
+
+        d3l = settings.d3l
+        wp_da = PackageStatusMap(d3l)
 
         # Store Extrinsic
-        from jam.block.extrinsics.guarantees import wrg_store
-        wrg_store.store(report_guarantee)
+        self.pool.guarantees.store(report_guarantee)
 
         wr = report_guarantee.report
-        wr_hash = Hash.blake2b(wr.encode())
+        wr_hash = wr.hash()
+
+
+        # anchor_block = Block.load(wr.context.anchor, settings.main_db)
+        # print("ANCHOR", anchor_block if not anchor_block else "SOME BLOCK", wr.context.anchor.hex())
+        # if not anchor_block:
+        #     status = PackageStatus.empty()
+        #     status.status = String("FAILED")
+        #     status.wr_hash = Option[WorkReportHash](wr_hash)
+        #     status.err = String("Anchor block not found in database.")
+        #     wp_da.put(wr.package_spec.hash, status)
+        #
+        #     raise KeyError("Anchor Block not found")
+
 
         guarantees = report_guarantee.signatures
         erasure_root = wr.package_spec.erasure_root
@@ -570,8 +620,6 @@ class Processor:
 
         package_hash = wr.package_spec.hash
         assurers = Assurers([sign.validator_index for sign in guarantees])
-
-        d3l = settings.d3l
 
         rep_da = ReportsDA(d3l)
         map_da = PackageSegmentMap(d3l)
@@ -584,6 +632,27 @@ class Processor:
 
         # Store Package Hash -> Segment Root Mapping
         map_da.put(wr)
+
+        # Store Package Hash -> Status Mapping
+        status = PackageStatus.empty()
+        status.status = String("REPORTABLE")
+        status.wr_hash = Option[WorkReportHash](wr_hash)
+        wp_da.put(wr.package_spec.hash, status)
+
+        max_slot = int(wr.context.lookup_anchor_slot) + LOOKUP_ANCHOR_MAX_AGE
+        remaining = max(0, max_slot - state.tau)
+        val = {
+            "Reportable": {
+                "remaining_blocks": remaining
+            }
+        }
+
+        create_safe_task(
+            self.jam.publisher.publish_work_package_status(
+                wr.package_spec.hash, wr.context.anchor, val
+            ),
+            name="Publish WP Status (Reportable)"
+        )
 
         # Store Segment Root -> Erasure Root Mapping
         sr_er_da.put(root=exports_root, data=erasure_root)
@@ -606,13 +675,13 @@ class Processor:
         self,
         wr: WorkReport,
         wr_hash: WorkReportHash,
-        signatures: list[tuple[Credential | None, NodeConnection]],
+        signatures: list[tuple[Credential | None, PeerConnection]],
     ):
         """
         Function for processing guarantees
         """
-
-        from jam.settings import settings
+        settings = self.settings
+        logger = self.logger
 
         ed25519_key = Ed25519PrivateKey.from_private_bytes(settings.ed25519_private)
 
@@ -621,14 +690,21 @@ class Processor:
         # Sign the Guarantee
         sign = Ed25519Signature(ed25519_key.sign(payload))
 
-        from jam.settings import settings
-        og_guarantee = ValidatorSignature(
-            validator_index=ValidatorIndex(settings.validator_index), signature=sign
-        )
+        my_vi = settings.validator_index(self.jam.state)
 
-        # Check majority & Build guarantees:
-        guarantees = [og_guarantee]
-        vi = {int(settings.validator_index)}
+        # Only include own signature if assigned to this core
+        from jam.state.transitions.report.guarantee_assignment import assign_fn
+        mappings = assign_fn(self.jam.state)
+        curr_assigned = mappings[0].get(wr.core_index, [])
+
+        guarantees = []
+        vi = set()
+        if my_vi in curr_assigned:
+            og_guarantee = ValidatorSignature(
+                validator_index=my_vi, signature=sign
+            )
+            guarantees.append(og_guarantee)
+            vi.add(int(my_vi))
 
         for cred, peer in signatures:
             if cred is not None and cred.work_report_hash == wr_hash:
@@ -637,7 +713,7 @@ class Processor:
                         logger.error("Duplicate guarantee received from peer", peer=peer)
                         continue
 
-                    Ed25519PublicKey.from_public_bytes(peer.ed25519_public).verify(
+                    Ed25519PublicKey.from_public_bytes(peer.peer_ed_key).verify(
                         cred.ed25519_signature,
                         payload,
                     )
@@ -659,7 +735,7 @@ class Processor:
 
         guaranteed_wr = ReportGuarantee(
             report=wr,
-            slot=TimeSlot((time.time() - GENESIS_TS) // SLOT_PERIOD),
+            slot=self.jam.state.tau,
             signatures=guarantees,
         )
 

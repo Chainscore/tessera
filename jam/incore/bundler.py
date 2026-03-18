@@ -1,7 +1,8 @@
 import asyncio
 from math import ceil
-from typing import Tuple, Dict, List, Set
+from typing import Tuple, Dict, List, Set, TYPE_CHECKING
 
+from jam.incore.doer import Doer
 from tsrkit_types.sequences import Vector
 from tsrkit_types.integers import Uint
 from tsrkit_types.bytes import Bytes
@@ -9,7 +10,6 @@ from tsrkit_types.bytes import Bytes
 from jam.incore.error import BundlerError, BundlerErrorCode as Code
 from jam.incore.utils import Utils
 
-from jam.log_setup import node_logger as logger
 
 from jam.network.utils.shards import get_vi
 from jam.network.protocols.ce_139_base import SegmentIndexes, Query, Queries, CE139Data
@@ -44,20 +44,25 @@ from jam.utils.gather import gather_with_exceptions
 from jam.utils.merkle.binary_merkle import BMRFunctions, OpaqueHashes
 from jam.utils.erasure_coding.erasure_code import ErasureCode
 
+if TYPE_CHECKING:
+    from jam.jam_node import JamNode
 
-class Bundler:
+
+class Bundler(Doer):
     merkle: BMRFunctions
     sr_lookup: SegmentRootLookup
     segments_lookup: Vector[SegmentDict]
 
-    def __init__(self):
+    def __init__(self, jam: "JamNode"):
+        super().__init__(jam)
         self.merkle = BMRFunctions()
         self.sr_lookup = SegmentRootLookup({})
         self.segments_lookup = Vector([])
 
     def build_lookup(self, p: WorkPackage) -> SegmentRootLookup:
         # Access DA
-        from jam.settings import settings
+        settings = self.settings
+        logger = self.logger
 
         d3l = settings.d3l
 
@@ -97,6 +102,7 @@ class Bundler:
         Returns:
             r, if r is already a segment root, else Segment root from dictionary if r is a work package hash.
         """
+        logger = self.logger
         if isinstance(r, SegmentRoot):
             return r
         else:
@@ -109,8 +115,7 @@ class Bundler:
                 )
                 raise BundlerError(Code.LOOKUP_ERROR)
 
-    @staticmethod
-    def fetch_extrinsics(w: WorkItem, data: Bytes) -> Extrinsics:
+    def fetch_extrinsics(self, w: WorkItem, data: Bytes) -> Extrinsics:
         """
         Function X defined in Eqn 14.15
         Takes Work Item & retrieves its required extrinsic data
@@ -125,7 +130,7 @@ class Bundler:
         """
 
         # Access DA
-        from jam.settings import settings
+        settings = self.settings
 
         db = settings.main_db
 
@@ -160,9 +165,10 @@ class Bundler:
         """
 
         imports: Segments = Segments([])
+        logger = self.logger
 
         # Access DA
-        from jam.settings import settings
+        settings = self.settings
 
         d3l = settings.d3l
 
@@ -444,13 +450,14 @@ class Bundler:
             Bundler Error: If Justifications aren't computed due to any reason (which can be traced back)
         """
 
-        justifications: Justifications = Justifications([])
+        logger = self.logger
+        settings = self.settings
 
-        # Access DA
-        from jam.settings import settings
+        justifications: Justifications = Justifications([])
 
         d3l = settings.d3l
 
+        # Access DA
         seg_da = SegmentsDA(d3l)
         sr_er_da = SegmentErasureMap(d3l)
         shards_da = SegmentShardsDA(d3l)
@@ -658,19 +665,16 @@ class Bundler:
                             proof_ind=(exports_count + p),
                         )
 
-                        from jam.network.protocols import SegmentShardRequest
-
-                        ce_139 = SegmentShardRequest()
                         for i in range(chain_config.num_validators):
                             vi = get_vi(i, wr.core_index)
 
                             query = Query(e_root, ShardIndex(i), ind_to_req)
                             queries = Queries([query])
                             length = Uint[32](len(queries.encode()))
-                            ce_139_data = CE139Data(length, queries)
+                            request = CE139Data(length, queries)
 
                             if self.node.validator_index != vi:
-                                data = await ce_139.transmit(self.node, ce_139_data)
+                                data = await self.router.dispatch(139, request)
                                 if (
                                     data
                                     and len(data) == 1
@@ -752,6 +756,7 @@ class Bundler:
 
     async def build_bundle(self, p: WorkPackage, x: Extrinsics) -> WorkPackageBundle:
         """Function to build Work Package Bundle"""
+        logger = self.logger
 
         all_imp = MultiSegments([])
         all_jfn = MultiJustifications([])
