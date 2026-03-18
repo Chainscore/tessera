@@ -247,8 +247,8 @@ class JudgmentPublication(NetworkProtocol):
         state = self.jam.state
         settings = self.jam.settings
 
-        audit = Audit()
-        utils = Utils()
+        audit = Audit(self.jam)
+        utils = Utils(self.jam)
 
         validator_index = settings.validator_index(state)
         wr_hash = judgment.work_report_hash
@@ -259,7 +259,7 @@ class JudgmentPublication(NetworkProtocol):
 
         epoch_index = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
 
-        ed25519_signature = Audit.judgment_signature(
+        ed25519_signature = audit.judgment_signature(
             wr_hash=judgment.work_report_hash, validity=update_validity
         )
 
