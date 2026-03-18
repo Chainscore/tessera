@@ -4,7 +4,7 @@ from typing import List, Coroutine
 from jam.log_setup import logger
 
 
-async def gather_with_exceptions(tasks: List[asyncio.Task | Coroutine]):
+async def gather_with_exceptions(tasks: List[asyncio.Task | Coroutine], name: str = None):
     """
     Run tasks concurrently and handle exceptions gracefully.
     
@@ -18,7 +18,8 @@ async def gather_with_exceptions(tasks: List[asyncio.Task | Coroutine]):
         if isinstance(res, Exception):
             logger.error(
                 f"Task {i} in gather failed",
-                exc_info=(type(res), res, res.__traceback__)
+                exc_info=(type(res), res, res.__traceback__),
+                **({"task": name} if name else {})
             )
             # Optionally append None for failed tasks
             # results.append(None)

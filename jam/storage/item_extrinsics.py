@@ -59,6 +59,7 @@ class ItemExtrinsics:
             for ext in item:
                 key = Hash.blake2b(ext.encode())
                 cls.DB.put(key.encode(), ext.encode())
+                print("EXTRINSIC", key.hex(), ext.hex(), len(ext), len(ext.encode()))
 
     def store(self, package: WorkPackage, data: List[Bytes]):
         """
@@ -128,8 +129,25 @@ class ItemExtrinsics:
             item_extr = []
             for extrinsics in item.extrinsic:
                 ext = self.get(extrinsics.hash)
-                if len(ext) != extrinsics.len:
+                if extrinsics.len == 0:
+                    ext = b""
+                elif not ext or len(ext) != extrinsics.len:
                     raise ValueError("Critical: Invalid extrinsic!")
                 item_extr.append(ext)
+            result.append(item_extr)
+        return result
+
+
+    def get_ext(self, wp: WorkPackage) -> Extrinsics:
+        result = Extrinsics([])
+        for item in wp.items:
+            item_extr = Extrinsic(b"")
+            for extrinsics in item.extrinsic:
+                ext = self.get(extrinsics.hash)
+                if extrinsics.len == 0:
+                    ext = Extrinsic(b"")
+                if not ext or len(ext) != extrinsics.len:
+                    raise ValueError("Critical: Invalid extrinsic!")
+                item_extr += Extrinsic(ext)
             result.append(item_extr)
         return result

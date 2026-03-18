@@ -1,5 +1,5 @@
 """Constants for the JAM protocol as defined in the specification."""
-
+# from jam.block import Block
 from tsrkit_types import Enum, U16, U32, U64
 
 from datetime import datetime, timezone
@@ -11,6 +11,7 @@ from jam.utils.chainspec import chain_config
 GENESIS_HASH = "2bf11dc5e1c7b9bbaafc2c8533017abc12daeb0baf22c92509ad50f7875e5716"
 JAMNP_VERSION = "0"
 NODE_ALPN = f"jamnp-s/{JAMNP_VERSION}/{GENESIS_HASH[:8]}" 
+BUILDER_ALPN = NODE_ALPN + "/builder"
 
 # ───────────────────────────────────────
 # Constants (I.4.4, JAM Graypaper Order)

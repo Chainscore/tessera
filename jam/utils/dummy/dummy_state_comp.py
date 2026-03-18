@@ -1,5 +1,6 @@
 from typing import Dict
 
+from jam.config import NodeConfig
 from jam.settings import Settings
 from jam.types.protocol.ticket import TicketAttempt, TicketBody, TicketId
 from jam.types.state.gamma import Gamma, GammaA, GammaP, GammaS, GammaSTickets
@@ -106,7 +107,7 @@ def create_dummy_state_components() -> Dict[str, object]:
     components["theta"] = Theta([])
 
     # Create dummy validator data
-    key_set = [Settings(data_path=None, seed=i) for i in range(VALIDATOR_COUNT)]
+    key_set = [Settings(NodeConfig(DATA_PATH=None, SEED=str(i))) for i in range(VALIDATOR_COUNT)]
     dummy_validator_data = [
         ValidatorData(
             bandersnatch=BandersnatchPublic(key.bandersnatch_public),

@@ -100,8 +100,8 @@ class WorkPackage:
         )
         return decode_code_hash(service_data)
 
-    def hash(self) -> Bytes[32]:
-        return Hash.blake2b(self.encode())
+    def hash(self) -> WorkPackageHash:
+        return WorkPackageHash(Hash.blake2b(self.encode()))
 
     def encode_into(self, buffer: bytearray, offset: int = 0) -> int:
         current_offset = offset

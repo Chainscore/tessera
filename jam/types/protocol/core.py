@@ -1,28 +1,32 @@
-from jam.types.protocol.validators import ValidatorsData
+from typing import TYPE_CHECKING
+
 from tsrkit_types.integers import Uint
 from jam.types.protocol.crypto import OpaqueHash
 
 # Simple type aliases
 TimeSlot = Uint[32]
 
+if TYPE_CHECKING:
+    from jam.jam_node import JamNode
+
 
 class ValidatorIndex(Uint[16]):
     @classmethod
-    def from_bandersnatch(cls, b_key, val_set: ValidatorsData):
+    def from_bandersnatch(cls, jam: "JamNode"):
         """
         Get block producer's author index from the state
         """
-        from jam.network.start import node
-        from jam.state.state import state
-        from jam.log_setup import node_logger as logger
+        logger = jam.logger
+        state = jam.state
+        settings = jam.settings
 
         for i, validator in enumerate(state.kappa):
-            if validator.bandersnatch == node.validator_data.bandersnatch:
+            if validator.bandersnatch == settings.bandersnatch_public:
                 return ValidatorIndex(i)
 
         logger.error(
             "Author not found in validator set",
-            our_key=node.validator_data.bandersnatch,
+            our_key=settings.bandersnatch_public,
         )
         raise ValueError("Author not found in the state")
 

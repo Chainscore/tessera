@@ -1,5 +1,6 @@
 from typing import Tuple
 
+from jam.types import HeaderHash
 from rockstore import RockStore
 
 from jam.types.protocol.crypto import Hash
@@ -13,7 +14,7 @@ from jam.types.work.report import WorkReport
 from jam.types.work.manifest import Assurers, ReportAssurers
 
 from jam.storage.da.store import DA
-
+from tsrkit_types import structure, Option, String, Null
 
 class PackageSegmentMap(DA):
     """
@@ -42,6 +43,87 @@ class PackageSegmentMap(DA):
         report, _ = ExportsRoot.decode_from(data)
 
         return report
+
+    def delete(self, wp_hash: WorkPackageHash) -> None:
+        key = self.prefix + wp_hash.encode()
+        self.db.delete(key)
+
+class PackageReportMap(DA):
+    """
+    PackageReportMap Maps all the packages to their report hash.
+
+    Key: Work Package Hash
+    Value: Work Report Hash
+    """
+
+    def __init__(self, db: RockStore):
+        self.prefix = bytes("WPWR", "utf-8")
+        self.db = db
+
+    def put(self, report: WorkReport) -> None:
+        key = self.prefix + report.package_spec.hash.encode()
+        data = report.hash()
+
+        self.db.put(key, data.encode())
+
+    def get(self, wp_hash: WorkPackageHash) -> WorkReportHash:
+        key = self.prefix + wp_hash.encode()
+        data = self.db.get(key)
+        if data is None:
+            raise KeyError("Work Report not found in DA")
+
+        wr_hash = WorkReportHash.decode(data)
+
+        return wr_hash
+
+    def delete(self, wp_hash: WorkPackageHash) -> None:
+        key = self.prefix + wp_hash.encode()
+        self.db.delete(key)
+
+@structure
+class PackageStatus:
+    ready_in: Option[HeaderHash]
+    reported_in: Option[HeaderHash]
+    wr_hash: Option[WorkReportHash]
+    status: String
+    err: String = String("")
+
+    @classmethod
+    def empty(cls):
+        return cls(
+            ready_in=Option[HeaderHash](Null),
+            reported_in=Option[HeaderHash](Null),
+            wr_hash=Option[WorkReportHash](Null),
+            status=String(""),
+            err=String("")
+        )
+
+class PackageStatusMap(DA):
+    """
+    PackageReportMap Maps all the packages to their report hash.
+
+    Key: Work Package Hash
+    Value: Status
+    """
+
+    def __init__(self, db: RockStore):
+        self.prefix = bytes("WPST", "utf-8")
+        self.db = db
+
+    def put(self, wp_hash: WorkPackageHash, status: PackageStatus) -> None:
+        key = self.prefix + wp_hash.encode()
+
+        self.db.put(key, status.encode())
+
+    def get(self, wp_hash: WorkPackageHash) -> PackageStatus:
+        key = self.prefix + wp_hash.encode()
+        data = self.db.get(key)
+        if data is None:
+            raise KeyError("Work Package Info not found in DA")
+
+        wp_status = PackageStatus.decode(data)
+
+        return wp_status
 
     def delete(self, wp_hash: WorkPackageHash) -> None:
         key = self.prefix + wp_hash.encode()

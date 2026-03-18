@@ -1,5 +1,4 @@
 from math import floor
-from collections import deque
 
 from tsrkit_types import TypedVector, U32
 
@@ -16,47 +15,41 @@ from jam.utils.constants import (
     ROTATION_PERIOD,
 )
 
-def assign_guarantors(slot: TimeSlot = None, epoch=0):
+def assign_guarantors(jam, slot: TimeSlot = None, epoch=0):
     """
-    Fetch core mappings of guarantors for a specific timeslot or current state's timeslot
+    Fetch core mappings of guarantors for a specific timeslot or current state's timeslot.
+
+    Implements Graypaper eq 11.19-11.21:
+        P(e, t) = R(F([⌊C·i/V⌋ | i ∈ N_V], e), ⌊(t mod E) / R⌋)
+        R(c, n) = [(x + n) mod C | x ∈ c]
 
     Args:
+        jam: JamNode instance
         slot: A Particular Timeslot
         epoch: 0 for current epoch, -1 for previous epoch and 1 for next epoch
 
     Returns:
-        Mapping of core index to its assigned guarantor
+        (val_map, index_map) — core → validator data and core → validator indices
     """
 
     vc = VALIDATOR_COUNT
 
     # ------ Fetch State --------
     if slot:
-        from jam.settings import settings
         from jam.state.state import State
 
         ts_key = Block.get_storage_key_slot(slot)
-        hh = settings.main_db.get(ts_key)
-        from jam.state.state import State
-        state = State.load(hh)
+        hh = jam.settings.main_db.get(ts_key)
+        state = State.load(jam, hh)
 
     else:
-        from jam.state.state import state
-
+        state = jam.state
         slot = state.tau
 
     # ------- Validators ---------
     if len(state.kappa) < VALIDATOR_COUNT:
         print(f"FOUND {len(state.kappa)} VALIDATORS : LESS THAN {VALIDATOR_COUNT}")
         vc = len(state.kappa)
-
-    validators: TypedVector[U32] = TypedVector[U32]([U32(i) for i in range(vc)])
-
-    # ------- Unassigned Cores -------
-    validator_assign: TypedVector[U32] = TypedVector[U32]([])
-    for i in range(vc):
-        val_core = floor((CORE_COUNT * i) / vc)
-        validator_assign.append(U32(val_core))
 
     # ------- Epoch Entropy -------
     if epoch == 0:
@@ -71,36 +64,33 @@ def assign_guarantors(slot: TimeSlot = None, epoch=0):
     else:
         raise ValueError("Epoch value can be 0, 1 or -1.")
 
-    # ------- Shuffle Validators -------
-    core_assign = shuffle(epoch_entropy.encode().hex(), validator_assign)
+    # ------- Base assignment: [⌊C·i/V⌋ | i ∈ N_V] -------
+    base_assign = TypedVector[U32]([U32(floor((CORE_COUNT * i) / vc)) for i in range(vc)])
 
-    # ------- Create Mapping ---------
-    mapping = {}
-    for i in range(vc):
-        key = core_assign[i]
-        value = validators[i]
-        if key not in mapping:
-            mapping[key] = set()
-        mapping[key].add(value)
+    # ------- Shuffle with epochal entropy: F(base, e) -------
+    shuffled = shuffle(epoch_entropy.encode().hex(), base_assign)
 
-    # ------- Rotate Validators -------
+    # ------- Rotation: R(c, n) = [(x + n) mod C | x ∈ c] (eq 11.19) -------
     rotation_phase = floor((slot % EPOCH_LENGTH) / ROTATION_PERIOD)
-    keys = sorted(list(mapping.keys()))
-    values = [mapping[k] for k in keys]
-    values = deque(values)
-    values.rotate(-rotation_phase)
+    rotated = [U32((int(x) + rotation_phase) % CORE_COUNT) for x in shuffled]
 
+    # ------- Build mapping: core → [validator indices] -------
     index_map = {}
     val_map = {}
 
-    for core in keys:
-        for vi in values[core]:
-            if core not in index_map:
-                index_map[core] = []
-                val_map[core] = []
+    for vi in range(vc):
+        core = rotated[vi]
+        if core not in index_map:
+            index_map[core] = []
+            val_map[core] = []
+        index_map[core].append(vi)
+        val_map[core].append(validator_set[vi])
 
-            index_map[core].append(vi)
-            val_map[core].append(validator_set[vi])
-
-    logger.debug("Guarantors Mapping", state_root=state.root.hex(), tau=slot, mapping=index_map)
+    logger.debug("ASSIGN_G",
+        eta=epoch_entropy.hex()[:16], slot=int(slot), phase=rotation_phase,
+        base=[int(x) for x in base_assign[:6]],
+        shuffled=[int(x) for x in shuffled[:6]],
+        rotated=[int(x) for x in rotated[:6]],
+        mapping={int(k): v for k, v in index_map.items()},
+    )
     return val_map, index_map

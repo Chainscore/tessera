@@ -44,3 +44,6 @@ MultiExtrinsics = TypedVector[Extrinsics]
 Justification = TypedVector[Bytes]
 Justifications = TypedVector[Justification]
 MultiJustifications = TypedVector[Justifications]
+
+SegmentJfn = TypedVector[OpaqueHash]
+SegmentJfns = TypedVector[SegmentJfn]
