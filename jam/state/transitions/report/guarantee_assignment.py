@@ -130,8 +130,14 @@ def permute_fn(e: OpaqueHash, t: TimeSlot):
 
 
 def assign_fn(state: Sigma):
+    from jam.log_setup import logger as _logger
     assigned_cores = permute_fn(state.eta[2], state.tau)
     vals = state.kappa
+
+    _logger.debug("ASSIGN_FN",
+        eta=state.eta[2].hex()[:16], tau=int(state.tau),
+        cores=[int(x) for x in assigned_cores[:6]],
+    )
 
     curr_mapping: Dict[CoreIndex, ValidatorList] = {}
     curr_vals: Dict[CoreIndex, TypedVector[ValidatorData]] = {}

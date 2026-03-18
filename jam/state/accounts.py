@@ -1,17 +1,11 @@
-import asyncio
-from keyword import kwlist
-from typing import Tuple
+from typing import TYPE_CHECKING, Tuple
 
-from rockstore import store
 from jam.execution.utils import decode_code_hash
 from jam.state.storage import StateStorage
 from jam.state.utils import construct_state_key
 from jam.types.protocol.core import Balance, ServiceId, TimeSlot, BlobLength
-from jam.types.protocol.crypto import Hash
 from jam.types.state.delta import (
     AccountMetadata,
-    Ai,
-    Ao,
     LookupTable,
     Timestamps,
     AccountData,
@@ -21,14 +15,13 @@ from jam.utils.constants import (
     ADDITIONAL_BALANCE_PER_ITEM,
     ADDITIONAL_BALANCE_PER_OCTET,
 )
+from jam.utils.task_utils import create_safe_task
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U32
-from jam.api.rpc.subscription_handlers import (
-    subscribe_service_value,
-    subscribe_service_request,
-    subscribe_service_data,
-    subscribe_service_preimage,
-)
+
+if TYPE_CHECKING:
+    from jam.jam_node import JamNode
+
 
 
 def make_account_prop(field):
@@ -50,15 +43,19 @@ def make_account_prop(field):
 
         self.store.put(k, v)
         # Publishes updates of the service data.
-        asyncio.create_task(subscribe_service_data(self.id, meta))
+        create_safe_task(
+            self.jam.publisher.publish_service_data(self.id, meta),
+            name="Publish Service Data"
+        )
 
     return property(getter, setter)
 
 
 class AccountDataView:
-    def __init__(self, id: ServiceId, store: StateStorage):
-        self.id = id
-        self.store = store
+    def __init__(self, _id: ServiceId, _store: StateStorage, _jam: "JamNode"):
+        self.id = _id
+        self.store = _store
+        self.jam = _jam
 
     code_hash = make_account_prop("code_hash")
     balance = make_account_prop("balance")
@@ -85,9 +82,10 @@ class AccountDataView:
 
 
 class Account:
-    def __init__(self, id: ServiceId, store: StateStorage):
-        self.id = id
-        self.store = store
+    def __init__(self, _id: "ServiceId", _store: "StateStorage", _jam: "JamNode"):
+        self.id = _id
+        self.store = _store
+        self.jam = _jam
 
     @property
     def t(self):
@@ -103,7 +101,7 @@ class Account:
 
     @property
     def service(self):
-        return AccountDataView(self.id, self.store)
+        return AccountDataView(self.id, self.store, self.jam)
 
     @service.setter
     def service(self, value: AccountMetadata):
@@ -113,21 +111,24 @@ class Account:
         )
         self.store.put(storage_key, encoded_val)
         # Publishes updates of the service data.
-        asyncio.create_task(subscribe_service_data(self.id, value))
+        create_safe_task(
+            self.jam.publisher.publish_service_data(self.id, value),
+            name="Publish Service Data"
+        )
 
     @property
     def storage(self):
-        return StorageView(self.id, self.store)
+        return StorageView(self.id, self.store, self.jam)
 
     @property
     def preimages(self):
-        return PreImageView(self.id, self.store)
+        return PreImageView(self.id, self.store, self.jam)
 
     @property
     def lookup(self):
-        return TimestampsView(self.id, self.store)
+        return TimestampsView(self.id, self.store, self.jam)
 
-    def m_c(self) -> Tuple[bytes, bytes]:
+    def m_c(self) -> Tuple[bytes, bytes] | None:
         if not self.service.code_hash:
             return None
         img = self.preimages.get(self.service.code_hash)
@@ -179,14 +180,16 @@ class Account:
 
 
 class DeltaView:
-    def __init__(self, store: StateStorage):
+    def __init__(self, store: StateStorage, jam: "JamNode"):
+        self.jam = jam
         self.store = store
+
 
     def __getitem__(self, key: ServiceId):
         data = self.store.get(bytes(construct_state_key((255, key))))
         if data is None:
             return None
-        return Account(id=key, store=self.store)
+        return Account(_id=key, _store=self.store, _jam=self.jam)
 
     def get(self, key: ServiceId, default=None):
         if key in self:
@@ -194,7 +197,7 @@ class DeltaView:
         return default
 
     def __setitem__(self, key: ServiceId, value: AccountData):
-        account = Account(id=key, store=self.store)
+        account = Account(_id=key, _store=self.store, _jam=self.jam)
         account.service = value.service
         for k, v in value.preimages.items():
             account.preimages[k] = v
@@ -210,11 +213,37 @@ class DeltaView:
         account_s_key = bytes(construct_state_key((255, key)))
         self.store.delete(account_s_key)
 
+    def keys(self) -> list:
+        """Return all ServiceIds that exist in the current state."""
+        service_ids = set()
+        # Scan DB for service metadata keys (first byte = 0xFF)
+        start = bytes([255] + [0] * 30)
+        end = bytes([255] + [255] * 30)
+        for key_bytes, _ in self.store._DB.iterate_range(start, end):
+            if (len(key_bytes) >= 31 and
+                key_bytes[2] == 0 and key_bytes[4] == 0 and
+                key_bytes[6] == 0 and key_bytes[8] == 0 and
+                all(b == 0 for b in key_bytes[9:31])):
+                sid = int.from_bytes(bytes([key_bytes[1], key_bytes[3], key_bytes[5], key_bytes[7]]), 'little')
+                service_ids.add(sid)
+        # Also check cached updates (pending state changes)
+        for key_bytes, value in self.store._updates.items():
+            if value is None:
+                continue
+            if (len(key_bytes) >= 31 and key_bytes[0] == 255 and
+                key_bytes[2] == 0 and key_bytes[4] == 0 and
+                key_bytes[6] == 0 and key_bytes[8] == 0 and
+                all(b == 0 for b in key_bytes[9:31])):
+                sid = int.from_bytes(bytes([key_bytes[1], key_bytes[3], key_bytes[5], key_bytes[7]]), 'little')
+                service_ids.add(sid)
+
+        return sorted(ServiceId(s) for s in service_ids)
 
 class StorageView:
-    def __init__(self, id: ServiceId, store: StateStorage):
+    def __init__(self, id: ServiceId, store: StateStorage, jam: "JamNode"):
         self.id = id
         self.store = store
+        self.jam = jam
 
     def __getitem__(self, key: Bytes):
         data = self.store.get(self.get_key(key))
@@ -230,33 +259,41 @@ class StorageView:
         # TODO - check for gas before adding, throw error if insufficient. This is supposed to be handled in relevent invocation
         storage_key = self.get_key(key)
         curr_data = self[key]
-        meta_view = AccountDataView(self.id, self.store)
+        meta_view = AccountDataView(self.id, self.store, self.jam)
         if curr_data is None:
             meta_view.num_i = meta_view.num_i + 1
             meta_view.num_o = meta_view.num_o + len(value) + 34 + len(key)
         else:
             meta_view.num_o = meta_view.num_o + len(value) - len(curr_data)
         # Publishes updates for service value
-        asyncio.create_task(subscribe_service_value(self.id, key, list(value)))
+        create_safe_task(
+            self.jam.publisher.publish_service_value(self.id, key, value),
+            name="Publish Service Value (Update)"
+        )
+
         self.store.put(storage_key, value)
 
     def __delitem__(self, key: Bytes):
         curr_value = self[key]
         storage_key = self.get_key(key)
         if curr_value:
-            meta_view = AccountDataView(self.id, self.store)
+            meta_view = AccountDataView(self.id, self.store, self.jam)
             meta_view.num_i = meta_view.num_i - 1
             meta_view.num_o = meta_view.num_o - len(curr_value) - 34 - len(key)
         # Publishes updates for service value
-        asyncio.create_task(subscribe_service_value(self.id, key, None))
+        create_safe_task(
+            self.jam.publisher.publish_service_value(self.id, key, None),
+            name="Publish Service Value (Delete)"
+        )
 
         self.store.delete(storage_key)
 
 
 class PreImageView:
-    def __init__(self, id: ServiceId, store: StateStorage):
+    def __init__(self, id: ServiceId, store: StateStorage, jam: "JamNode"):
         self.id = id
         self.store = store
+        self.jam = jam
 
     def __getitem__(self, key: Bytes[32]):
         data = self.store.get(self.get_key(key))
@@ -272,20 +309,27 @@ class PreImageView:
         k = self.get_key(key)
         self.store.put(k, value)
         # Publishes updates for service preimage
-        asyncio.create_task(subscribe_service_preimage(self.id, key, value))
+        create_safe_task(
+            self.jam.publisher.publish_service_preimage(self.id, key, value),
+            name="Publish Service Preimage (Update)"
+        )
 
     def __delitem__(self, key: Bytes[32]):
         storage_key = self.get_key(key)
         # Publishes updates for service preimage
-        asyncio.create_task(subscribe_service_preimage(self.id, key, None))
+        create_safe_task(
+            self.jam.publisher.publish_service_preimage(self.id, key, Bytes(b"")),
+            name="Publish Service Preimage (Delete)"
+        )
 
         self.store.delete(storage_key)
 
 
 class TimestampsView:
-    def __init__(self, id: ServiceId, store: StateStorage):
+    def __init__(self, id: ServiceId, store: StateStorage, jam: "JamNode"):
         self.id = id
         self.store = store
+        self.jam = jam
 
     def __getitem__(self, key: LookupTable):
         storage_key = self.get_key(key)
@@ -303,12 +347,15 @@ class TimestampsView:
         v = value.encode()
 
         curr_data = self.store.get(storage_key)
-        meta_view = AccountDataView(self.id, self.store)
+        meta_view = AccountDataView(self.id, self.store, self.jam)
         if curr_data is None:
             meta_view.num_i = meta_view.num_i + 2
             meta_view.num_o = meta_view.num_o + key.length + 81
         # Publishes updates for service request
-        asyncio.create_task(subscribe_service_request(self.id, key.hash, key.length, value))
+        create_safe_task(
+            self.jam.publisher.publish_service_request(self.id, key.hash, key.length, value),
+            name="Publish Service Requests (Update)"
+        )
 
         self.store.put(storage_key, v)
 
@@ -316,10 +363,13 @@ class TimestampsView:
         storage_key = self.get_key(key)
         curr_data = self.store.get(storage_key)
         if curr_data is not None:
-            meta_view = AccountDataView(self.id, self.store)
+            meta_view = AccountDataView(self.id, self.store, self.jam)
             meta_view.num_i = meta_view.num_i - 2
             meta_view.num_o = meta_view.num_o - key.length - 81
         # Publishes updates for service request
-        asyncio.create_task(subscribe_service_request(self.id, key.hash, key.length, None))
+        create_safe_task(
+            self.jam.publisher.publish_service_request(self.id, key.hash, key.length, None),
+            name="Publish Service Requests (Delete)"
+        )
 
         self.store.delete(storage_key)

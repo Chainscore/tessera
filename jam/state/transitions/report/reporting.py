@@ -1,8 +1,12 @@
-from jam.types import ValidatorIndex
-from math import floor
-from typing import Set, List
+import asyncio
 
-from tsrkit_types import Bytes, Uint, Null
+from jam.storage.da.mappings import PackageStatusMap, PackageStatus
+from jam.types import ValidatorIndex, HeaderHash, WorkReportHash
+from math import floor
+from typing import Set, List, TYPE_CHECKING
+
+from jam.utils.task_utils import create_safe_task
+from tsrkit_types import Bytes, Uint, Null, String, Option
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
@@ -28,12 +32,15 @@ from jam.utils.constants import (
     O,
 )
 
+if TYPE_CHECKING:
+    from jam.state.state import State
+
 
 class Reporting:
     @staticmethod
     def transition(
         pre_state: Sigma,
-        state: Sigma,
+        state: "State",
         block: Block,
         known_packages: List[OpaqueHash] = [],
     ) -> Sigma:
@@ -291,11 +298,36 @@ class Reporting:
         pi_core = AllCoreStats.empty()
         pi_service = AllServiceStats({})
 
+        wp_da = PackageStatusMap(state.settings.d3l)
+
         for report in all_reports:
             rho[report.core_index] = OptionalWorkReportState(
                 WorkReportState(report=report, timeout=block.header.slot)
             )
             core_index = report.core_index
+
+            # Publishes updates for work package
+            val = {
+                "Reported": {
+                    "reported_in": {
+                        "header_hash": block.header.hash(),
+                        "slot": int(block.header.slot)
+                    },
+                    "core": int(core_index),
+                    "report_hash": report.hash()
+                }
+            }
+            print("REPORTED WP STATUS SUB", block.header.hash().hex(), val)
+            create_safe_task(state.publisher.publish_work_package_status(report.package_spec.hash, report.context.anchor, val))
+
+
+            status = PackageStatus.empty()
+            status.status = String("REPORTED")
+            status.reported_in = Option[HeaderHash](block.header.hash())
+            status.wr_hash = Option[WorkReportHash](report.hash())
+
+            wp_da.put(report.package_spec.hash, status)
+
             for digest in report.digests:
                 pi_core[core_index].imports += Uint(digest.refine_load.imports)
                 pi_core[core_index].exports += Uint(digest.refine_load.exports)

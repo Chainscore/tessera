@@ -1,4 +1,4 @@
-from typing import Self
+from typing import Self, TYPE_CHECKING
 from collections import OrderedDict
 
 from rockstore import RockStore
@@ -6,10 +6,13 @@ from tsrkit_types import Bytes, structure, Dictionary
 
 from jam.block.block import Block
 from jam.error import JamError
-from jam.finality.finality import Finality
 from jam.log_setup import logger
 from jam.types.protocol.crypto import StateRoot, HeaderHash, Hash
 from jam.utils.trie.merkle import StateTrie
+
+
+if TYPE_CHECKING:
+    from jam.jam_node import JamNode
 
 
 @structure
@@ -87,13 +90,14 @@ class StateStorage:
         self._updates.update(new_writes)
         return self
 
-    def load_cache(self, hh: HeaderHash, apply_trie: bool = True) -> tuple[dict, StateRoot | None]:
+    def load_cache(self, hh: HeaderHash, jam: "JamNode", apply_trie: bool = True) -> tuple[dict, StateRoot | None]:
         """
         Loads cache for given block's header hash.
         Optionally applies changes in trie of current store's instance.
 
         Args:
             hh (HeaderHash): block whose cache needs to be stashed.
+            jam (JamNode): access to whole Jam Node and its submodules
             apply_trie (bool): flag for applying changes in trie.
 
         Returns:
@@ -103,14 +107,10 @@ class StateStorage:
         if hh == HeaderHash(32):
             return {}, None
 
-        from jam.settings import settings
+        settings = jam.settings
 
         kv = settings.main_db
-        finalized_block = Finality.load_final(kv)
-
-        if finalized_block is None:
-            # NOTE: Genesis Block must be finalized in any case
-            raise JamError("State Loading: Not yet initialized")
+        finalized_block = jam.grandpa.load_final()
 
         fh = finalized_block.header.hash()
 
@@ -201,13 +201,14 @@ class StateStorage:
 
         return _updates, final_root
 
-    def record_cache(self, hh: HeaderHash | None = None, kv: RockStore | None = None):
+    def record_cache(self, hh: HeaderHash | None = None, kv: RockStore | None = None, jam: "JamNode" = None):
         """
         Apply cached updates to Trie.
 
         Args:
             hh (HeaderHash): block whose cache needs to be stashed
             kv (RockStore): main DB, where we store blocks
+            jam (JamNode): access to whole Jam Node and its submodules
         """
         if self._read_only:
             raise PermissionError("State storage is not writable")
@@ -220,7 +221,7 @@ class StateStorage:
 
         if hh:
             block = Block.load(hh, kv)
-            previous_updates, _ = self.load_cache(block.header.parent, False)
+            previous_updates, _ = self.load_cache(block.header.parent, jam, apply_trie=False)
         else:
             previous_updates = {}
 

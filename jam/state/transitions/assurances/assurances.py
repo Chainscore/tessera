@@ -1,10 +1,14 @@
 import math
-from typing import List
+
+from typing import List, TYPE_CHECKING
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-from tsrkit_types import Null
+from jam.storage.da.mappings import PackageStatusMap
+from jam.types import HeaderHash
+from jam.utils.task_utils import create_safe_task
+from tsrkit_types import Null, String, Option
 
 from jam.block import Block
 from jam.block.extrinsics.assurances import AvailAssurance, AvailBitField
@@ -37,6 +41,8 @@ class Assurances:
         Returns:
             The new state of the chain.
         """
+        settings = state.settings
+
         # rho_dagger
         rho = state.rho
         kappa = pre_state.kappa
@@ -80,6 +86,8 @@ class Assurances:
         Assurances.ensure_assurances_order(assurances)
         Assurances.ensure_assurances_unique(assurances)
 
+        wp_da = PackageStatusMap(settings.d3l)
+
         # If we have supermajority - add them to newly available WRs list
         newly_avail_reports = WorkReports([])
         # Or if we have any stale pending WRs
@@ -93,12 +101,73 @@ class Assurances:
                 if core_assurances[i] > super_majority:
                     newly_avail_reports.append(rep.report)
                     rho[i] = OptionalWorkReportState(Null)
+
+                    wp_hash = rep.report.package_spec.hash
+
+                    # status and reported in cannot be null??
+                    status = wp_da.get(wp_hash)
+                    assert status.status == String("REPORTED")
+                    reported_in = status.reported_in.unwrap()
+                    reported_block = Block.load(reported_in, settings.main_db)
+
+                    # Publishes updates for work package
+                    val = {
+                        "Ready": {
+                            "reported_in": {
+                                "header_hash": reported_in,
+                                "slot": int(reported_block.header.slot)
+                            },
+                            "core": int(rep.report.core_index),
+                            "report_hash": rep.report.hash(),
+                            "ready_in": {
+                                "slot": int(block.header.slot),
+                                "header_hash": block.header.hash()
+                            }
+                        }
+                    }
+                    # TODO: Handle this properly
+                    if hasattr(state, "publisher"):
+                        create_safe_task(
+                            state.publisher.publish_work_package_status(wp_hash, rep.report.context.anchor, val)
+                        )
+
+                    status.status = String("READY")
+                    status.ready_in = Option[HeaderHash](block.header.hash())
+
+
+                    wp_da.put(wp_hash, status)
+
                 if (
                     core_assurances[i] > super_majority
                     or block.header.slot
                     >= rep.timeout + UNAVAILABLE_WORK_EXPIRY
                 ):
                     rho[i] = OptionalWorkReportState(Null)
+
+                    if core_assurances[i] <= super_majority:
+                        wp_hash = rep.report.package_spec.hash
+
+                        # status and reported in cannot be null??
+                        status = wp_da.get(wp_hash)
+
+                        status.status = String("FAILED")
+                        status.err = String("Not enough assurances available in time.")
+
+                        # Publishes updates for work package
+                        val = {
+                            "Failed": "Not enough assurances available in time"
+                        }
+                        print("FAIL READY WP STATUS SUB",  block.header.hash().hex(), val)
+                        # TODO: HANDLE THIS PROPERLY
+                        if hasattr(state, "publisher"):
+                            create_safe_task(
+                                state.publisher.publish_work_package_status(wp_hash, rep.report.context.anchor, val)
+                            )
+                        # asyncio.create_task(
+                        #     subscribe_work_package_status(wp_hash, rep.report.context.anchor, val))
+
+                        wp_da.put(wp_hash, status)
+
 
         state.rho = rho
 

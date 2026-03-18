@@ -1,18 +1,18 @@
+import structlog
 from time import time
 from types import NoneType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
+
+from jam.config import NodeConfig
 from py_ark_vrf import  secret_from_seed
-from typing import Optional
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types import U32, Bytes, Bytes32
 
-from jam.log_setup import logger
-from jam.types import ValidatorIndex
-from jam.types.protocol.core import CoreIndex
+from jam.network.base.certificate import generate_san
+from jam.types.protocol.core import CoreIndex, ValidatorIndex
 from jam.types.protocol.crypto import Hash
 from jam.types.protocol.validators import ValidatorData
 from rockstore import RockStore
-import random
 
 from jam.types.work.shard import ShardIndex
 from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
@@ -20,14 +20,13 @@ from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
 if TYPE_CHECKING:
     from jam.state.state import State
 
+logger = structlog.get_logger("node")
+
 class Settings:
     # Node settings
-    NODE_NAME: str = "JAM-Node"
-    NODE_ID: int | None = None
-
-    # Env config
-    ENV_PREFIX = "JAM_"
-    ENV_FILE = "40000.env"
+    node_name: str = "JAM-Node"
+    node_id: str | None = None
+    port: int = 0
 
     # RPC flag
     rpc_flag: bool
@@ -57,17 +56,18 @@ class Settings:
 
     def __init__(
         self,
-        data_path: Optional[str],
-        seed: Optional[int] = None,
-        name: str = "god_mode",
-        port: int = 3000,
-        rpc_flag: bool = True
+        config: Optional[NodeConfig] = NodeConfig()
     ):
-        self.NODE_NAME = name
-        random.seed(port)
-        self.NODE_ID = random.randint(0, 2**16 - 1)
+        self.node_name = config.NODE_NAME
+        self.port = config.PORT
 
-        self.rpc_flag = rpc_flag
+        self.rpc_flag = config.RPC_FLAG
+
+        self._data_path = config.DATA_PATH
+        data_path = self._data_path
+
+        self.seed = config.SEED
+        seed = self.seed
 
         self._main_db = None
         self._audit_db = None
@@ -77,7 +77,7 @@ class Settings:
         if data_path:
             import os
 
-            data_path = data_path + str(port)
+            data_path = data_path + str(self.port)
             # Create a folder for this node
             os.makedirs(data_path, exist_ok=True)
             # Setup DB
@@ -86,6 +86,7 @@ class Settings:
             self._d3l = RockStore(data_path + "/d3l")
             self._state_db = RockStore(data_path + "/state")
             self._data_path = data_path
+            logger.info("Setting up data path", data_path=data_path)
 
         if seed is not None:
             self._seed = seed
@@ -100,16 +101,14 @@ class Settings:
             pub, ss = secret_from_seed(self.bandersnatch_seed)
             self.bandersnatch_public = Bytes32(pub)
             self.bandersnatch_private = Bytes32(ss)
+            self.node_id = generate_san(self.ed25519_public)
 
 
-    def update(self, state: Optional["State"] = None):
+    def update(self, state: "State"):
         """
         Updates epoch related data
         TBD: Can be trigger via state transitions or keep checking while
         """
-        if not state:
-            from jam.state.state import state
-
         curr_epoch = int(time() // 6 // EPOCH_LENGTH)
 
         if self._last_recorded_epoch == curr_epoch:
@@ -159,7 +158,7 @@ class Settings:
         return self._state_db
 
     def clear(self):
-        print(self.NODE_NAME, "Closing DB")
+        print(self.node_name, "Closing DB")
         if hasattr(self, "_main_db") and self._main_db:
             self._main_db.close()
         if hasattr(self, "_d3l") and self._d3l:
@@ -177,39 +176,23 @@ class Settings:
             raise ValueError("Validator data is not set, check if the node is registered in the state.")
         return self._val
 
-    @property
-    def validator_index(self):
+    def validator_index(self, state: "State"):
         if time()//(6)//EPOCH_LENGTH != self._last_recorded_epoch:
             logger.warning("Validator index is not updated, call update() first.")
-            from jam.state.state import state
+
             self._validator_index, _ = state.kappa.find(self.bandersnatch_public)
         if isinstance(self._validator_index, NoneType):
             raise ValueError("Validator index is not set, check if the node is registered in the state.")
         return ValidatorIndex(self._validator_index)
 
-    def get_shard_index(self, core_index: CoreIndex):
-        from jam.utils.chainspec import chain_config
-
-        vi = self.validator_index
-        shard_index = ShardIndex(
-            (core_index * chain_config.recovery_threshold + vi) % VALIDATOR_COUNT
-        )
-
-        return shard_index
-
-
 
 # Default setting, to be easier to differentiate
-settings: Settings = Settings(data_path=None, seed=None)
+# settings: Settings = Settings()
 
 
 # When starting a node, pass node params to set global settings
 def setup_setting(*args, **kwargs) -> Settings:
-    global settings
     settings = Settings(*args, **kwargs)
-
-    from jam.block.block_view import viewer
-    viewer.initialize(settings.main_db)
 
     return settings
 
