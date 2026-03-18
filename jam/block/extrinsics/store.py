@@ -1,5 +1,6 @@
-from typing import Any, Generic, List, TypeVar
-from jam.log_setup import node_logger as logger
+from typing import Generic, List, TypeVar
+
+import structlog
 
 T = TypeVar("T")
 
@@ -9,6 +10,7 @@ class ExtrinsicStore(Generic[T]):
 
     def __init__(self) -> None:
         self._store = []
+        self.logger = structlog.get_logger("node")
 
     @classmethod
     def _validate(cls, ext: T):
@@ -26,12 +28,12 @@ class ExtrinsicStore(Generic[T]):
                 d.faults ==ext.faults
                 for d in self._store
             ):
-                logger.debug("Duplicate extrinsic found")
+                self.logger.debug("Duplicate extrinsic found")
                 return
 
         else:
             if ext in self._store:
-                logger.debug(
+                self.logger.debug(
                     "Duplicate extrinsic found",
                     ext=ext.__class__.__name__,
                     val=ext.to_json(),
@@ -39,7 +41,7 @@ class ExtrinsicStore(Generic[T]):
                 return
             else:
                 if not self._validate(ext):
-                    logger.info(
+                    self.logger.info(
                         "Invalid extrinsic found",
                         ext=ext.__class__.__name__,
                         val=ext.to_json(),
@@ -58,7 +60,7 @@ class ExtrinsicStore(Generic[T]):
                 indx = self._store.index(ext)
                 self._store.pop(indx)
             except ValueError as e:
-                logger.debug(
+                self.logger.debug(
                     "Extrinsic was not collected",
                     ext=ext.__class__.__name__,
                     val=ext.to_json(),

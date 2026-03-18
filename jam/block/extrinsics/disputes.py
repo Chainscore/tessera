@@ -1,12 +1,10 @@
-from jam.block.extrinsics.store import ExtrinsicStore
 from tsrkit_types.bool import Bool
 from tsrkit_types.integers import U32
-from tsrkit_types.sequences import TypedArray, TypedVector
+from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
 from jam.types.protocol.crypto import Ed25519Public, Ed25519Signature, WorkReportHash
 from jam.types.protocol.core import ValidatorIndex
-from jam.utils.constants import VALIDATOR_COUNT
 
 
 @structure
@@ -82,5 +80,3 @@ class DisputesExtrinsic:
     @classmethod
     def empty(cls):
         return cls(verdicts=Verdicts([]), culprits=Culprits([]), faults=Faults([]))
-
-dpt_store = ExtrinsicStore[DisputesExtrinsic]()

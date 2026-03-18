@@ -1,4 +1,3 @@
-from jam.block.extrinsics.store import ExtrinsicStore
 from tsrkit_types.bits import Bits
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
@@ -29,5 +28,3 @@ class AvailAssurance:
 
 
 AssurancesExtrinsic = TypedVector[AvailAssurance]
-
-asr_store = ExtrinsicStore[AvailAssurance]()

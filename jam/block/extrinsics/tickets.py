@@ -1,4 +1,3 @@
-from jam.block.extrinsics.store import ExtrinsicStore
 from tsrkit_types.sequences import TypedBoundedVector
 from tsrkit_types.struct import structure
 from jam.types.protocol.crypto import BandersnatchRingVrfSignature
@@ -15,5 +14,3 @@ class TicketEnvelope:
 
 
 TicketsExtrinsic = TypedBoundedVector[TicketEnvelope, 0, MAX_TICKETS_PER_EXTRINSIC]
-
-ticket_store = ExtrinsicStore[TicketEnvelope]()

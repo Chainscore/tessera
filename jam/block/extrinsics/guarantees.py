@@ -1,4 +1,3 @@
-from jam.block.extrinsics.store import ExtrinsicStore
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
@@ -28,5 +27,3 @@ class ReportGuarantee:
 
 
 GuaranteesExtrinsic = TypedVector[ReportGuarantee]
-
-wrg_store = ExtrinsicStore[ReportGuarantee]()

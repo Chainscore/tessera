@@ -1,4 +1,4 @@
-from typing import Self, List
+from typing import Self, List, TYPE_CHECKING
 
 from jam.types.protocol.ticket import TicketBody
 from tsrkit_types.struct import structure
@@ -12,6 +12,9 @@ from jam.types.protocol.crypto import Hash, HeaderHash
 from jam.utils.dummy.dummy_extrinsics import create_dummy_extrinsics
 from jam.utils.dummy.dummy_header import create_dummy_header
 
+if TYPE_CHECKING:
+    from jam.block.block_view import BlockView
+    from jam.state.state import State
 
 @structure
 class Block:
@@ -61,9 +64,8 @@ class Block:
         return cls.decode(data)
 
     @classmethod
-    def load_w_ts(cls, ts: TimeSlot, db: RockStore) -> "Block" | List["Block"]:
+    def load_w_ts(cls, ts: TimeSlot, db: RockStore, viewer: "BlockView") -> "Block" | List["Block"]:
 
-        from jam.block.block_view import viewer
         final = viewer.final
 
         ts_key = cls.get_storage_key_slot(ts)
@@ -77,7 +79,7 @@ class Block:
 
         # otherwise load using block viewer
         else:
-            blocks = viewer.load_block_w_ts(ts, db)
+            blocks = viewer.load_block_w_ts(ts)
             if len(blocks) == 0:
                 raise ValueError("No block found with given slot!")
 
@@ -118,14 +120,14 @@ class Block:
         # Return the HeaderHash
         return HeaderHash(hh)
 
-    def validate(self, state, prestate, settings) -> bool:
-        return self.header.validate(state, prestate, settings) and self.extrinsic.validate(self.header)
+    def validate(self, state, prestate) -> bool:
+        return self.header.validate(state, prestate) and self.extrinsic.validate(self.header)
 
-    def produce(self, time_slot: TimeSlot, state, settings, ticket: TicketBody | None = None) -> "Block":
-        extrinsic = Extrinsic.from_collected(time_slot)
+    def produce(self, time_slot: TimeSlot, state: "State", ticket: TicketBody | None = None) -> "Block":
+        extrinsic = state.pool.build_extrinsics(time_slot)
 
         # Produce a new header from previous header
-        header = self.header.produce(time_slot, extrinsic, ticket, state, settings)
+        header = self.header.produce(time_slot, extrinsic, ticket, state)
 
         block = Block(header=header, extrinsic=extrinsic)
 

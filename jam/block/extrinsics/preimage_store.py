@@ -1,56 +1,55 @@
 import asyncio
-from typing import List
+from typing import TYPE_CHECKING, List
+
+import structlog
 
 from tsrkit_types import Uint
-from tsrkit_types.bytes import Bytes
-from tsrkit_types.struct import structure
 
-from jam.types.protocol.core import ServiceId, BlobLength
-from jam.log_setup import node_logger as logger
+from jam.types.protocol.core import BlobLength
 from jam.types.protocol.crypto import (
     OpaqueHash, Hash
 )
 
-@structure
-class Preimage:
-    """Preimage structure."""
-
-    requester: ServiceId
-    blob: Bytes
+if TYPE_CHECKING:
+    from jam.block.extrinsics.preimages import Preimage
+    from jam.jam_node import JamNode
 
 class PreimageStore:
-    _store: dict[OpaqueHash, Preimage] = {}
+    _store: dict[OpaqueHash, "Preimage"] = {}
 
     def __init__(self) -> None:
         self._store = {}
+        self.logger = structlog.get_logger("node")
 
-    def store(self, preimage: Preimage):
+    def store(self, preimage: "Preimage", jam: "JamNode" = None):
 
         pi_hash = OpaqueHash(Hash.blake2b(preimage.blob))
 
         if pi_hash in self._store:
-            logger.debug(
+            self.logger.debug(
                 "Duplicate preimage found",
                 preimage=preimage.__class__.__name__,
                 val=preimage.blob[:16],
             )
         else:
             self._store[pi_hash] = preimage
-            asyncio.create_task(self.announce(preimage, pi_hash))
+            asyncio.create_task(self.announce(preimage, pi_hash, jam))
 
     @staticmethod
-    async def announce(preimage: Preimage, pi_hash: OpaqueHash):
-        from jam.network.protocols.ce_142 import PreImageAnnouncement, CE142Data, Announcement
+    async def announce(preimage: "Preimage", pi_hash: OpaqueHash, jam: "JamNode" = None):
+        from jam.network.protocols.ce_142 import CE142Data, Announcement
+        if not jam or not jam._router:
+            return
         pre_image_len = BlobLength(len(preimage.blob))
         anc = Announcement(serviceId=preimage.requester,
                            hash=pi_hash,
                            preimage_len=pre_image_len)
         data_len = Uint[32](len(anc.encode()))
         data = CE142Data(len=data_len, announcement=anc)
-        await PreImageAnnouncement().transmit(data)
+        await jam.router.dispatch(142, data)
 
 
-    def remove(self, preimage_list: List[Preimage]):
+    def remove(self, preimage_list: List["Preimage"]):
         """Remove the recently included preimage extrinsic"""
         for k in list(self._store.keys()):
             preimage = self._store[k]
@@ -58,7 +57,7 @@ class PreimageStore:
                 try:
                     del self._store[k]
                 except ValueError as e:
-                    logger.debug(
+                    self.logger.debug(
                         "Extrinsic was not collected",
                         preimage=preimage.__class__.__name__,
                         val=preimage.blob[:16],

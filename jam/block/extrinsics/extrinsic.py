@@ -2,19 +2,12 @@ from typing import TYPE_CHECKING
 from tsrkit_types import Bytes, Uint
 from jam.block.errors import BlockError, BlockErrorCode
 from jam.types.protocol.crypto import Hash
-from jam.utils.constants import CORE_COUNT, MAX_TICKETS_PER_EXTRINSIC, EPOCH_LENGTH, TICKET_SUBMISSION_END
 from tsrkit_types.struct import structure
-from jam.block.extrinsics.tickets import TicketsExtrinsic, TicketEnvelope
-from jam.block.extrinsics.preimages import PreimagesExtrinsic, Preimage
+from jam.block.extrinsics.tickets import TicketsExtrinsic
+from jam.block.extrinsics.preimages import PreimagesExtrinsic
 from jam.block.extrinsics.guarantees import GuaranteesExtrinsic
 from jam.block.extrinsics.assurances import AssurancesExtrinsic
 from jam.block.extrinsics.disputes import DisputesExtrinsic, Culprits, Faults, Verdicts
-from jam.types.protocol.crypto import (
-    BandersnatchRingVrfSignature,
-    Hash,
-    OpaqueHash,
-)
-from dot_ring import RingVRF, Bandersnatch, IETF_VRF
 
 if TYPE_CHECKING:
     from jam.block.header.header import Header
@@ -56,85 +49,6 @@ class Extrinsic:
             + bytes(Hash.blake2b(self.assurances.encode()))
             + bytes(Hash.blake2b(self.disputes.encode()))
         )
-
-    @classmethod
-    def from_collected(cls, time_slot):
-        # --- Extrinsic Collection --- #
-        eg, et, ea, ep, ed = GuaranteesExtrinsic([]), [], [], PreimagesExtrinsic([]), DisputesExtrinsic.empty()
-        from .tickets import ticket_store
-        from .guarantees import wrg_store
-        from .assurances import asr_store
-        from .preimages import preimg_store
-        from .disputes import dpt_store
-
-        # Sort Assurances
-        ea = AssurancesExtrinsic(sorted(asr_store._store, key=lambda a: a.validator_index))
-
-        # Filter Guarantees
-        rg_cores = set()
-        for rg in wrg_store._store:
-            if rg.report.core_index not in rg_cores:
-                eg.append(rg)
-                rg_cores.add(rg.report.core_index)
-
-            if len(eg) >= CORE_COUNT:
-                break
-        rg_cores.clear()
-
-        ep = PreimagesExtrinsic(list(preimg_store._store.values()))
-        def preimage_sort_fn(preimage: Preimage):
-            return (
-                int(preimage.requester),
-                preimage.blob,
-            )
-
-        ep.sort(key=preimage_sort_fn)
-
-        # Already sorted
-        if dpt_store._store:
-            ed = DisputesExtrinsic(
-                verdicts=Verdicts([d.verdicts for d in dpt_store._store]),
-                culprits=Culprits([d.culprits for d in dpt_store._store]),
-                faults=Faults([d.faults for d in dpt_store._store]),
-            )
-
-        def sort_fn(ticket: TicketEnvelope) -> int:
-            # Take VRF output of the signature and sort by it
-            # Tickets use Ring VRF signatures
-            ring_proof = RingVRF[Bandersnatch].from_bytes(ticket.signature, skip_pedersen=False)
-            return int.from_bytes(ring_proof.proof_to_hash(ring_proof.pedersen_proof.output_point)[:32])
-
-        if time_slot%EPOCH_LENGTH < TICKET_SUBMISSION_END:
-            et = TicketsExtrinsic(ticket_store._store[:MAX_TICKETS_PER_EXTRINSIC])
-            et.sort(key=sort_fn)
-        else:
-            et = TicketsExtrinsic([])
-
-        return Extrinsic(
-            tickets=et,
-            preimages=ep,
-            guarantees=eg,
-            assurances=ea,
-            disputes=ed,
-        )
-
-    def clear_from_stores(self):
-        """
-        Assumes that the current extrinsics were imported and need not be stored in our
-        extrinsic stores, so here we'll remove them
-        """
-        from .tickets import ticket_store
-        from .guarantees import wrg_store
-        from .assurances import asr_store
-        from .preimages import preimg_store
-        from .disputes import dpt_store
-
-        ticket_store.remove(self.tickets)
-        wrg_store.remove(self.guarantees)
-        asr_store.remove(self.assurances)
-        preimg_store.remove(self.preimages)
-        dpt_store.remove(self.disputes)
-        return
 
     def validate(self, header: "Header") -> bool:
         # Valid extrinsics hash

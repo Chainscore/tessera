@@ -1,5 +1,5 @@
 import json
-from typing import Self
+from typing import Self, TYPE_CHECKING
 
 from jam.block.errors import BlockError, BlockErrorCode
 from jam.block.extrinsics.extrinsic import Extrinsic
@@ -23,6 +23,10 @@ from .tickets_mark import TicketsMark, TicketsMarkData
 from dot_ring import IETF_VRF, Bandersnatch
 
 from ...utils.util_fns import outside_in
+
+if TYPE_CHECKING:
+    from jam.state.state import State
+
 
 
 @structure
@@ -67,13 +71,12 @@ class Header:
         time_slot: TimeSlot,
         extrinsic: Extrinsic,
         ticket: TicketBody | None,
-        state,
-        settings
+        state: "State"
     ) -> Self | None:
         """
         Produces a child header of current header
         """
-        # from jam.settings import settings
+        settings = state.settings
 
         header = Header(
             parent=Hash.blake2b(self.encode()),
@@ -122,7 +125,7 @@ class Header:
         
         return header
 
-    def validate(self, state, pre_state, settings) -> bool:
+    def validate(self, state, pre_state) -> bool:
         """
         Validate a block's header
         1. Extrinsic hash should match hash(block.extrinsics)
@@ -133,6 +136,7 @@ class Header:
         6. H_e only when epoch transition
         7. H_r == state.root
         """
+        settings = state.settings
 
         slot_entry = self.slot % EPOCH_LENGTH
         full_val_set = state.kappa

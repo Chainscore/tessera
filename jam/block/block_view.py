@@ -1,15 +1,14 @@
-import asyncio
-from pathlib import Path
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, TYPE_CHECKING
 
-from jam.api.rpc.subscription_handlers import subscribe_best_block
 from jam.block import Block
 from jam.types.protocol.core import TimeSlot
 from jam.types.protocol.crypto import OpaqueHash, HeaderHash
+from jam.utils.task_utils import create_safe_task
 
-from tsrkit_types import Dictionary, Enum, structure, Option, TypedVector
+from tsrkit_types import Enum, structure, TypedVector
 
-from rockstore import RockStore
+if TYPE_CHECKING:
+    from jam.jam_node import JamNode
 
 
 class BlockStatus(Enum):
@@ -68,13 +67,15 @@ class GhostBlock:
             self.parent = None
 
 class BlockView:
+    jam: "JamNode"
     final: GhostBlock
     heads: Heads
     best: Optional[GhostBlock]
 
     _index_map: Dict[HeaderHash, GhostBlock]
 
-    def __init__(self):
+    def __init__(self, jam: "JamNode"):
+        self.jam = jam
         self.final = GhostBlock()
         self.heads = Heads([])
         self.acceptable = []
@@ -83,12 +84,25 @@ class BlockView:
         # map Header Hash -> GhostBlock for quick lookup
         self._index_map = dict[HeaderHash, GhostBlock]({})
 
-    def initialize(self, kv: RockStore):
-        self._index_map = {}
-        from jam.finality.finality import Finality
+        self.db = jam.settings.main_db
 
-        latest_heads = Finality.load_heads(kv)
-        final_block = Finality.load_final(kv)
+    @property
+    def settings(self):
+        return self.jam.settings
+
+    @property
+    def grandpa(self):
+        return self.jam.grandpa
+
+    @property
+    def publisher(self):
+        return self.jam.responder.publisher
+
+    def initialize(self):
+        self._index_map = {}
+
+        latest_heads = self.grandpa.load_heads()
+        final_block = self.grandpa.load_final()
 
         ghost_final = GhostBlock(final_block)
         self.final = ghost_final
@@ -107,7 +121,7 @@ class BlockView:
                 curr_head = head
                 # print("CURR HEAD", head)
                 while curr_head != self.final.header:
-                    block = Block.load(curr_head, kv)
+                    block = Block.load(curr_head, self.db)
                     branch_stack.append(block)
                     curr_head = block.header.parent
 
@@ -121,7 +135,7 @@ class BlockView:
                         continue
 
                     key = block.get_storage_key_meta(bh)
-                    data = kv.get(key)
+                    data = self.db.get(key)
                     meta = BlockMeta.decode(data)
 
                     ghost_parent = self._index_map.get(block.header.parent)
@@ -134,7 +148,7 @@ class BlockView:
 
         self.revalidate_view()
 
-    def record_block(self, block: Block, kv: RockStore):
+    def record_block(self, block: Block):
         parent = block.header.parent
         bh = block.header.hash()
 
@@ -156,7 +170,7 @@ class BlockView:
 
         meta = ghost_block.to_meta()
         meta_key = block.get_storage_key_meta(bh)
-        kv.put(meta_key, meta.encode())
+        self.db.put(meta_key, meta.encode())
 
         self.revalidate_view()
 
@@ -166,16 +180,16 @@ class BlockView:
 
         return self._index_map[hh]
 
-    def load_block_w_ts(self, ts: TimeSlot, kv: RockStore):
+    def load_block_w_ts(self, ts: TimeSlot):
         blocks = []
         for gb in self._index_map.values():
             if gb.slot == ts:
-                block = Block.load(gb.header, kv)
+                block = Block.load(gb.header, self.db)
                 blocks.append(block)
 
         return blocks
 
-    def mark_as_audited(self, block: Block, kv: RockStore):
+    def mark_as_audited(self, block: Block):
         bh = block.header.hash()
 
         ghost_block = self._index_map.get(bh)
@@ -183,11 +197,11 @@ class BlockView:
 
         meta = ghost_block.to_meta()
         meta_key = block.get_storage_key_meta(bh)
-        kv.put(meta_key, meta.encode())
+        self.db.put(meta_key, meta.encode())
 
         self.revalidate_view()
 
-    def finalize(self, block: Block, kv: RockStore):
+    def finalize(self, block: Block):
         bh = block.header.hash()
 
         ghost_block = self._index_map[bh]
@@ -203,6 +217,8 @@ class BlockView:
             print("pre-final must be direct parent of the block being finalized")
             # raise ValueError("pre-final must be direct parent of the block being finalized")
 
+        # publish updates of the latest finalized block
+        create_safe_task(self.publisher.publish_finalized_block(bh, block.header.slot))
         self._index_map.pop(pre_final.header, None)
 
         # TODO: Handle forked chain properly
@@ -232,7 +248,7 @@ class BlockView:
         self.final = ghost_block
         meta = ghost_block.to_meta()
         meta_key = block.get_storage_key_meta(bh)
-        kv.put(meta_key, meta.encode())
+        self.db.put(meta_key, meta.encode())
 
         self.revalidate_view()
 
@@ -261,7 +277,7 @@ class BlockView:
             self.best = best
 
             # publish updates of the head of the "best" chain.
-            asyncio.create_task(subscribe_best_block(best.header))
+            create_safe_task(self.publisher.publish_best_block(best.header, best.slot))
 
     def visualize(self, *, show_status: bool = True, show_slot: bool = True, color: bool = True):
         """
@@ -319,7 +335,3 @@ class BlockView:
         print(f"  Final:       {self.final.header.hex()[:8] if self.final else 'None'}")
         print(f"  Best:        {self.best.header.hex()[:8] if self.best else 'None'}")
         print(f"  #Heads:      {len(self.heads)} {[head.hex()[:8] for head in self.heads]}")
-
-
-
-viewer = BlockView()
