@@ -297,13 +297,6 @@ class JamNode:
             + (f" rpc_port={self.config.RPC_PORT}" if self.config.RPC_FLAG else "")
         )
 
-        # TODO: Remove Vectors recording later.
-        # Enable vector recording if JAM_VECTOR_RECORD env var is set  # VECTOR
-        _vec_cycle = os.environ.get("JAM_VECTOR_RECORD", "")  # VECTOR
-        if _vec_cycle:  # VECTOR
-            from jam.vectors import recorder as vec  # VECTOR
-            vec.enable(_vec_cycle)  # VECTOR
-
         main_db = self.settings.main_db
         state_db = self.settings.state_db
 

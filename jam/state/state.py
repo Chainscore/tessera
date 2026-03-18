@@ -390,16 +390,6 @@ class State:
                     t=int(self.tau),
                     sr=self.root.hex()[:6] + "..",
                 )
-                from jam.vectors import recorder as vec  # VECTOR
-                if vec.is_active():  # VECTOR
-                    vec.record_block(  # VECTOR
-                        slot=self.tau, header_hash=header_hash,  # VECTOR
-                        parent_hash=block.header.parent,  # VECTOR
-                        pre_state_root=block.header.parent_state_root,  # VECTOR
-                        post_state_root=self.root, author_index=block.header.author_index,  # VECTOR
-                        block=block,  # VECTOR
-                    )  # VECTOR
-                    vec.record_state(self, header_hash)  # VECTOR
                 emit_event(BestBlockChanged(slot=U32(int(self.tau)), hash=Bytes32(header_hash)))
 
                 # Emit BlockExecuted event (services list is empty for now as we don't track individual service costs yet)

@@ -112,10 +112,6 @@ class Processor(Doer):
         from jam.network.protocols.ce_134 import CoreSegment, CE134Data
         from jam.network.protocols.ce_135 import CE135Data
 
-        from jam.vectors import recorder as vec  # VECTOR
-        if vec.is_active():  # VECTOR
-            vec.record_wp_received(self.jam.state.tau, package.hash(), core, package)  # VECTOR
-
         logger.debug("Validating work package..")
         validator = Validator()
         validator.validate_wp(package)
@@ -158,16 +154,10 @@ class Processor(Doer):
                 self.router.dispatch(134, data)
             )
 
-        if vec.is_active():  # VECTOR
-            vec.record_bundle(self.jam.state.tau, package.hash(), bundle)  # VECTOR
-
         # Build Report
         logger.debug("Processing work package bundle..")
         wr, wr_hash = self.process_bundle(core, bundle, lookup)
         _t_report = time.time()
-
-        if vec.is_active():  # VECTOR
-            vec.record_report(self.jam.state.tau, package.hash(), wr_hash, wr)  # VECTOR
 
         if share_guarantee and (guarantee_task is not None):
             # Build Guaranteed WR
@@ -195,9 +185,6 @@ class Processor(Doer):
                 slot=ts,
             )
             # acks = await transmit_task
-
-            if vec.is_active():  # VECTOR
-                vec.record_guarantee(self.jam.state.tau, package.hash(), wr_hash, guaranteed_wr)  # VECTOR
 
             logger.debug("Saving guaranteed work report mappings..")
             self.process_guaranteed_report(guaranteed_wr)

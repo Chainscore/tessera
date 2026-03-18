@@ -256,20 +256,12 @@ class AccumulateFunctions(INVF):
             and i < MINIMUM_SERVICE_INDEX
         ):
             logger.warning("NEW SERVICE CREATED", service_id=ServiceId(i))
-            from jam.vectors import recorder as vec  # VECTOR
-            if vec.is_active():  # VECTOR
-                _code_blob = accounts[ServiceId(context.x.s_index)].preimages.get(ServiceCodeHash(c))  # VECTOR
-                vec.record_service_created(block_timeslot, ServiceId(i), ServiceCodeHash(c), new_service, code=_code_blob)  # VECTOR
             accounts[i] = new_service
             accounts[context.x.s_index].service.balance -= new_service.service.balance
             return CONTINUE, gas, registers, memory, context
 
         registers[7] = context.x.i_index
         logger.warning("NEW SERVICE CREATED (CONTEXT)", service_id=ServiceId(context.x.i_index))
-        from jam.vectors import recorder as vec  # VECTOR
-        if vec.is_active():  # VECTOR
-            _code_blob = accounts[ServiceId(context.x.s_index)].preimages.get(ServiceCodeHash(c))  # VECTOR
-            vec.record_service_created(block_timeslot, ServiceId(context.x.i_index), ServiceCodeHash(c), new_service, code=_code_blob)  # VECTOR
         accounts[ServiceId(context.x.i_index)] = new_service
         accounts[ServiceId(context.x.s_index)].service.balance -= new_service.service.balance
         context.x.i_index = check(
