@@ -1,4 +1,6 @@
 import math
+
+from jam.incore.doer import Doer
 from tsrkit_types import U8, U32, TypedVector, Null, Bool, Uint
 from jam.types.protocol.crypto import Ed25519Signature, HeaderHash
 from jam.types.audit.audit_tranche import TrancheIndex, Tranche, CoreReport
@@ -26,7 +28,7 @@ from jam.network.protocols.ce_144 import (
 )
 
 
-class Auditor:
+class Auditor(Doer):
     async def assignment_wrs(
         self,
         block: Block,
@@ -37,10 +39,10 @@ class Auditor:
         The function assigns work reports for auditing to each validator
         for tranche n and triggers an announcement for the assigned reports
         """
-        from jam.settings import settings
+        settings = self.settings
         from jam.storage.tranche_audit_store import tranche_store
 
-        audit = Audit()
+        audit = Audit(self.jam)
 
         entropy = block.header.entropy_source
         curr_state = await tranche_store.get_state(tranche=tranche)
@@ -75,9 +77,8 @@ class Auditor:
             subsequent_evidence=subsequent_evidence,
         )
 
-    @classmethod
     async def announcement(
-        cls,
+        self,
         block: Block,
         tranche: Tranche,
         assigned_wrs: TypedVector[CoreReport],
@@ -96,11 +97,11 @@ class Auditor:
         """
 
         from jam.audit.audit import Audit
-        from jam.settings import settings
+        settings = self.settings
         from jam.storage.tranche_audit_store import tranche_store
 
-        audit = Audit()
-        CE144 = AuditAnnouncement()
+        audit = Audit(self.jam)
+        CE144 = AuditAnnouncement(self.jam)
 
         tranche_index = tranche.tranche_index
         header_hash = block.header.hash()
@@ -164,7 +165,7 @@ class Auditor:
 
         try:
             await CE144.transmit(data=data)
-            await cls.judgment_process(block=block, tranche=tranche, assign_wrs=assigned_wrs)
+            await self.judgment_process(block=block, tranche=tranche, assign_wrs=assigned_wrs)
 
         except Exception as e:
             logger.error(
@@ -173,9 +174,8 @@ class Auditor:
                 error_type=type(e).__name__,
             )
 
-    @classmethod
     async def judgment_process(
-        cls,
+        self,
         block: Block,
         tranche: Tranche,
         assign_wrs: TypedVector[CoreReport] | None = None,
@@ -189,13 +189,13 @@ class Auditor:
             tranche: Current tranche index
             assigned_wrs: List of report which just become available for judgments
         """
-        from jam.settings import settings
+        settings = self.settings
         from jam.storage.tranche_audit_store import tranche_store
         from jam.audit.audit import Audit
         from jam.network.protocols.ce_145 import JudgmentPublication, CE145Data, Judgment
 
-        audit = Audit()
-        CE145 = JudgmentPublication()
+        audit = Audit(self.jam)
+        CE145 = JudgmentPublication(self.jam)
 
         curr_tranche = tranche
         validator_index = settings.validator_index
@@ -214,7 +214,7 @@ class Auditor:
                 validity = await audit.refine(wr=wr)
                 ed25519_signature = audit.judgment_signature(wr_hash=wr_hash, validity=validity)
 
-                from jam.state.state import state
+                state = self.state
 
                 epoch_index = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
 

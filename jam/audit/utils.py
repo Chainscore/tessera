@@ -1,4 +1,8 @@
 import math
+from typing import TYPE_CHECKING
+
+import structlog
+
 from tsrkit_types import U32, Uint, U8, Null, TypedVector, Bool
 from jam.block.extrinsics.disputes import DisputesExtrinsic, Verdicts, Culprits, Faults
 from jam.block.block import Block
@@ -17,14 +21,18 @@ from jam.types.protocol.core import CoreIndex, EpochIndex, ValidatorIndex
 from jam.network.protocols.ce_144 import NoShow, SubsequentTrancheEvidence
 from jam.utils.constants import EPOCH_LENGTH, VALIDATORS_SUPER_MAJORITY, VALIDATORS_WONKY
 from jam.block.extrinsics.disputes import Verdict, Culprit, Fault, JudgementVotes, Judgement
-from jam.log_setup import network_logger
 
-logger = network_logger
+logger = structlog.get_logger("node")
 
+if TYPE_CHECKING:
+    from jam.jam_node import JamNode
 
 class Utils:
-    @classmethod
-    async def fetch_report(cls, wr_hash: WorkReportHash) -> WorkReport | None:
+
+    def __init__(self, jam: "JamNode"):
+        self.jam = jam
+
+    async def fetch_report(self, wr_hash: WorkReportHash) -> WorkReport | None:
         """
         Fetch Work Report.
         1. Check in ReportDA
@@ -40,14 +48,13 @@ class Utils:
             NetworkingError if protocol 136 failed
         """
 
-        from jam.settings import settings
         from jam.storage.da.reports import ReportsDA
         from jam.network.protocols.ce_136 import WorkReportRequest, CE136Data
 
-        CE136 = WorkReportRequest()
+        CE136 = WorkReportRequest(self.jam)
 
         try:
-            reports_da = ReportsDA(settings.d3l)
+            reports_da = ReportsDA(self.jam.settings.d3l)
             wr = reports_da.get(wr_hash=wr_hash)
 
             if wr is not None:
@@ -115,8 +122,8 @@ class Utils:
             )
             return False
 
-    @staticmethod
     async def is_tranche(
+        self,
         block: Block,
         curr_tranche: Tranche,
         prev_tranche_state: TrancheState,
@@ -135,9 +142,9 @@ class Utils:
         """
         from jam.storage.tranche_audit_store import tranche_store
         from jam.audit.audit import Audit
-        from jam.settings import settings
+        settings = self.jam.settings
 
-        audit = Audit()
+        audit = Audit(self.jam)
 
         header_hash = curr_tranche.header_hash
         tranche_index = curr_tranche.tranche_index
@@ -241,11 +248,10 @@ class Utils:
 
         return subsequent_evidence
 
-    @staticmethod
-    async def dispute_ext(block: Block, tranche: Tranche) -> DisputesExtrinsic:
+    async def dispute_ext(self, block: Block, tranche: Tranche) -> DisputesExtrinsic:
         """here we build while dispute extrinsic"""
         from jam.storage.tranche_audit_store import tranche_store
-        from jam.settings import settings
+        settings = self.jam.settings
 
         # -------------------- Fetching State for dispute ext. calculate --------------------
         state = await tranche_store.get_state(tranche=tranche)
@@ -307,9 +313,8 @@ class Utils:
 
                         report_age = EpochIndex(math.floor(report_slot / EPOCH_LENGTH))
 
-                        from jam.state.state import state
 
-                        current_epoch = EpochIndex(math.floor(state.tau / EPOCH_LENGTH))
+                        current_epoch = EpochIndex(math.floor(self.jam.state.tau / EPOCH_LENGTH))
 
                         valid_ages = (
                             [current_epoch, current_epoch]
@@ -360,7 +365,7 @@ class Utils:
                                     fault = Fault(
                                         target=wr_hash,
                                         vote=Bool(False)._value,
-                                        key=f.ed25519_public,
+                                        key=f.peer_ed_key,
                                         signature=f.ed25519_signature,
                                     )
 
@@ -397,7 +402,7 @@ class Utils:
                                             for s in guarantee.signatures:
                                                 culprit = Culprit(
                                                     target=wr_hash,
-                                                    key=t.ed25519_public,
+                                                    key=t.peer_ed_key,
                                                     signature=s.signature,
                                                 )
                                                 culprits.append(culprit)
@@ -452,8 +457,6 @@ class Utils:
 
         dispute_ext = DisputesExtrinsic(verdicts=verdicts, culprits=culprits, faults=faults)
 
-        from jam.block.extrinsics.disputes import dpt_store
-
-        dpt_store.store(ext=dispute_ext)
+        self.jam.pool.disputes.store(ext=dispute_ext)
 
         return dispute_ext

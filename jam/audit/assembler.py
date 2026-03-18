@@ -1,10 +1,10 @@
 import asyncio
+from typing import TYPE_CHECKING
 
 from tsrkit_types import U32, Bytes, Vector
 
 from jam.audit.error import AssemblerError, AssemblerErrorCode as Code
 from jam.network.utils.shards import get_si, get_vi
-from jam.settings import Settings
 
 from jam.storage.da.audits import AuditShardsDA
 
@@ -28,20 +28,20 @@ from jam.utils.merkle import BMRFunctions
 from jam.utils.erasure_coding.erasure_code import ErasureCode
 from jam.utils.merkle.binary_merkle import OpaqueHashes
 from jam.log_setup import node_logger as logger
+from jam.incore.doer import Doer
 
+if TYPE_CHECKING:
+    from jam.jam_node import JamNode
 
-class Assembler:
+class Assembler(Doer):
     # node: Node
     merklizer: BMRFunctions
     codec: ErasureCode
-    settings: Settings
 
-    def __init__(self):
-        from jam.settings import settings
-
+    def __init__(self, jam: "JamNode"):
+        super().__init__(jam)
         self.codec = ErasureCode()
         self.merklizer = BMRFunctions()
-        self.settings = settings
 
     async def assemble_bundle(self, wr: WorkReport):
         from jam.network.protocols.ce_137 import Query

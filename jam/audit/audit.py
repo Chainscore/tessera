@@ -1,3 +1,4 @@
+from jam.incore.doer import Doer
 from jam.types.state.rho import WorkReportState, OptionalWorkReportState
 from tsrkit_types import Null, TypedVector, Bytes, Uint, U8
 from dot_ring import IETF_VRF, Bandersnatch
@@ -28,7 +29,7 @@ from jam.utils.constants import VALIDATOR_COUNT, AUDIT_BIAS_FACTOR, AUDIT_REPORT
 from jam.log_setup import logger
 
 
-class Audit:
+class Audit(Doer):
     @staticmethod
     def auditable_reports(
         prior_state: TypedVector[OptionalWorkReportState], newly_rep: TypedVector[WorkReport]
@@ -185,9 +186,8 @@ class Audit:
         )
         return tranche_index
 
-    @staticmethod
     def validator_announcement_statement(
-        tranche: Tranche, header_hash: HeaderHash, assign_report: TypedVector[CoreReport]
+        self, tranche: Tranche, header_hash: HeaderHash, assign_report: TypedVector[CoreReport]
     ) -> Ed25519Signature:
         """
         Equations: 17.8, 17.9, 17.10
@@ -204,7 +204,7 @@ class Audit:
 
         Source: https://graypaper.fluffylabs.dev/#/ab2cdbd/1e8b011ee501?v=0.7.2
         """
-        from jam.settings import settings
+        settings = self.settings
 
         tranche_index = tranche.tranche_index
 
@@ -228,9 +228,8 @@ class Audit:
 
         return Ed25519Signature(signature)
 
-    @classmethod
     async def vrf_tranche(
-        cls,
+        self,
         header_hash: HeaderHash,
         tranche: Tranche,
         entropy: BandersnatchVrfSignature,
@@ -251,7 +250,7 @@ class Audit:
 
         Source: https://graypaper.fluffylabs.dev/#/1c979cb/1f3d001fb900?v=0.7.1
         """
-        from jam.settings import settings
+        settings = self.settings
         from jam.storage.tranche_audit_store import tranche_store
 
         tranche_index = tranche.tranche_index
@@ -263,7 +262,7 @@ class Audit:
             rep = wr.unwrap()
 
             if rep is not Null:
-                random_quantity = cls.vrf_signature_bandersnatch(
+                random_quantity = self.vrf_signature_bandersnatch(
                     bandersnatch_key=settings.bandersnatch_private,
                     entropy_source=entropy,
                     tranche=tranche,
@@ -298,8 +297,7 @@ class Audit:
 
         return assigned_wrs
 
-    @staticmethod
-    async def refine(wr: WorkReport) -> Uint:
+    async def refine(self, wr: WorkReport) -> Uint:
         """
         Equation: 17.16
         Rebuild bundle for given work report, refine it and compare reports
@@ -313,11 +311,12 @@ class Audit:
         Source: https://graypaper.fluffylabs.dev/#/1c979cb/1fde001f1b01?v=0.7.1
         """
 
+        jam = self.jam
         wr_hash = wr.hash()
         from jam.incore import Processor
 
-        assembler = Assembler()
-        processor = Processor()
+        assembler = Assembler(jam)
+        processor = Processor(jam)
 
         try:
             logger.debug("Recompiling bundle...", wr_hash=wr_hash.hex())
@@ -347,8 +346,7 @@ class Audit:
 
             return U8(0)
 
-    @staticmethod
-    def judgment_signature(wr_hash: WorkReportHash, validity: Uint[8]) -> Ed25519Signature:
+    def judgment_signature(self, wr_hash: WorkReportHash, validity: Uint[8]) -> Ed25519Signature:
         """
         Equations: 17.17
         This function just build the ed25519 signature(Judgment Signature) for the particular work report.
@@ -360,7 +358,7 @@ class Audit:
         Source: https://graypaper.fluffylabs.dev/#/38c4e62/1f6f011f9801?v=0.7.0
 
         """
-        from jam.settings import settings
+        settings = self.settings
 
         if validity == Uint[8](1):
             message = X.VALID.value + wr_hash.encode()

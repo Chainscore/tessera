@@ -1,10 +1,12 @@
 import asyncio
-from tsrkit_types import Null, Option, TypedVector, Uint
+from typing import TYPE_CHECKING
+
+from jam.incore.doer import Doer
+from tsrkit_types import TypedVector
 from jam.audit.auditor import Auditor
 from jam.audit.audit import Audit
 from jam.audit.utils import Utils
 from jam.block.block import Block
-from jam.finality.finality import Finality
 from jam.log_setup import logger
 from jam.network.protocols.ce_144 import SubsequentTrancheEvidence
 from jam.types.audit.audit_tranche import (
@@ -17,30 +19,32 @@ from jam.types.work.report import WorkReports
 from jam.utils.constants import AUDIT_PERIOD, CURRENT_TIME, SLOT_PERIOD
 from jam.storage.tranche_audit_store import tranche_store
 from jam.state.state import State
-from jam.block.block_view import BlockView
-from jam.settings import settings
 
+if TYPE_CHECKING:
+    from jam.jam_node import JamNode
 
-class AuditEngine:
+class AuditEngine(Doer):
     """
     Audit engine initiates auditing and manages tranches for newly available reports.
     """
 
-    def __init__(self):
+    def __init__(self, jam: "JamNode"):
+        super().__init__(jam)
         self.is_audited = False
 
     async def run(self, block: Block, newly_avail_wrs: WorkReports):
+        settings = self.settings
         header_hash = block.header.hash()
 
-        auditor = Auditor()
-        audit = Audit()
-        utils = Utils()
-        view = BlockView()
+        auditor = Auditor(self.jam)
+        audit = Audit(self.jam)
+        utils = Utils(self.jam)
+        view = self.ledger
 
         logger.info("Auditing started", header_hash=header_hash.hex())
 
         # Fetch Last Finalized Block (defensive)
-        last_finalized_block = Finality.load_final(kv=settings.main_db)
+        last_finalized_block = self.grandpa.load_final()
         if last_finalized_block is None:
             logger.error(
                 "Finality.load_final returned None; aborting audit", header_hash=header_hash.hex()
