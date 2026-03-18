@@ -140,6 +140,9 @@ class NetworkService:
             self.logger.warning("NetworkService not started, cannot connect to peers.")
             return
 
+        if self.jam.shutdown_event.is_set():
+            return
+
         state = self.state
         settings = self.settings
 

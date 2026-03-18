@@ -279,6 +279,8 @@ class PeerConnection(QuicConnectionProtocol):
                 # If we don't know stream, we receive prefix
                 # i.e. whenever client initiates connection or starts new protocol.
                 # Add prefix to the buffer
+                if len(data) == 0:
+                    return
                 prefix = U8.decode(data)
                 self.logger.trace(
                     f"⬇ Received data", stream_id=stream_id, prefix=prefix, data_len=len(data)
