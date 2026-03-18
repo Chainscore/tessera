@@ -85,6 +85,16 @@ class ErrorMessage:
     """Error ::= UTF8String"""
     message: String
 
+@structure
+class StateVector:
+    state_root: Bytes32
+    key_vals: TypedVector[KeyValue]
+
+@structure
+class Case:
+    pre_state: StateVector
+    block: Block
+    post_state: StateVector
 
 # Keep old aliases for compatibility during transition
 KeyVal = KeyValue
