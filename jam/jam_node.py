@@ -237,7 +237,13 @@ class JamNode:
 
         # Give tasks a moment to run their finally: cleanup blocks
         if pending:
-            await asyncio.gather(*pending, return_exceptions=True)
+            try:
+                await asyncio.wait_for(
+                    asyncio.gather(*pending, return_exceptions=True),
+                    timeout=5.0,
+                )
+            except asyncio.TimeoutError:
+                self.logger.warning("Shutdown: some tasks did not finish in 5s, forcing exit")
 
         # 5. Close DBs — safe now, no tasks are writing
         if self._settings:
@@ -315,8 +321,13 @@ class JamNode:
                 self._sigint_count += 1
                 if self._sigint_count == 1:
                     print("\033[1;91m ⚠  Interrupt received. Press Ctrl+C again to shut down.\033[0m")
-                else:
+                elif self._sigint_count == 2:
                     asyncio.create_task(self.graceful_shutdown())
+                else:
+                    # Third signal: force exit (graceful_shutdown is stuck)
+                    print("\033[1;91m ⚠  Force exit.\033[0m")
+                    import os
+                    os._exit(1)
 
             for sig in (signal.SIGTERM, signal.SIGINT):
                 try:
