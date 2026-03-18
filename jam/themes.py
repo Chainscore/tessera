@@ -40,6 +40,7 @@ class Colors:
 # Theme configurations
 THEMES: Dict[str, Dict[str, str]] = {
     "default": {
+        "TRACE": Colors.DIM,
         "DEBUG": Colors.CYAN,
         "INFO": Colors.GREEN,
         "WARNING": Colors.YELLOW,
@@ -48,6 +49,7 @@ THEMES: Dict[str, Dict[str, str]] = {
         "node": Colors.BMAG,
     },
     "ocean": {
+        "TRACE": _fg(34),
         "DEBUG": Colors.CYAN,
         "INFO": Colors.BCYAN,
         "WARNING": Colors.YELLOW,
@@ -56,6 +58,7 @@ THEMES: Dict[str, Dict[str, str]] = {
         "node": Colors.BBLUE,
     },
     "forest": {
+        "TRACE": _rgb(0, 100, 0),
         "DEBUG": Colors.GREEN,
         "INFO": Colors.BGREEN,
         "WARNING": Colors.YELLOW,
@@ -64,6 +67,7 @@ THEMES: Dict[str, Dict[str, str]] = {
         "node": Colors.GREEN,
     },
     "retro": {
+        "TRACE": Colors.WHITE,
         "DEBUG": Colors.BBLUE,
         "INFO": Colors.BGREEN,
         "WARNING": Colors.BYELLOW,
@@ -72,6 +76,7 @@ THEMES: Dict[str, Dict[str, str]] = {
         "node": Colors.BMAG,
     },
     "gruvbox": {
+        "TRACE": _rgb(146, 131, 116),
         "DEBUG": _rgb(131, 165, 152),
         "INFO": _rgb(184, 187, 38),
         "WARNING": _rgb(254, 128, 25),
@@ -80,6 +85,7 @@ THEMES: Dict[str, Dict[str, str]] = {
         "node": _rgb(142, 192, 124),
     },
     "dracula": {
+        "TRACE": _rgb(98, 114, 164),
         "DEBUG": _rgb(139, 233, 253),
         "INFO": _rgb(80, 250, 123),
         "WARNING": _rgb(241, 250, 140),

@@ -6,12 +6,15 @@ import os
 import sys
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import Optional, cast, Type
 
 import structlog
 import logging.config
-from .themes import get_theme_colors, RESET
 
+from structlog.stdlib import BoundLogger
+from structlog.typing import BindableLogger
+
+from .themes import get_theme_colors, RESET
 
 class LogModule(Enum):
     """Enum for configurable log modules"""
@@ -25,6 +28,22 @@ class LogModule(Enum):
 _theme_colors = get_theme_colors("default")
 _node_name: Optional[str] = None
 _is_setup = False
+
+# Custom Log Level
+TRACE = 5
+logging.addLevelName(TRACE, "TRACE")
+def trace(self, msg, *args, **kwargs):
+    if self.isEnabledFor(TRACE):
+        self._log(TRACE, msg, args, **kwargs)
+
+logging.Logger.trace = trace
+structlog.stdlib.NAME_TO_LEVEL["trace"] = TRACE
+structlog.stdlib.LEVEL_TO_NAME[TRACE] = "trace"
+
+def _trace(self, event=None, *args, **kwargs):
+    return self._proxy_to_logger("trace", event, *args, **kwargs)
+
+BoundLogger.trace = _trace
 
 class ColoredRenderer:
     """Simple colored renderer for structlog"""
@@ -40,12 +59,12 @@ class ColoredRenderer:
             "eve": "\033[48;5;201m\033[97m",     # Magenta/pink bg
             "fergie": "\033[48;5;226m\033[30m",  # Yellow bg
         }
-        
+
         # Use predefined color if node is known
         name_lower = name.lower().strip()
         if name_lower in known_nodes:
             return known_nodes[name_lower]
-        
+
         # For unknown nodes, use hash with more colors
         colors = [
             "\033[48;5;51m\033[30m",   # Cyan bg
@@ -106,21 +125,21 @@ class ColoredRenderer:
 def setup_logging(theme: str = "default", node_name: Optional[str] = None):
     """
     Setup logging system - call once at startup
-    
+
     Args:
         theme: Color theme name
         node_name: Node identifier for logs
     """
     global _theme_colors, _node_name, _is_setup
-    
+
     _theme_colors = get_theme_colors(theme)
     _node_name = node_name
     _is_setup = True
-    
+
     # Get root log level from env
     root_level_name = os.environ.get("JAM_LOG_LEVEL", "CRITICAL").upper()
-    root_level = getattr(logging, root_level_name, logging.CRITICAL)
-    
+    root_level = logging._nameToLevel.get(root_level_name.upper(), logging.CRITICAL)
+
     # Collect module levels
     module_levels = {}
     for key, value in os.environ.items():
@@ -128,12 +147,12 @@ def setup_logging(theme: str = "default", node_name: Optional[str] = None):
             module_name = key[14:]
             try:
                 module = LogModule[module_name.upper()]
-                level = getattr(logging, value.upper(), logging.CRITICAL)
+                level = logging._nameToLevel.get(value.upper(), logging.CRITICAL)
                 module_levels[module.value] = level
             except (KeyError, AttributeError):
                 # Invalid module or level, ignore
                 pass
-    
+
     # Find minimum level for wrapper
     all_levels = [root_level] + list(module_levels.values())
     min_level = min(all_levels)
@@ -157,7 +176,7 @@ def setup_logging(theme: str = "default", node_name: Optional[str] = None):
         # Check if we can write to the log file
         with open(log_file, "a"):
             pass
-        
+
         handlers["file"] = {
             "level": min_level,
             "class": "logging.handlers.RotatingFileHandler",
@@ -194,7 +213,7 @@ def setup_logging(theme: str = "default", node_name: Optional[str] = None):
         "loggers": {
             "": {
                 "handlers": list(handlers.keys()),
-                "level": "DEBUG",
+                "level": root_level,
                 "propagate": True,
             },
         },
@@ -204,6 +223,8 @@ def setup_logging(theme: str = "default", node_name: Optional[str] = None):
         logging.getLogger(module).setLevel(level)
 
     # Configure structlog
+    wrapper = cast(Type[BindableLogger], BoundLogger)
+
     structlog.configure(
         processors=[
             structlog.stdlib.filter_by_level,
@@ -216,7 +237,7 @@ def setup_logging(theme: str = "default", node_name: Optional[str] = None):
             structlog.processors.UnicodeDecoder(),
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
-        wrapper_class=structlog.make_filtering_bound_logger(min_level),
+        wrapper_class=wrapper,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )

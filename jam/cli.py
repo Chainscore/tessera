@@ -2,6 +2,7 @@ import sys
 import os
 import re
 import argparse
+import platform
 import multiprocessing as mp
 import asyncio
 
@@ -86,53 +87,67 @@ def build_parser():
 
     return p
 
-def show_info():
-    print("=== Process info ===")
-    print(f"pid: {os.getpid()}")
-    print(f"argv: {sys.argv}")
-    print(f"cpu count: {os.cpu_count()}")
-    print(f"frozen: {getattr(sys, 'frozen', False)}")
-    print(f"multiprocessing start method (default): {mp.get_start_method()}")
-    print("====================\n")
+def node_info():
+    # Gather data
+    info = {
+        "PID": os.getpid(),
+        "CPUs": f"{os.cpu_count()} cores",
+        "Arch": f"{platform.system()} ({platform.machine()})",
+        "Mode": "Frozen" if getattr(sys, 'frozen', False) else "Source",
+        "Method": mp.get_start_method(),
+    }
+
+    # Print the "pretty" box
+    print("┌" + "─" * 32 + "┐")
+    print(f"│ {'NODE SYSTEM DIAGNOSTICS':^30} │")
+    print("├" + "─" * 32 + "┤")
+    for key, val in info.items():
+        print(f"│ {key:<8} : {str(val):<19} │")
+    print("└" + "─" * 32 + "┘")
+
+def greet_jam():
+    # JAM Ascii
+    ascii_art = """                         
+                                                                
+                                     .......                              
+                                    ...:::.....                           
+                                   -.. . ...- :..                      :-.
+                           .... .- .-. ... .... :  ..    :.           -#- 
+                         .- .-. --- .-. .- :..... ....   :*.        .==+. 
+                        ...::--====-::.  .-.....   ...:. :*+.      :+::+  
+                     ..:-===#*-::...     -%=       .-==. :=:+.   .-=. =-  
+              ..::-===---::.++....:.    :-+     .-==:.:.-= :*. .+-  .+.  
+            .=+==-:..  .....-#:.::..   .+. +:  .-=-. .::.=-  -*:+:   .+   
+             ..        ...::.*-...     =-  :+:==:.   ....+:   -*:    :=   
+                         ....=+.      :+. .:**.        ..*.    .     =-   
+                             .*.     .+..-=-.+:        .:+           +:   
+                        ......*-     ==-=-.  :*.      ..+=          .+.   
+                       ..::::.-*... :%+-.     :+.   ..:.*:          .=    
+                       .:......*=...-*.        :.   .::.-.          :=    
+                       .:....:-+#:.. .             .::..            :=    
+                        .:-=+==::.:...            ..:..             :-    
+                     .:-===-:....:..   .......... ....              ::    
+                 .:-===:.   ....... ....::::::::.                   ::    
+              .-===-..              .::::::::....                   ::    
+          .:-==-:.                  ..........                      ..    
+      ..-==-:.                        ...                           ..    
+    .-==-.                                                           .    
+    ...                             τεςςεɽα                          .
+                                ChainScore Labs
+                      
+                                                                          
+    """
+
+    print(ascii_art)
+
 
 def main():
-    # show_info()
-
     # Display ASCII art on startup
-    ascii_art = """
-                                                                             
-                                                                            
-                                                                            
-                                                                      
-                                 .......                              
-                                ...:::.....                           
-                               ..:......::...                      :-.
-                       .......   ..::......:.  ..    :.           -#- 
-                     ........:::-=-.......... ....   :*.        .==+. 
-                    ...::--====-::.  .-.....   ...:. :*+.      :+::+  
-                 ..:-===#*-::...     -%=       .-==. :=:+.   .-=. =-  
-          ..::-===---::.++....:.    :+-+     .-==:.:.-= :*. .+-  .+.  
-        .=+==-:..  .....-#:.::..   .+. +:  .-=-. .::.=-  -*:+:   .+   
-         ..        ...::.*-...     =-  :+:==:.   ....+:   -*:    :=   
-                     ....=+.      :+. .:**.        ..*.    .     =-   
-                         .*.     .+..-=-.+:        .:+           +:   
-                    ......*-     ==-=-.  :*.      ..+=          .+.   
-                   ..::::.-*... :%+-.     :+.   ..:.*:          .=    
-                   .:......*=...-*.        :.   .::.-.          :=    
-                   .:....:-+#:.. .             .::..            :=    
-                    .:-=+==::.:...            ..:..             :-    
-                 .:-===-:....:..   .......... ....              ::    
-             .:-===:.   ....... ....::::::::.                   ::    
-          .-===-..              .::::::::....                   ::    
-      .:-==-:.                  ..........                      ..    
-  ..-==-:.                        ...                           ..    
-.-==-.                                                           .    By Chainscore Labs
-...                                                                   
-                                                                      
-                                                                      
-"""
-    print(ascii_art)
-    
+    greet_jam()
+
+    # Display system info
+    node_info()
+
     # Change to base directory first for file resolution
     base_dir = detect_base_dir()
     os.chdir(base_dir)
@@ -161,14 +176,14 @@ def main():
         return
     
     # Check for import mode
-    if args.import_path:
+    elif args.import_path:
         # Setup basic logging for import mode
         from jam.log_setup import setup_logging
         setup_logging("default", "importer")
         
         print("📥 Starting Tessera in import mode...")
         
-        # Import import functionality
+        # Import block import functionality
         from jam.fuzzer.importer import run_import
 
         # Run importer
@@ -179,29 +194,43 @@ def main():
             )
         )
         return
-    
-    # Import main function
-    from jam.__main__ import main as node_main
-    
-    # Run the node
-    try:
-        asyncio.run(
-            node_main(
-                args.db,
-                args.env, 
-                args.theme,
-                False,
-                True,
-                args.no_rpc,
-                None
-            )
-        )
-    except KeyboardInterrupt:
-        print("\n🛑 Tessera node stopped by user")
-        sys.exit(0)
-    except Exception as e:
-        print(f"❌ Fatal error: {e}")
-        sys.exit(1)
+
+    else:
+        # Import main function
+        from jam.jam_node import JamNode
+        from jam.config import NodeConfig
+
+        # Run the node
+        try:
+            # Create config with overrides from CLI args
+            overrides = {}
+
+            # Map CLI args to Config fields
+            if args.db:
+                overrides["DATA_PATH"] = args.db
+            if args.theme:
+                overrides["LOG_THEME"] = args.theme
+            if hasattr(args, 'telemetry') and args.telemetry:
+                overrides["TELEMETRY"] = args.telemetry
+
+            # Boolean flags
+            overrides["RPC_FLAG"] = args.no_rpc  # args.no_rpc is True by default, False if --no-rpc passed
+            # Initialize config (loads from env file + overrides)
+            config = NodeConfig(_env_file=args.env, **overrides)
+
+            # Initialize and run node
+            node = JamNode(config)
+
+            asyncio.run(node.start())
+
+        except KeyboardInterrupt:
+            print("\n🛑 Tessera node stopped by user")
+            sys.exit(0)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"❌ Fatal error: {e}")
+            sys.exit(1)
 
 if __name__ == "__main__":
     main()
