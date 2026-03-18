@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.unit
+
 from rockstore import RockStore
 from jam.storage.queue import StorageQueue
 

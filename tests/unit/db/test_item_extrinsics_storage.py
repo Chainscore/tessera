@@ -1,4 +1,6 @@
 import pytest
+
+pytestmark = pytest.mark.unit
 from unittest.mock import MagicMock
 from rockstore import RockStore
 from jam.storage.item_extrinsics import ItemExtrinsics
