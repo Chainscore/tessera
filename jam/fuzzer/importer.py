@@ -88,7 +88,12 @@ def process_test_vector(test_vector: TraceCase, state, settings) -> Tuple[Any, f
     transition_time = 0.0
     block = test_vector.block
     start_time = time.time()
-    state._force_transition(block, False)
+    from jam.state.state import State
+    is_valid = State._force_transition(block, False)
+    if is_valid:
+        state = State.load(block.header.hash())
+    else:
+        state = State.load(block.header.parent)
     transition_time = time.time() - start_time
 
     return state, transition_time
