@@ -32,6 +32,7 @@ from .types import PeerInfo, Version, Initialize, State, KeyValue, ErrorMessage
 
 from .handlers import read_message, send_message, handle_handshake
 from ..block.extrinsics.extrinsic import Extrinsic
+from ..types import HeaderHash
 
 
 def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optional[str] = None):
@@ -94,9 +95,12 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                     try:
                         block = Block.decode(payload)
 
+                        from jam.block.block_view import viewer
+                        viewer.record_block(block, settings.main_db)
+
                         if record_enabled and json_data:
                             json_data["blocks"].append(block.to_json())
-                        valid_block = State._force_transition(block, True, True)
+                        valid_block = State._force_transition(block, False, True)
                         if valid_block:
                             post_state = State.load(block.header.hash())
                             send_message(conn, TAG_STATE_ROOT, post_state.root)
@@ -152,14 +156,27 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                 
                 elif tag == TAG_GET_STATE:
                     print(f"📤 Received GetState command ({len(payload)} bytes)")
+                    print(f"📤 Received GetState payload: {payload.hex()}")
                     print(f"🔍 Current StateRoot: {state.root.hex()}")
 
                     try:
                         keyvals = TypedVector[KeyValue]([])
-                        for key, val in settings.state_db.get_all().items():
-                            # Ensure key is 31 bytes
-                            key_31 = key[:31].ljust(31, b'\x00') if len(key) < 31 else key[:31]
-                            keyvals.append(KeyValue(key=Bytes[31](key_31), value=Bytes(val)))
+                        header_hash = HeaderHash(payload)
+                        from jam.block.block_view import viewer, BlockStatus
+                        if header_hash is not None:
+                            block = viewer.load_ghost(header_hash)
+                            if block.status == BlockStatus.audited:
+                                st = State.load(block.header)
+                                for key, val in st.transform().items():
+                                    # Ensure key is 31 bytes
+                                    key_31 = key[:31].ljust(31, b'\x00') if len(key) < 31 else key[:31]
+                                    keyvals.append(KeyValue(key=Bytes[31](key_31), value=Bytes(val)))
+                            elif block.status == BlockStatus.unaudited:
+                                st = State.load(block.parent.header)
+                                for key, val in st.transform().items():
+                                    # Ensure key is 31 bytes
+                                    key_31 = key[:31].ljust(31, b'\x00') if len(key) < 31 else key[:31]
+                                    keyvals.append(KeyValue(key=Bytes[31](key_31), value=Bytes(val)))
 
                         # state_response = State(keyvals=keyvals)
                         state_response = keyvals

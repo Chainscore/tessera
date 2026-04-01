@@ -9,6 +9,7 @@ from rockstore import RockStore
 from jam.state.accounts import DeltaView
 from jam.state.ghost import GhostState
 from jam.utils.trie.merkle import StateTrie
+from jam.utils.trie.utils import NodeType
 from jam.state.storage import StateStorage
 from jam.state.utils import make_state_prop
 from tsrkit_types import Bytes, Dictionary, TypedVector
@@ -113,6 +114,41 @@ class State:
             db.put(k, v)
 
         return cls(StateStorage(trie, db, {}))
+
+    def _transform(self, node_hash: Bytes, state_dict: dict[Bytes, Bytes]) -> None:
+        node = self.store._TRIE.nodes.get(node_hash)
+        if node is None:
+            return
+
+        if node.type == NodeType.BRANCH:
+            if node.left is not None:
+                self._transform(node.left, state_dict)
+            if node.right is not None:
+                self._transform(node.right, state_dict)
+            return
+
+        key = Bytes[31].from_bits(node.encoded.slice_bits(8, 256))
+        key_bytes = bytes(key)
+
+        if key_bytes in self.store._updates:
+            raw_value = self.store._updates[key_bytes]
+        else:
+            raw_value = self.store._DB.get(key_bytes)
+
+        if raw_value is not None:
+            state_dict[key] = Bytes(raw_value)
+
+    def transform(self) -> dict[Bytes, Bytes]:
+        state_dict: dict[Bytes, Bytes] = {}
+        self._transform(self.root, state_dict)
+        return state_dict
+
+    def to_json(self) -> dict[str, str | list[dict[str, str]]]:
+        keyvals = [
+            {"key": key.to_json(), "value": value.to_json()}
+            for key, value in sorted(self.transform().items())
+        ]
+        return {"state_root": self.root.to_json(), "keyvals": keyvals}
 
     @property
     def root(self):
@@ -373,8 +409,8 @@ class State:
                 #     asyncio.create_task(audit_engine.run(block=block, newly_avail_wrs=newly_avail_wrs))
 
                 # TODO: Mark block as audited once audit process is done.
-                # from jam.block.block_view import viewer
-                # viewer.mark_as_audited(block, _set.main_db)
+                from jam.block.block_view import viewer
+                viewer.mark_as_audited(block, _set.main_db)
                 # TODO: Remove Direct Finality
                 # NOTE: We are setting instant finality here, this is to be updated once GRANDPA is implemented
                 if instant_finality:
