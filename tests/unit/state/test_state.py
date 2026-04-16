@@ -36,8 +36,8 @@ def test_state_sync(db_path):
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_state_update(db_path, rpc):
-    settings = setup_setting(db_path, None)
+async def test_state_update(db_path):
+    settings = setup_setting(db_path, None, rpc=False)
     state = setup_state(settings.state_db, GhostState.genesis())
     prev_hash = state.root
     state.tau = Tau(1)
@@ -50,8 +50,8 @@ async def test_state_update(db_path, rpc):
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_delta_update(db_path, rpc):
-    settings = setup_setting(db_path, None, "alice", 0, rpc)
+async def test_delta_update(db_path):
+    settings = setup_setting(db_path, None, "alice", 0, False)
     state = setup_state(settings.state_db, GhostState.genesis())
     prev_hash = state.root
     state.delta[ServiceId(1)] = AccountData()
@@ -88,8 +88,8 @@ async def test_delta_update(db_path, rpc):
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_preimage_add(db_path, rpc):
-    settings = setup_setting(db_path, None, "alice", 0, rpc)
+async def test_preimage_add(db_path):
+    settings = setup_setting(db_path, None, "alice", 0, False)
     state = setup_state(settings.state_db, GhostState.genesis())
     prev_hash = state.root
     data = create_dummy_bytes(100)
@@ -106,8 +106,8 @@ async def test_preimage_add(db_path, rpc):
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_storage_add(db_path, rpc):
-    settings = setup_setting(db_path, None, "alice", 0, rpc)
+async def test_storage_add(db_path):
+    settings = setup_setting(db_path, None, "alice", 0, False)
     state = setup_state(settings.state_db, GhostState.genesis())
     prev_hash = state.root
     data = create_dummy_bytes(100)
@@ -124,8 +124,8 @@ async def test_storage_add(db_path, rpc):
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_timestamps_add(db_path, rpc):
-    settings = setup_setting(db_path, None, "alice", 0, rpc)
+async def test_timestamps_add(db_path):
+    settings = setup_setting(db_path, None, "alice", 0, False)
     state = setup_state(settings.state_db, GhostState.genesis())
 
     prev_hash = state.root
