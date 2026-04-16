@@ -3,7 +3,7 @@ import pytest
 from tsrkit_types import Bytes, Vector
 import random
 from jam.utils.erasure_coding.erasure_code import ErasureCode
-from jam.types.work.manifest import Segments, Segment
+from jam.models.work.manifest import Segments, Segment
 
 
 def test_benchmark_erasure_coding():
