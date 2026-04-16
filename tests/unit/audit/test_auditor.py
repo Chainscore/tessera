@@ -12,7 +12,7 @@ from jam.incore.processor import Processor
 from jam.log_setup import node_logger as logger
 from jam.network.protocols import WorkPackageSubmission
 from jam.network.protocols.ce_133 import CE133Data, WorkPackageCore
-from jam.types import Hash
+from jam.models import Hash
 from jam.utils.constants import GENESIS_TS
 from jam.storage.da.mappings import (
     PackageSegmentMap,

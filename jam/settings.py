@@ -1,20 +1,20 @@
 from time import time
 from types import NoneType
 from typing import TYPE_CHECKING
-from py_ark_vrf import  secret_from_seed
+from dot_ring import secret_from_seed
 from typing import Optional
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tsrkit_types import U32, Bytes, Bytes32
 
 from jam.log_setup import logger
-from jam.types import ValidatorIndex
-from jam.types.protocol.core import CoreIndex
-from jam.types.protocol.crypto import Hash
-from jam.types.protocol.validators import ValidatorData
+from jam.models import ValidatorIndex
+from jam.models.protocol.core import CoreIndex
+from jam.models.protocol.crypto import Hash
+from jam.models.protocol.validators import ValidatorData
 from rockstore import RockStore
 import random
 
-from jam.types.work.shard import ShardIndex
+from jam.models.work.shard import ShardIndex
 from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
 
 if TYPE_CHECKING:

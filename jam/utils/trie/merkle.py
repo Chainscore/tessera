@@ -11,7 +11,7 @@ from .utils import (
     encode_branch,
     encode_leaf,
 )
-from jam.types.protocol.crypto import Hash
+from jam.models.protocol.crypto import Hash
 from rockstore import RockStore
 from tsrkit_types.bytes import Bytes
 

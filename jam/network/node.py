@@ -20,11 +20,11 @@ from jam.utils.task_utils import create_safe_task
 from functools import partial
 from typing import Callable, Optional, Text, Union, cast
 from jam.log_setup import network_logger as logger
-from jam.types.protocol.crypto import Ed25519Public
+from jam.models.protocol.crypto import Ed25519Public
 from jam.utils.constants import VALIDATOR_COUNT
 from .base.certificate import generate_san
 from .connection import NodeConnection
-from jam.types.protocol.validators import ValidatorData
+from jam.models.protocol.validators import ValidatorData
 
 
 # AIOQUIC - Patch to recieve certificates

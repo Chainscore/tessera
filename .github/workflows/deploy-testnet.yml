@@ -29,13 +29,6 @@ jobs:
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           submodules: false
 
-      - name: Init submodules
-        run: |
-          git submodule init deps/tsrkit-pvm deps/py-ark-vrf deps/rockstore deps/tsrkit-asm deps/tsrkit-types
-          git -c "url.https://x-access-token:${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/.insteadOf=https://github.com/" \
-            submodule update --recursive --depth 1 \
-            deps/tsrkit-pvm deps/py-ark-vrf deps/rockstore deps/tsrkit-asm deps/tsrkit-types
-
       - name: Azure Login
         uses: azure/login@v2
         with:

@@ -1,4 +1,9 @@
-from py_ark_vrf import vrf_output
+from dot_ring import RingVRF, Bandersnatch
+
+def vrf_output(signature):
+    """Extract VRF output (hash) from Ring VRF signature."""
+    ring_proof = RingVRF[Bandersnatch].from_bytes(signature, skip_pedersen=False)
+    return ring_proof.proof_to_hash(ring_proof.pedersen_proof.output_point)[:32]
 import pytest
 import os
 from tsrkit_types.bytes import Bytes
@@ -6,14 +11,14 @@ from jam.operations.handlers.conductor import Conductor
 from jam.settings import setup_setting
 from jam.state.transitions import SafroleError, SafroleErrorCode
 from jam.state.transitions import Safrole
-from jam.types.state.eta import Eta
+from jam.models.state.eta import Eta
 from tsrkit_types.integers import U32
-from jam.types.state.kappa import Kappa
-from jam.types.state.gamma import GammaP, GammaA, GammaS, GammaSFallback, GammaZ
-from jam.types.state.psi import PsiO
-from jam.types.state.iota import Iota
-from jam.types.state.lambda_ import Lambda_
-from jam.types.protocol.ticket import TicketBody, TicketId, TicketAttempt
+from jam.models.state.kappa import Kappa
+from jam.models.state.gamma import GammaP, GammaA, GammaS, GammaSFallback, GammaZ
+from jam.models.state.psi import PsiO
+from jam.models.state.iota import Iota
+from jam.models.state.lambda_ import Lambda_
+from jam.models.protocol.ticket import TicketBody, TicketId, TicketAttempt
 from jam.utils.dummy.utils import create_dummy_bytes
 from tests.unit.safrole.data import (
     create_block,

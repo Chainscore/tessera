@@ -1,9 +1,9 @@
-from jam.types.state.sigma import Sigma
+from jam.models.state.sigma import Sigma
 from tsrkit_types import structure, Option, TypedArray, Null, U64
 from typing import Self
-from jam.types.protocol.crypto import Entropy
+from jam.models.protocol.crypto import Entropy
 from jam.utils.constants import EPOCH_LENGTH
-from jam.types.protocol.crypto import BandersnatchPublic, Ed25519Public, Entropy
+from jam.models.protocol.crypto import BandersnatchPublic, Ed25519Public, Entropy
 from jam.utils.constants import VALIDATOR_COUNT
 
 

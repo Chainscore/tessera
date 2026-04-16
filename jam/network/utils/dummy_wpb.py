@@ -5,9 +5,9 @@ from time import time
 from tsrkit_types import Bytes, U16, Uint
 
 from jam.execution.pvm.code import Code
-from jam.types.protocol.crypto import Hash
-from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpec
-from jam.types.work.manifest import Extrinsics
+from jam.models.protocol.crypto import Hash
+from jam.models.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpec
+from jam.models.work.manifest import Extrinsics
 from jam.utils.constants import EPOCH_LENGTH, GENESIS_TS
 from jam.network.node import Node
 from jam.log_setup import pvm_logger
@@ -15,7 +15,7 @@ from rockstore import RockStore
 from jam.utils.dummy.dummy_package import create_dummy_package
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
-from jam.types.protocol.core import CoreIndex, Gas, ServiceId, SegmentRoot
+from jam.models.protocol.core import CoreIndex, Gas, ServiceId, SegmentRoot
 
 # Logger for WP Production
 logger = pvm_logger

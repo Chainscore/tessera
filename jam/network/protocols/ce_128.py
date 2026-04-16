@@ -8,13 +8,13 @@ from tsrkit_types import TypedArray, Enum
 from jam.log_setup import network_logger as logger
 from jam.network.base.error import NetworkingErrorCode
 from jam.network.connection import NodeConnection
-from jam.types import HeaderHash 
+from jam.models import HeaderHash 
 
 
 from tsrkit_types.integers import U32, U64
 from tsrkit_types.struct import structure
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-from jam.types.protocol.core import TimeSlot
+from jam.models.protocol.core import TimeSlot
 from jam.utils.constants import GENESIS_HASH
 from jam.utils.gather import gather_with_exceptions
 from jam.telemetry import emit_event

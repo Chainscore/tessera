@@ -1,8 +1,8 @@
 from jam.block import Block
 from jam.finality.finality import Finality
-from jam.types import RefineContext, BeefyRoot, HeaderHash, ServiceId
-from jam.types.state.beta import BlockHistory
-from jam.types.work import WorkItems
+from jam.models import RefineContext, BeefyRoot, HeaderHash, ServiceId
+from jam.models.state.beta import BlockHistory
+from jam.models.work import WorkItems
 from jam.utils.dummy.dummy_package import create_dummy_package
 from jam.utils.merkle import MMRFunctions
 

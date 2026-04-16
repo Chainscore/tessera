@@ -5,9 +5,9 @@ from tsrkit_types import Uint
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.struct import structure
 
-from jam.types.protocol.core import ServiceId, BlobLength
+from jam.models.protocol.core import ServiceId, BlobLength
 from jam.log_setup import node_logger as logger
-from jam.types.protocol.crypto import (
+from jam.models.protocol.crypto import (
     OpaqueHash, Hash
 )
 

@@ -4,8 +4,8 @@ from tsrkit_types.integers import U32
 from tsrkit_types.sequences import TypedArray, TypedVector
 from tsrkit_types.struct import structure
 
-from jam.types.protocol.crypto import Ed25519Public, Ed25519Signature, WorkReportHash
-from jam.types.protocol.core import ValidatorIndex
+from jam.models.protocol.crypto import Ed25519Public, Ed25519Signature, WorkReportHash
+from jam.models.protocol.core import ValidatorIndex
 from jam.utils.constants import VALIDATOR_COUNT
 
 

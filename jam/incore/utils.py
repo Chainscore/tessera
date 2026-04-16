@@ -4,8 +4,8 @@ from tsrkit_types import ByteArray, Bytes
 
 from jam.utils.merkle.binary_merkle import BMRFunctions, OpaqueHashes
 
-from jam.types.protocol import OpaqueHash
-from jam.types.work.manifest import Segments, Segment
+from jam.models.protocol import OpaqueHash
+from jam.models.work.manifest import Segments, Segment
 
 from jam.utils.constants import SEGMENT_SIZE
 

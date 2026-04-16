@@ -17,7 +17,7 @@ from cryptography.hazmat.primitives.serialization import (
 from tsrkit_types import Uint
 
 from jam.log_setup import network_logger as logger
-from jam.types.protocol.crypto import Hash
+from jam.models.protocol.crypto import Hash
 
 ASN1_PREFIX = bytes.fromhex("302e020100300506032b657004220420")
 ZERO_SEED = b"\x00" * 32

@@ -1,5 +1,5 @@
-from jam.types.protocol.core import CoreIndex, ValidatorIndex
-from jam.types.work.shard import ShardIndex
+from jam.models.protocol.core import CoreIndex, ValidatorIndex
+from jam.models.work.shard import ShardIndex
 
 from jam.utils import constants
 from jam.utils.chainspec import chain_config

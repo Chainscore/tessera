@@ -3,7 +3,7 @@ from tsrkit_types.integers import U32
 
 from jam.state.transitions import Disputes
 from jam.block.extrinsics.disputes import DisputesExtrinsic, Verdicts, Culprits, Faults, Verdict
-from jam.types.protocol.crypto import WorkReportHash
+from jam.models.protocol.crypto import WorkReportHash
 from jam.utils.constants import VALIDATORS_SUPER_MAJORITY
 from jam.utils.dummy.utils import create_dummy_bytes32
 

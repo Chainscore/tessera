@@ -7,10 +7,10 @@ from jam.state.state import setup_state
 from rockstore import RockStore
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U32, U64
-from jam.types.protocol.core import Balance, ServiceId, TimeSlot
-from jam.types.protocol.crypto import Hash
-from jam.types.state.delta import AccountData, LookupTable, Timestamps, AccountMetadata
-from jam.types.state.tau import Tau
+from jam.models.protocol.core import Balance, ServiceId, TimeSlot
+from jam.models.protocol.crypto import Hash
+from jam.models.state.delta import AccountData, LookupTable, Timestamps, AccountMetadata
+from jam.models.state.tau import Tau
 from jam.utils.dummy.utils import create_dummy_bytes
 from jam.settings import setup_setting
 

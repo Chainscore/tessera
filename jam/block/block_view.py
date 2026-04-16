@@ -4,8 +4,8 @@ from typing import List, Optional, Dict
 
 from jam.api.rpc.subscription_handlers import subscribe_best_block
 from jam.block import Block
-from jam.types.protocol.core import TimeSlot
-from jam.types.protocol.crypto import OpaqueHash, HeaderHash
+from jam.models.protocol.core import TimeSlot
+from jam.models.protocol.crypto import OpaqueHash, HeaderHash
 
 from tsrkit_types import Dictionary, Enum, structure, Option, TypedVector
 
@@ -200,7 +200,7 @@ class BlockView:
             return
 
         if ghost_block.parent is None or ghost_block.parent.header != pre_final.header:
-            print("pre-final must be direct parent of the block being finalized")
+            print("WARN: pre-final must be direct parent of the block being finalized")
             # raise ValueError("pre-final must be direct parent of the block being finalized")
 
         self._index_map.pop(pre_final.header, None)

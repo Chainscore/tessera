@@ -7,13 +7,13 @@ from jam.block.block import Block
 from jam.finality.finality import Finality
 from jam.log_setup import logger
 from jam.network.protocols.ce_144 import SubsequentTrancheEvidence
-from jam.types.audit.audit_tranche import (
+from jam.models.audit.audit_tranche import (
     TrancheIndex,
     Tranche,
     TrancheState,
     OptionalReports,
 )
-from jam.types.work.report import WorkReports
+from jam.models.work.report import WorkReports
 from jam.utils.constants import AUDIT_PERIOD, CURRENT_TIME, SLOT_PERIOD
 from jam.storage.tranche_audit_store import tranche_store
 from jam.state.state import State

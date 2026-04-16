@@ -1,15 +1,15 @@
 from copy import copy
 from typing import List
 
-from jam.types.protocol.ticket import TicketBody
+from jam.models.protocol.ticket import TicketBody
 from .errors import SafroleError, SafroleErrorCode
 from jam.log_setup import logger
 from jam.block import TicketEnvelope
-from jam.types.state.eta import Eta
-from jam.types.state.kappa import Kappa
-from jam.types.state.lambda_ import Lambda_
-from jam.types.state.sigma import Sigma
-from jam.types.state.gamma import GammaS, GammaSTickets
+from jam.models.state.eta import Eta
+from jam.models.state.kappa import Kappa
+from jam.models.state.lambda_ import Lambda_
+from jam.models.state.sigma import Sigma
+from jam.models.state.gamma import GammaS, GammaSTickets
 from jam.utils.util_fns import outside_in
 from tsrkit_types import Bytes, U32
 from jam.block import Block
@@ -20,7 +20,7 @@ from jam.utils.constants import (
     TICKET_ENTRIES_PER_VALIDATOR,
     MAX_TICKETS_PER_EXTRINSIC,
 )
-from jam.types.protocol.crypto import (
+from jam.models.protocol.crypto import (
     BandersnatchPublic,
     BandersnatchRingVrfSignature,
     BlsPublic,
@@ -28,8 +28,8 @@ from jam.types.protocol.crypto import (
     Hash,
     OpaqueHash,
 )
-from jam.types.state.gamma import GammaP, GammaSFallback, GammaA, GammaZ
-from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
+from jam.models.state.gamma import GammaP, GammaSFallback, GammaA, GammaZ
+from jam.models.protocol.validators import ValidatorData, ValidatorMetadata
 # dot_ring is used for Ring VRF operations
 from dot_ring import RingVRF, Bandersnatch, IETF_VRF
 from dot_ring.vrf.ring.ring_root import RingRoot

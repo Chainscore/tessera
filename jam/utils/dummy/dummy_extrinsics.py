@@ -11,10 +11,10 @@ from jam.block.extrinsics.guarantees import (
 )
 from jam.block.extrinsics.assurances import AvailAssurance, AssurancesExtrinsic
 from jam.block.extrinsics.disputes import Verdicts, Culprits, Faults, DisputesExtrinsic
-from jam.types.protocol.core import ServiceId, TimeSlot, ValidatorIndex, Gas
+from jam.models.protocol.core import ServiceId, TimeSlot, ValidatorIndex, Gas
 from tsrkit_types.integers import U32, U16, U8, Uint
-from jam.types.work import WorkReport
-from jam.types.work import (
+from jam.models.work import WorkReport
+from jam.models.work import (
     SegmentRootLookup,
     WorkPackageSpec,
     WorkDigest,
@@ -27,8 +27,8 @@ from jam.utils.dummy.utils import (
     create_dummy_bytes32,
     create_dummy_int,
 )
-from jam.types.work import RefineContext
-from jam.types.protocol.crypto import Ed25519Signature, BandersnatchRingVrfSignature
+from jam.models.work import RefineContext
+from jam.models.protocol.crypto import Ed25519Signature, BandersnatchRingVrfSignature
 from tsrkit_types.bytes import Bytes
 from jam.utils.constants import VALIDATORS_SUPER_MAJORITY
 
