@@ -9,7 +9,7 @@ from tsrkit_types.null import Null
 from jam.block import Block
 from jam.execution.invocations.accumulate import PsiA
 from jam.state.partial import GhostPartial
-from jam.types.state.accumulation.types import (
+from jam.models.state.accumulation.types import (
     AccumulationOutput,
     DeferredTransfers,
     AccumulationInputs,
@@ -17,16 +17,16 @@ from jam.types.state.accumulation.types import (
     BeefyMap,
     GasConsumed, AccumulationInput,
 )
-from jam.types.protocol.crypto import Hash, OpaqueHash
-from jam.types.state.pi import ServiceStat
-from jam.types.state.sigma import Sigma
-from jam.types.state.delta import Delta, LookupTable, Timestamps
-from jam.types.state.tau import Tau
-from jam.types.state.chi import ChiZ, Chi, ChiA
-from jam.types.state.omega import AllReadyWRs, ReadyWR
-from jam.types.state.theta import Commitment, Theta
-from jam.types.protocol.core import Gas, ServiceId
-from jam.types.work import (
+from jam.models.protocol.crypto import Hash, OpaqueHash
+from jam.models.state.pi import ServiceStat
+from jam.models.state.sigma import Sigma
+from jam.models.state.delta import Delta, LookupTable, Timestamps
+from jam.models.state.tau import Tau
+from jam.models.state.chi import ChiZ, Chi, ChiA
+from jam.models.state.omega import AllReadyWRs, ReadyWR
+from jam.models.state.theta import Commitment, Theta
+from jam.models.protocol.core import Gas, ServiceId
+from jam.models.work import (
     WorkDependencies,
     WorkReports,
     WorkReport,

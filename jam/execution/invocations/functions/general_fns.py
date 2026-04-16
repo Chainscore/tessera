@@ -5,16 +5,16 @@ from jam.execution.invocations.functions.protocol import (
     InvocationFunctions as INVF,
 )
 from jam.execution.invocations.protocol import Context, DispatchReturn
-from jam.types.state.accumulation.types import AccumulationInputs
-from jam.types.work.manifest import Extrinsics
+from jam.models.state.accumulation.types import AccumulationInputs
+from jam.models.work.manifest import Extrinsics
 from tsrkit_pvm import Memory, ExecutionStatus, PANIC, HostStatus, CONTINUE, PvmError, Accessibility
 from tsrkit_types import U64, U32, U16, Bytes, Uint
-from jam.types.protocol.crypto import OpaqueHash
-from jam.types.state.delta import AccountData
-from jam.types.protocol.core import Gas, ServiceId, Register
-from jam.types.state.delta import Delta
-from jam.types.work import WorkItem
-from jam.types.work import WorkPackage
+from jam.models.protocol.crypto import OpaqueHash
+from jam.models.state.delta import AccountData
+from jam.models.protocol.core import Gas, ServiceId, Register
+from jam.models.state.delta import Delta
+from jam.models.work import WorkItem
+from jam.models.work import WorkPackage
 from jam.utils.constants import (
     B_I,
     B_L,

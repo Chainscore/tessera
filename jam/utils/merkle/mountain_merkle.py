@@ -2,11 +2,11 @@ from tsrkit_types.null import Null
 from tsrkit_types.integers import Uint
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import TypedVector
-from jam.types.protocol.crypto import OpaqueHash
+from jam.models.protocol.crypto import OpaqueHash
 
 from typing import Callable, Optional
-from jam.types.protocol.crypto import Hash
-from jam.types.protocol.merkle import MMR, OptionHash
+from jam.models.protocol.crypto import Hash
+from jam.models.protocol.merkle import MMR, OptionHash
 
 
 class MMRFunctions:

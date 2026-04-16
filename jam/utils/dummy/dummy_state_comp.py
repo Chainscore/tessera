@@ -1,12 +1,12 @@
 from typing import Dict
 
 from jam.settings import Settings
-from jam.types.protocol.ticket import TicketAttempt, TicketBody, TicketId
-from jam.types.state.gamma import Gamma, GammaA, GammaP, GammaS, GammaSTickets
-from jam.types.state.alpha import Alpha, AuthorizationPool, AuthorizerHash
-from jam.types.state.beta import Beta, BlockHistory, BetaHistory, BeefyBelt
-from jam.types.state.chi import Chi, ChiZ, ChiA
-from jam.types.state.delta import (
+from jam.models.protocol.ticket import TicketAttempt, TicketBody, TicketId
+from jam.models.state.gamma import Gamma, GammaA, GammaP, GammaS, GammaSTickets
+from jam.models.state.alpha import Alpha, AuthorizationPool, AuthorizerHash
+from jam.models.state.beta import Beta, BlockHistory, BetaHistory, BeefyBelt
+from jam.models.state.chi import Chi, ChiZ, ChiA
+from jam.models.state.delta import (
     AccountData,
     AccountStorage,
     Delta,
@@ -19,7 +19,7 @@ from jam.types.state.delta import (
     Ai,
     LookupTable,
 )
-from jam.types import (
+from jam.models import (
     Eta,
     Iota,
     Kappa,
@@ -49,7 +49,7 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U16, U32, U8, Uint
 from tsrkit_types.null import Null
 
-from jam.types.protocol.crypto import (
+from jam.models.protocol.crypto import (
     BlsPublic,
     Ed25519Public,
     HeaderHash,
@@ -58,17 +58,17 @@ from jam.types.protocol.crypto import (
     BandersnatchPublic,
     BandersnatchRingRoot,
 )
-from jam.types.state.theta import Theta
-from jam.types.work import SegmentRootLookup
-from jam.types.protocol.core import (
+from jam.models.state.theta import Theta
+from jam.models.work import SegmentRootLookup
+from jam.models.protocol.core import (
     SegmentRoot,
     WorkPackageHash,
     Balance,
     Gas,
     ServiceId,
 )
-from jam.types.protocol.validators import ValidatorData, ValidatorMetadata, IPAddress
-from jam.types.work import WorkDependencies
+from jam.models.protocol.validators import ValidatorData, ValidatorMetadata, IPAddress
+from jam.models.work import WorkDependencies
 from jam.utils.constants import (
     CORE_COUNT,
     EPOCH_LENGTH,
@@ -186,7 +186,7 @@ def create_dummy_state_components() -> Dict[str, object]:
 
     # Chi
     chi_z = ChiZ({ServiceId(i): Gas(100) for i in range(3)})
-    chi_a = ChiA([ServiceId(i) for i in range(CORE_COUNT)])
+    chi_a = ServiceId(0)
     components["chi"] = Chi(
         chi_m=ServiceId(0), chi_a=chi_a, chi_v=ServiceId(2), chi_r=ServiceId(2), chi_z=chi_z
     )

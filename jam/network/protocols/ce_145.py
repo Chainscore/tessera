@@ -3,16 +3,16 @@ import math
 from jam.utils.task_utils import create_safe_task
 from typing import cast
 from tsrkit_types import structure, Uint, U8, U32
-from jam.types.protocol.core import ValidatorIndex, EpochIndex
+from jam.models.protocol.core import ValidatorIndex, EpochIndex
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
 from jam.log_setup import network_logger
-from jam.types.protocol.crypto import Ed25519Signature, Ed25519Public
+from jam.models.protocol.crypto import Ed25519Signature, Ed25519Public
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.utils.gather import gather_with_exceptions
-from jam.types.work.report import WorkReportHash
+from jam.models.work.report import WorkReportHash
 from jam.utils.constants import EPOCH_LENGTH
-from jam.types.audit.audit_tranche import Tranche
+from jam.models.audit.audit_tranche import Tranche
 from jam.state.state import state
 
 logger = network_logger

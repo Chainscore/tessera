@@ -1,13 +1,13 @@
-from jam.types import OpaqueHash, HeaderHash
-from jam.types.protocol.core import SegmentRoot, WorkPackageHash
-from jam.types.state.beta import BlockHistory, Beta, BetaHistory
-from jam.types.state.sigma import Sigma
+from jam.models import OpaqueHash, HeaderHash
+from jam.models.protocol.core import SegmentRoot, WorkPackageHash
+from jam.models.state.beta import BlockHistory, Beta, BetaHistory
+from jam.models.state.sigma import Sigma
 from jam.block import Block
 from jam.block import GuaranteesExtrinsic
-from jam.types.protocol.crypto import Hash
+from jam.models.protocol.crypto import Hash
 from jam.utils.merkle import MMRFunctions, BMRFunctions
-from jam.types.protocol.merkle import MMR
-from jam.types.work import SegmentRootLookup
+from jam.models.protocol.merkle import MMR
+from jam.models.work import SegmentRootLookup
 from jam.utils.constants import RECENT_HISTORY_SIZE
 from tsrkit_types.bytes import Bytes
 

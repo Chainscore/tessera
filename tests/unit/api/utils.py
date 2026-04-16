@@ -6,11 +6,11 @@ from jam.state.state import setup_state
 from jam.block.block import Block
 
 from tsrkit_types import Bytes, structure, TypedVector
-from jam.types import BlobLength, Balance, Gas, Ai, Ao
-from jam.types.protocol.core import ServiceId, TimeSlot
-from jam.types.state.delta import Timestamps, LookupTable
-from jam.types.protocol.crypto import StateRoot, OpaqueHash, HeaderHash
-from jam.types.state.delta import AccountMetadata
+from jam.models import BlobLength, Balance, Gas, Ai, Ao
+from jam.models.protocol.core import ServiceId, TimeSlot
+from jam.models.state.delta import Timestamps, LookupTable
+from jam.models.protocol.crypto import StateRoot, OpaqueHash, HeaderHash
+from jam.models.state.delta import AccountMetadata
 
 def init_chain(db_path, rpc: bool = True):
     # Load genesis state

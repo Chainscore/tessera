@@ -8,19 +8,19 @@ from jam.settings import Settings
 
 from jam.storage.da.audits import AuditShardsDA
 
-from jam.types.protocol.core import SegmentRoot
-from jam.types.protocol.crypto import Hash, OpaqueHash
-from jam.types.work.item import ExtrinsicSpecs, ImportSpecs
-from jam.types.work.manifest import (
+from jam.models.protocol.core import SegmentRoot
+from jam.models.protocol.crypto import Hash, OpaqueHash
+from jam.models.work.item import ExtrinsicSpecs, ImportSpecs
+from jam.models.work.manifest import (
     Assurers,
     Extrinsics,
     Segments,
     Justifications,
     SegmentRootLookup,
 )
-from jam.types.work.package import WorkPackageBundle
-from jam.types.work.report import WorkReport
-from jam.types.work.shard import ShardKey, ShardIndex, SegmentsShardRoot
+from jam.models.work.package import WorkPackageBundle
+from jam.models.work.report import WorkReport
+from jam.models.work.shard import ShardKey, ShardIndex, SegmentsShardRoot
 
 from jam.utils.chainspec import chain_config
 from jam.utils.constants import VALIDATOR_COUNT

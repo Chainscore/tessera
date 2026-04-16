@@ -9,8 +9,8 @@ from jam.utils.gather import gather_with_exceptions
 from jam.log_setup import network_logger
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.connection import NodeConnection
-from jam.types.protocol.core import CoreIndex, ValidatorIndex, TrancheIndex
-from jam.types.protocol.crypto import (
+from jam.models.protocol.core import CoreIndex, ValidatorIndex, TrancheIndex
+from jam.models.protocol.crypto import (
     HeaderHash,
     BandersnatchVrfSignature,
     Ed25519Signature,
@@ -176,7 +176,7 @@ class AuditAnnouncement(NetworkProtocol):
     def req_intercept(self, stream_id: int, server: NodeConnection):
         """Intercept lost of Work Report Announcement from other Auditors for their assigned Work Reports"""
         from jam.storage.tranche_audit_store import tranche_store
-        from jam.types.audit.audit_tranche import Tranche
+        from jam.models.audit.audit_tranche import Tranche
 
         buffer = server.stream_buffer[stream_id][1:]
 

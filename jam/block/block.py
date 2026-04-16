@@ -1,13 +1,13 @@
 from typing import Self, List
 
-from jam.types.protocol.ticket import TicketBody
+from jam.models.protocol.ticket import TicketBody
 from tsrkit_types.struct import structure
 from rockstore import RockStore
 from jam.log_setup import block_logger as logger
-from jam.types import TimeSlot
+from jam.models import TimeSlot
 from jam.block.extrinsics.extrinsic import Extrinsic
 from jam.block.header import Header
-from jam.types.protocol.crypto import Hash, HeaderHash
+from jam.models.protocol.crypto import Hash, HeaderHash
 
 from jam.utils.dummy.dummy_extrinsics import create_dummy_extrinsics
 from jam.utils.dummy.dummy_header import create_dummy_header

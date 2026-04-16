@@ -7,17 +7,17 @@ from jam.log_setup import network_logger as logger
 from jam.network.connection import NodeConnection
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 
-from jam.types.work.manifest import (
+from jam.models.work.manifest import (
     SegmentIndex,
     Justification,
     Justifications,
     Assurers,
 )
-from jam.types.work.shard import ShardIndex, SegmentsShard
+from jam.models.work.shard import ShardIndex, SegmentsShard
 
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 
-from jam.types.protocol.core import ErasureRoot, ValidatorIndex
+from jam.models.protocol.core import ErasureRoot, ValidatorIndex
 from jam.utils.gather import gather_with_exceptions
 
 

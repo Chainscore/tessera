@@ -1,5 +1,5 @@
 from typing import Tuple, Union
-from jam.types import Hash
+from jam.models import Hash
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U8, U32, Uint
 

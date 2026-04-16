@@ -17,8 +17,8 @@ from jam.settings import setup_setting
 # from jam.operations.utils.state_update import update_state
 from jam.state.state import setup_state
 from jam.block import Block
-from jam.types.protocol.core import TimeSlot
-from jam.types.protocol.crypto import HeaderHash
+from jam.models.protocol.core import TimeSlot
+from jam.models.protocol.crypto import HeaderHash
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD
 from jam.operations.handlers.bp_engine import BlockProducer
 

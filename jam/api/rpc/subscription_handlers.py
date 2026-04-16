@@ -2,12 +2,12 @@ import asyncio
 
 from jam.block import Block
 from jam.api.rpc.broker import broker
-from jam.types.state.delta import LookupTable, Timestamps, AccountMetadata
+from jam.models.state.delta import LookupTable, Timestamps, AccountMetadata
 from tsrkit_types import Bytes
-from jam.types.protocol.core import ServiceId, BlobLength
+from jam.models.protocol.core import ServiceId, BlobLength
 from jam.log_setup import network_logger as logger
-from jam.types.protocol.crypto import HeaderHash, OpaqueHash
-from jam.types.state.pi import Pi
+from jam.models.protocol.crypto import HeaderHash, OpaqueHash
+from jam.models.state.pi import Pi
 
 
 def initial_subscription(method, params: list):
@@ -60,7 +60,7 @@ def initial_subscription(method, params: list):
                 from jam.state.state import state
                 from jam.finality.finality import Finality
                 from jam.settings import settings
-                from jam.types.state.delta import AccountMetadata
+                from jam.models.state.delta import AccountMetadata
 
                 value = None
                 if sid  in state.delta:

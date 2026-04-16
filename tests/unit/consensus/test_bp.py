@@ -5,7 +5,7 @@ import pytest
 from jam.settings import setup_setting
 from jam.state.state import setup_state
 from jam.block import Block
-from jam.types.protocol.core import TimeSlot
+from jam.models.protocol.core import TimeSlot
 from jam.finality.finality import Finality
 
 @pytest.mark.asyncio

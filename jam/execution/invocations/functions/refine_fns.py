@@ -22,10 +22,10 @@ from tsrkit_pvm import (
     HostStatus,
     PvmError,
 )
-from jam.types.protocol.core import Gas, Register, ProgramCounter
-from jam.types.protocol.core import ServiceId, TimeSlot
-from jam.types.state.delta import Delta
-from jam.types.work import Segment, Segments
+from jam.models.protocol.core import Gas, Register, ProgramCounter
+from jam.models.protocol.core import ServiceId, TimeSlot
+from jam.models.state.delta import Delta
+from jam.models.work import Segment, Segments
 from jam.utils.constants import MAX_EXPORT_ITEM, PVM_MEMORY_PAGE_SIZE, SEGMENT_SIZE
 
 

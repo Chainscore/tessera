@@ -7,10 +7,10 @@ from jam.state.state import setup_state
 from rockstore import RockStore
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U32, U64
-from jam.types.protocol.core import Balance, ServiceId, TimeSlot
-from jam.types.protocol.crypto import Hash
-from jam.types.state.delta import AccountData, LookupTable, Timestamps, AccountMetadata
-from jam.types.state.tau import Tau
+from jam.models.protocol.core import Balance, ServiceId, TimeSlot
+from jam.models.protocol.crypto import Hash
+from jam.models.state.delta import AccountData, LookupTable, Timestamps, AccountMetadata
+from jam.models.state.tau import Tau
 from jam.utils.dummy.utils import create_dummy_bytes
 from jam.settings import setup_setting
 
@@ -36,7 +36,7 @@ def test_state_sync(db_path):
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_state_update(db_path, rpc):
+async def test_state_update(db_path):
     settings = setup_setting(db_path, None)
     state = setup_state(settings.state_db, GhostState.genesis())
     prev_hash = state.root
@@ -50,8 +50,8 @@ async def test_state_update(db_path, rpc):
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_delta_update(db_path, rpc):
-    settings = setup_setting(db_path, None, "alice", 0, rpc)
+async def test_delta_update(db_path):
+    settings = setup_setting(db_path, None, "alice", 0, False)
     state = setup_state(settings.state_db, GhostState.genesis())
     prev_hash = state.root
     state.delta[ServiceId(1)] = AccountData()
@@ -88,8 +88,8 @@ async def test_delta_update(db_path, rpc):
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_preimage_add(db_path, rpc):
-    settings = setup_setting(db_path, None, "alice", 0, rpc)
+async def test_preimage_add(db_path):
+    settings = setup_setting(db_path, None, "alice", 0, False)
     state = setup_state(settings.state_db, GhostState.genesis())
     prev_hash = state.root
     data = create_dummy_bytes(100)
@@ -106,8 +106,8 @@ async def test_preimage_add(db_path, rpc):
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_storage_add(db_path, rpc):
-    settings = setup_setting(db_path, None, "alice", 0, rpc)
+async def test_storage_add(db_path):
+    settings = setup_setting(db_path, None, "alice", 0, False)
     state = setup_state(settings.state_db, GhostState.genesis())
     prev_hash = state.root
     data = create_dummy_bytes(100)
@@ -124,8 +124,8 @@ async def test_storage_add(db_path, rpc):
 
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
-async def test_timestamps_add(db_path, rpc):
-    settings = setup_setting(db_path, None, "alice", 0, rpc)
+async def test_timestamps_add(db_path):
+    settings = setup_setting(db_path, None, "alice", 0, False)
     state = setup_state(settings.state_db, GhostState.genesis())
 
     prev_hash = state.root

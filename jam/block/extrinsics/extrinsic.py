@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 from tsrkit_types import Bytes, Uint
 from jam.block.errors import BlockError, BlockErrorCode
-from jam.types.protocol.crypto import Hash
+from jam.models.protocol.crypto import Hash
 from jam.utils.constants import CORE_COUNT, MAX_TICKETS_PER_EXTRINSIC, EPOCH_LENGTH, TICKET_SUBMISSION_END
 from tsrkit_types.struct import structure
 from jam.block.extrinsics.tickets import TicketsExtrinsic, TicketEnvelope
@@ -9,7 +9,7 @@ from jam.block.extrinsics.preimages import PreimagesExtrinsic, Preimage
 from jam.block.extrinsics.guarantees import GuaranteesExtrinsic
 from jam.block.extrinsics.assurances import AssurancesExtrinsic
 from jam.block.extrinsics.disputes import DisputesExtrinsic, Culprits, Faults, Verdicts
-from jam.types.protocol.crypto import (
+from jam.models.protocol.crypto import (
     BandersnatchRingVrfSignature,
     Hash,
     OpaqueHash,

@@ -6,7 +6,7 @@ from tsrkit_types import TypedVector, U32
 from jam.block import Block
 from jam.log_setup import logger
 
-from jam.types.protocol.core import TimeSlot
+from jam.models.protocol.core import TimeSlot
 
 from jam.utils.shuffle import shuffle
 from jam.utils.constants import (

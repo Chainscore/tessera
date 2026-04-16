@@ -1,8 +1,8 @@
 from tsrkit_types import Option
 
 from jam.block.header import TicketsMark, EpochMark
-from jam.types.protocol.core import TimeSlot, ValidatorIndex
-from jam.types.protocol.crypto import (
+from jam.models.protocol.core import TimeSlot, ValidatorIndex
+from jam.models.protocol.crypto import (
     HeaderHash,
     StateRoot,
     OpaqueHash,

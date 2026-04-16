@@ -12,9 +12,9 @@ from jam.state.state import setup_state, State
 from jam.state.utils import construct_state_key
 from jam.block.block import Block
 from jam.state.accounts import AccountData
-from jam.types.protocol.core import ServiceId, TimeSlot
-from jam.types.protocol.crypto import Hash
-from jam.types.state.delta import LookupTable, Timestamps
+from jam.models.protocol.core import ServiceId, TimeSlot
+from jam.models.protocol.crypto import Hash
+from jam.models.state.delta import LookupTable, Timestamps
 from tsrkit_types import U32, ByteArray, Bytes, TypedArray
 from jam.utils.dummy.utils import create_dummy_bytes
 from tests.unit.api.utils import produce_chain, init_chain

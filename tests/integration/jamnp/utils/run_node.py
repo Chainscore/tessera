@@ -15,7 +15,7 @@ from jam.log_setup import setup_logging, logger
 from jam.settings import setup_setting
 from jam.state.state import setup_state
 from jam.network.start import start_node
-from jam.types.protocol.validators import IPAddress
+from jam.models.protocol.validators import IPAddress
 
 from jam.utils.chainspec import chain_config
 from jam.utils.constants import GENESIS_TS, EPOCH_LENGTH, SLOT_PERIOD

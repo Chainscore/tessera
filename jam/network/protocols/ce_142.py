@@ -6,8 +6,8 @@ from jam.log_setup import network_logger as logger
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-from jam.types.protocol.core import BlobLength, ServiceId
-from jam.types.protocol.crypto import OpaqueHash
+from jam.models.protocol.core import BlobLength, ServiceId
+from jam.models.protocol.crypto import OpaqueHash
 from .ce_143 import PreimageRequest, CE143Data
 
 @structure

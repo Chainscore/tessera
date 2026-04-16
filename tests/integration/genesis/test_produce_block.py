@@ -2,7 +2,7 @@ from jam.block.block import Block
 from jam.finality.finality import Finality
 from jam.settings import setup_setting
 from jam.state.state import setup_state
-from jam.types.protocol.core import TimeSlot
+from jam.models.protocol.core import TimeSlot
 
 
 def test_block_production(db_path):

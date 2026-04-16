@@ -2,9 +2,9 @@ from typing import Tuple
 
 from rockstore import RockStore
 
-from jam.types.protocol.core import ExportsRoot, ErasureRoot
-from jam.types.work.manifest import Segments, ProvedSegments, SegmentIndex
-from jam.types.work.shard import (
+from jam.models.protocol.core import ExportsRoot, ErasureRoot
+from jam.models.work.manifest import Segments, ProvedSegments, SegmentIndex
+from jam.models.work.shard import (
     SegmentsShard,
     SegmentShard,
     ShardIndex,

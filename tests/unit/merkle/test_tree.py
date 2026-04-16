@@ -5,9 +5,9 @@ from jam.utils.merkle.binary_merkle import (
     OpaqueHashes,
 )
 from jam.utils.merkle.simple_merkle import MerkleVisualizer, TreeNode
-from jam.types import Hash
-from jam.types.work.manifest import Segments
-from jam.types.protocol.core import OpaqueHash
+from jam.models import Hash
+from jam.models.work.manifest import Segments
+from jam.models.protocol.core import OpaqueHash
 
 from jam.incore.utils import Utils
 
