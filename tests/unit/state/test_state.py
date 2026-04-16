@@ -37,7 +37,7 @@ def test_state_sync(db_path):
 @pytest.mark.asyncio
 @pytest.mark.skipif("ASYNC" not in os.environ, reason="async test")
 async def test_state_update(db_path):
-    settings = setup_setting(db_path, None, rpc=False)
+    settings = setup_setting(db_path, None)
     state = setup_state(settings.state_db, GhostState.genesis())
     prev_hash = state.root
     state.tau = Tau(1)
