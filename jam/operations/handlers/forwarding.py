@@ -2,7 +2,7 @@ from asyncio import sleep
 from time import time
 from math import ceil
 from jam.operations.dispatcher import NodeDispatcher
-from jam.types.protocol.core import TimeSlot
+from jam.models.protocol.core import TimeSlot
 from tsrkit_types import U32
 from jam.log_setup import node_logger as logger
 from jam.utils.constants import TICKET_SUBMISSION_END, GENESIS_TS

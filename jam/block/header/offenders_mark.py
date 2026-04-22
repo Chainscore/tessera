@@ -1,6 +1,6 @@
 from typing import Self
 from jam.block.extrinsics.disputes import DisputesExtrinsic
-from jam.types.protocol.crypto import Ed25519Public
+from jam.models.protocol.crypto import Ed25519Public
 from tsrkit_types import TypedVector
 
 

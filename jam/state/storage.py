@@ -8,7 +8,7 @@ from jam.block.block import Block
 from jam.error import JamError
 from jam.finality.finality import Finality
 from jam.log_setup import logger
-from jam.types.protocol.crypto import StateRoot, HeaderHash, Hash
+from jam.models.protocol.crypto import StateRoot, HeaderHash, Hash
 from jam.utils.trie.merkle import StateTrie
 
 
@@ -174,13 +174,14 @@ class StateStorage:
             # Collect updates
             for k, u in items:
                 v = getattr(u, use_attr)
+                normalized_v = None if v == Bytes(0) else bytes(v)
 
-                _updates[k] = v
+                _updates[k] = normalized_v
                 if apply_trie:
-                    if v == Bytes(0):
+                    if normalized_v is None:
                         trie_deletes.append(Bytes(k))
                     else:
-                        trie_updates[Bytes[32](k)] = Bytes(v)
+                        trie_updates[Bytes[32](k)] = Bytes(normalized_v)
 
             # Apply the cache and verify state root
             if apply_trie and self._TRIE is not None:
@@ -226,6 +227,7 @@ class StateStorage:
 
         for k, v in self._updates.items():
             curr_val = self._DB.get(k)
+            prev_val = previous_updates.get(k, curr_val)
 
             if k in previous_updates and previous_updates[k] == v:
                 continue
@@ -234,7 +236,8 @@ class StateStorage:
 
             if kv and hh:
                 updates = Updates(
-                    prev=Bytes(curr_val) if curr_val else Bytes(0), curr=Bytes(v) if v else Bytes(0)
+                    prev=Bytes(prev_val) if prev_val else Bytes(0),
+                    curr=Bytes(v) if v else Bytes(0),
                 )
                 _state_cache[stored_key] = updates
 
@@ -276,7 +279,7 @@ class StateStorage:
                 self._DB.put(k, v)
 
         # Clear hash cache periodically to prevent memory buildup
-        from jam.types.protocol.crypto import Hash
+        from jam.models.protocol.crypto import Hash
 
         Hash.clear_cache()
 
@@ -304,6 +307,8 @@ class StateStorage:
     def delete(self, key_bytes: bytes, sync=False):
         if self._cache_mode:
             self._updates[key_bytes] = None
+            # Deleted inherited keys must still be merged back as explicit writes.
+            self._inherited_keys.discard(key_bytes)
         else:
             self._DB.delete(key_bytes, sync)
             self._TRIE.delete(Bytes(key_bytes))

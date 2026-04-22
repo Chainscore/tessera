@@ -9,7 +9,7 @@ from tsrkit_types import Bytes
 from jam.log_setup import network_logger as logger
 
 from jam.network.base.protocol import PrefixType
-from jam.types.work.shard import SegmentsShard, SegmentShard
+from jam.models.work.shard import SegmentsShard, SegmentShard
 from jam.storage.da.segments import SegmentShardsDA
 
 

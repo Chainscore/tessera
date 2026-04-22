@@ -6,7 +6,7 @@ from tsrkit_types.integers import Uint
 from tsrkit_types.bytes import Bytes, Bytes32
 from tsrkit_types.sequences import Vector, TypedVector
 
-from jam.types.protocol.crypto import Hash, OpaqueHash
+from jam.models.protocol.crypto import Hash, OpaqueHash
 from jam.utils.chainspec import chain_config
 
 ChoicedHash = Choice[Bytes, Bytes[32]]

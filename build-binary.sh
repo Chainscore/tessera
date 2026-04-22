@@ -2,33 +2,7 @@
 
 set -e
 
-echo "🔨 Building Tessera Node Binary..."
-
-# Verify critical dependencies are present
-echo "[INFO] Verifying dependencies..."
-REQUIRED_DEPS=(
-    "deps/tsrkit-pvm"
-    "deps/py-ark-vrf"
-    "deps/rockstore"
-    "deps/tsrkit-asm"
-    "deps/tsrkit-types"
-)
-
-MISSING_DEPS=()
-for dep in "${REQUIRED_DEPS[@]}"; do
-    if [ ! -d "$dep" ] || [ -z "$(ls -A "$dep" 2>/dev/null)" ]; then
-        MISSING_DEPS+=("$dep")
-    fi
-done
-
-if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
-    echo "❌ ERROR: Missing required dependencies:"
-    printf '   %s\n' "${MISSING_DEPS[@]}"
-    echo ""
-    echo "💡 Please run: git submodule update --init --recursive"
-    exit 1
-fi
-echo "[INFO] ✅ All dependencies present"
+echo "Building Tessera Node Binary..."
 
 # Detect platform
 PLATFORM=$(uname -s)
@@ -40,42 +14,13 @@ elif [ "$PLATFORM" = "Linux" ]; then
     PLATFORM_NAME="Linux"
     [ "$ARCH" = "x86_64" ] && ARCH_NAME="x64" || ARCH_NAME="$ARCH"
 else
-    echo "❌ Unsupported platform: $PLATFORM"
+    echo "ERROR: Unsupported platform: $PLATFORM"
     exit 1
 fi
 
 echo "[INFO] Building for: $PLATFORM_NAME-$ARCH_NAME"
 echo "[INFO] Cleaning previous builds..."
 rm -rf build/ dist/
-
-# Build all native dependencies with optimizations
-echo "[INFO] Building native dependencies with release optimizations..."
-
-# Set up Python environment variables for PyO3/Rust builds
-export PYTHON_SYS_EXECUTABLE=$(uv run python -c "import sys; print(sys.executable)")
-export PYO3_PYTHON="$PYTHON_SYS_EXECUTABLE"
-echo "[INFO] Using Python: $PYTHON_SYS_EXECUTABLE"
-
-# Debug Python environment for PyO3 builds
-echo "[INFO] Python debug info:"
-uv run python -c "
-import sys, sysconfig
-print(f'  Python version: {sys.version}')
-print(f'  Python executable: {sys.executable}')
-print(f'  Python library: {sysconfig.get_config_var(\"LIBDIR\")}')
-print(f'  Python include: {sysconfig.get_path(\"include\")}')
-"
-
-# Build PVM cython
-if [ -d deps/tsrkit-pvm ]; then
-    cd deps/tsrkit-pvm
-    echo "[INFO] Building tsrkit-pvm with Cython optimizations..."
-    CFLAGS="-O3 -march=native -flto" LDFLAGS="-flto" PVM_BUILD_MODE=cython uv run python setup.py build_ext --inplace --force
-    cd ../..
-else
-    echo "[WARN] deps/tsrkit-pvm not found, skipping tsrkit-pvm build"
-fi
-
 
 echo "[INFO] Setting up RocksDB library for bundling..."
 ./setup-rocksdb.sh
@@ -86,7 +31,7 @@ uv run pyinstaller tessera.spec --clean --noconfirm
 # Test binary
 echo "[INFO] Testing binary..."
 if ./dist/tessera-node --help > /dev/null 2>&1; then
-    echo "[INFO] ✅ Binary test passed!"
+    echo "[INFO] Binary test passed!"
     
     # Show size
     SIZE=$(du -sh dist/tessera-node | cut -f1)
@@ -101,15 +46,15 @@ if ./dist/tessera-node --help > /dev/null 2>&1; then
     tar -czf "tessera-node-${PLATFORM_NAME}-${ARCH_NAME}.tar.gz" tessera-node $([ -f "dev-spec.json" ] && echo "dev-spec.json") $([ -d "envs" ] && echo "envs")
     cd ..
     
-    echo "[INFO] ✅ BUILD COMPLETE!"
-    echo "[INFO] 📦 Binary: dist/tessera-node"
-    echo "[INFO] 📦 Package: dist/tessera-node-${PLATFORM_NAME}-${ARCH_NAME}.tar.gz"
+    echo "[INFO] BUILD COMPLETE!"
+    echo "[INFO] Binary: dist/tessera-node"
+    echo "[INFO] Package: dist/tessera-node-${PLATFORM_NAME}-${ARCH_NAME}.tar.gz"
     echo "[INFO] "
     echo "[INFO] Usage:"
     echo "[INFO]   ./dist/tessera-node --help"
     echo "[INFO]   ./dist/tessera-node --port 40000"
     
 else
-    echo "[ERROR] ❌ Binary test failed"
+    echo "[ERROR] Binary test failed"
     exit 1
 fi

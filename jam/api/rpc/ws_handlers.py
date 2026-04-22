@@ -4,15 +4,15 @@ from tsrkit_types import U32, U8, TypedArray, Uint
 
 from jam.block import Block
 from jam.finality.finality import Finality
-from jam.types.protocol.crypto import HeaderHash, OpaqueHash
+from jam.models.protocol.crypto import HeaderHash, OpaqueHash
 from jam.state.state import State
-from jam.types.protocol.core import ServiceId
+from jam.models.protocol.core import ServiceId
 from tsrkit_types.bytes import Bytes
 from jam.api.rpc.utils import parse_data
-from jam.types.state.delta import AccountMetadata, LookupTable
-from jam.types.protocol.core import CoreIndex
-from jam.types.work.manifest import Extrinsics, Extrinsic
-from jam.types.work.package import WorkPackage
+from jam.models.state.delta import AccountMetadata, LookupTable
+from jam.models.protocol.core import CoreIndex
+from jam.models.work.manifest import Extrinsics, Extrinsic
+from jam.models.work.package import WorkPackage
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data, WorkPackageCore
 from jam.api.rpc.parameters import parameters
 

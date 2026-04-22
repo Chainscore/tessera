@@ -5,7 +5,7 @@ from tsrkit_types import Bytes, TypedVector, Dictionary
 from jam.log_setup import network_logger as logger
 from jam.network.connection import NodeConnection
 from jam.state.state import state
-from jam.types import HeaderHash
+from jam.models import HeaderHash
 
 if TYPE_CHECKING:
     from jam.network.node import Node

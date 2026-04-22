@@ -10,9 +10,9 @@ from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
 # from jam.state.transitions.report.guarantee_assignment import assign_fn
 
-from jam.types.protocol.core import CoreIndex
-from jam.types.work.manifest import Extrinsics
-from jam.types.work.package import WorkPackage
+from jam.models.protocol.core import CoreIndex
+from jam.models.work.manifest import Extrinsics
+from jam.models.work.package import WorkPackage
 
 from jam.utils.assignment import assign_guarantors
 

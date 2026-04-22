@@ -166,7 +166,7 @@ def main():
         from jam.log_setup import setup_logging
         setup_logging("default", "importer")
         
-        print("📥 Starting Tessera in import mode...")
+        print("Starting Tessera in import mode...")
         
         # Import import functionality
         from jam.fuzzer.importer import run_import

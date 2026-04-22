@@ -2,7 +2,8 @@
 .PHONY: setup test lint format clean
 
 setup:
-	./scripts/setup.sh
+	uv sync
+	uv run pre-commit install
 
 test:
 	uv run pytest tests/

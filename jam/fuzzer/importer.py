@@ -88,7 +88,12 @@ def process_test_vector(test_vector: TraceCase, state, settings) -> Tuple[Any, f
     transition_time = 0.0
     block = test_vector.block
     start_time = time.time()
-    state._force_transition(block, False)
+    from jam.state.state import State
+    is_valid = State._force_transition(block, False)
+    if is_valid:
+        state = State.load(block.header.hash())
+    else:
+        state = State.load(block.header.parent)
     transition_time = time.time() - start_time
 
     return state, transition_time
@@ -140,12 +145,15 @@ async def run_import(db_path: str, import_path: str) -> None:
                 f"State root mismatch after processing {filename}"
             
         except Exception as e:
-            print(f"✗ {os.path.basename(file_path)}: {e}")
+            import traceback
+            print(f"FAIL {os.path.basename(file_path)}: {e}")
+            if os.environ.get('DEBUG'):
+                traceback.print_exc()
             errors += 1
     
     # Show timing table
     if transition_data:
-        print(f"\n⏱️  State Transition Times:")
+        print(f"\nState Transition Times:")
         print("File".ljust(40) + "Time (ms)")
         print("-" * 55)
         

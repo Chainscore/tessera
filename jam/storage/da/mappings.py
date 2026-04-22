@@ -2,15 +2,15 @@ from typing import Tuple
 
 from rockstore import RockStore
 
-from jam.types.protocol.crypto import Hash
-from jam.types.protocol.core import (
+from jam.models.protocol.crypto import Hash
+from jam.models.protocol.core import (
     WorkPackageHash,
     ExportsRoot,
     ErasureRoot,
     WorkReportHash,
 )
-from jam.types.work.report import WorkReport
-from jam.types.work.manifest import Assurers, ReportAssurers
+from jam.models.work.report import WorkReport
+from jam.models.work.manifest import Assurers, ReportAssurers
 
 from jam.storage.da.store import DA
 

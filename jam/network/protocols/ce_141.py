@@ -4,9 +4,9 @@ from jam.log_setup import network_logger as logger
 from typing import cast
 from jam.network.connection import NodeConnection
 from jam.network.base.protocol import NetworkProtocol, PrefixType
-from jam.types import ValidatorIndex
+from jam.models import ValidatorIndex
 from jam.block.extrinsics.assurances import AvailAssurance, AvailBitField, asr_store
-from jam.types.protocol.crypto import Ed25519Signature, HeaderHash
+from jam.models.protocol.crypto import Ed25519Signature, HeaderHash
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.utils.gather import gather_with_exceptions
 

@@ -3,8 +3,8 @@ from tsrkit_types.bits import Bits
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
-from jam.types.protocol.crypto import Ed25519Signature, OpaqueHash
-from jam.types.protocol.core import ValidatorIndex
+from jam.models.protocol.crypto import Ed25519Signature, OpaqueHash
+from jam.models.protocol.core import ValidatorIndex
 from jam.utils.constants import CORE_COUNT
 
 

@@ -2,13 +2,13 @@ import time
 import os
 
 from jam.state.state import setup_state
-from jam.types import IPAddress, ValidatorData, BlsPublic, ValidatorMetadata
+from jam.models import IPAddress, ValidatorData, BlsPublic, ValidatorMetadata
 from jam.utils.dummy.dummy_package import create_dummy_package
 from jam.execution.pvm.code import Code
 from tsrkit_types import Bytes, TypedVector
-from jam.types.protocol.crypto import Hash
-from jam.types.protocol.core import CoreIndex, Gas, ServiceId, SegmentRoot
-from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpec
+from jam.models.protocol.crypto import Hash
+from jam.models.protocol.core import CoreIndex, Gas, ServiceId, SegmentRoot
+from jam.models.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpec
 from jam.network.node import Node
 from jam.incore.processor import Processor
 from tsrkit_types.integers import U16, U8, Uint

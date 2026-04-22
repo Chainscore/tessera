@@ -10,8 +10,8 @@ from jam.audit.assembler import Assembler
 from jam.incore.processor import Processor
 from jam.network.protocols import WorkPackageSubmission
 from jam.network.protocols.ce_133 import CE133Data, WorkPackageCore
-from jam.types import Hash, CoreIndex
-from jam.types.work import Extrinsics
+from jam.models import Hash, CoreIndex
+from jam.models.work import Extrinsics
 from jam.utils.constants import GENESIS_TS
 from jam.storage.da.mappings import (
     PackageSegmentMap,

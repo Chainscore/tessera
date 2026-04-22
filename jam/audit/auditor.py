@@ -1,11 +1,11 @@
 import math
 from tsrkit_types import U8, U32, TypedVector, Null, Bool, Uint
-from jam.types.protocol.crypto import Ed25519Signature, HeaderHash
-from jam.types.audit.audit_tranche import TrancheIndex, Tranche, CoreReport
-from jam.types.protocol.core import EpochIndex
-from jam.types.protocol.crypto import BandersnatchVrfSignature
+from jam.models.protocol.crypto import Ed25519Signature, HeaderHash
+from jam.models.audit.audit_tranche import TrancheIndex, Tranche, CoreReport
+from jam.models.protocol.core import EpochIndex
+from jam.models.protocol.crypto import BandersnatchVrfSignature
 
-from jam.types.work.report import WorkReportHash
+from jam.models.work.report import WorkReportHash
 from jam.block.block import Block
 from jam.audit.audit import Audit
 from jam.audit.utils import Utils

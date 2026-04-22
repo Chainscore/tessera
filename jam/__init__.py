@@ -1,11 +1,11 @@
-import argparse
-from jam.utils.chainspec import JamConfig, chain_config
-import asyncio
+from jam.utils.chainspec import chain_config
 
 __all__ = ["JamConfig", "chain_config"]
 
 
 def run_jam():
+    import argparse
+    import asyncio
     """Entry point for the node."""
     try:
         from jam.__main__ import main

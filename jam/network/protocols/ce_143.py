@@ -7,7 +7,7 @@ from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.connection import NodeConnection
 
-from jam.types.protocol.crypto import Hash, OpaqueHash
+from jam.models.protocol.crypto import Hash, OpaqueHash
 
 @structure
 class CE143Data:

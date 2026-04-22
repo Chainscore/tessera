@@ -10,7 +10,7 @@ from tsrkit_types import U32, TypedVector, U64, Dictionary, Bool
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U16, U8, Uint
 
-from jam.types import (
+from jam.models import (
     WorkReport,
     WorkPackage,
     Authorizer,
@@ -31,13 +31,13 @@ from jam.types import (
     ErasureRoot,
     ExportsRoot,
 )
-from jam.types.work import RefineLoad
+from jam.models.work import RefineLoad
 
-from jam.types.work.manifest import Extrinsics
+from jam.models.work.manifest import Extrinsics
 from jam.log_setup import node_logger as logger
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
-from jam.types.protocol.core import CoreIndex
+from jam.models.protocol.core import CoreIndex
 from jam.storage.da.reports import ReportsDA
 from tests.integration.jamnp.utils.run_node import run_node_process
 

@@ -1,10 +1,10 @@
-# 👋 Onboarding Guide
+# Onboarding Guide
 
 Welcome to the Tessera team! This guide will help you get set up and productive as quickly as possible.
 
-## 🚀 Getting Started
+## Getting Started
 
-### 📋 First Day Checklist
+### First Day Checklist
 
 - [ ] Set up your development environment
 - [ ] Clone the Tessera repository
@@ -79,19 +79,18 @@ export PATH="$HOME/.cargo/bin:$PATH"
 uv --version
 ```
 
-### 📥 Project Setup
+### Project Setup
 
 ```bash
 # Clone repository
 git clone https://github.com/chainscore/tessera.git
 cd tessera
 
-# Run setup script (installs dependencies and sets up environment)
-./scripts/setup.sh
+# Install dependencies
+uv sync
 
-# Or manually:
-# uv sync --all-extras
-# uv run pre-commit install
+# Set up pre-commit hooks
+uv run pre-commit install
 ```
 
 ### 🔧 IDE Setup
@@ -286,11 +285,11 @@ A: See the [Local Development Network](./docs/modules/network.rst) guide.
 **Q: How do I debug issues?**
 A: Use Python's built-in debugger or VS Code's debugging tools. See debugging section in our development guide.
 
-## 🎉 Next Steps
+## Next Steps
 
 1. Set up your development environment
 2. Complete the [Tessera Tutorial](./docs/tutorials/getting_started.rst)
 3. Explore the codebase, starting with the module structure
 4. Take on your first issue!
 
-Welcome to the team! 🚀
+Welcome to the team!

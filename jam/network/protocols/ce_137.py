@@ -9,14 +9,14 @@ from jam.network.base.protocol import NetworkProtocol, PrefixType
 from jam.network.base.error import NetworkingError, NetworkingErrorCode as Code
 from jam.network.connection import NodeConnection
 
-from jam.types.protocol.core import ErasureRoot
-from jam.types.work.manifest import Justification, Assurers
-from jam.types.work.shard import BundleShard, SegmentsShard, ShardIndex, ShardKey
+from jam.models.protocol.core import ErasureRoot
+from jam.models.work.manifest import Justification, Assurers
+from jam.models.work.shard import BundleShard, SegmentsShard, ShardIndex, ShardKey
 
 from jam.storage.da.audits import AuditShardsDA, JustificationsDA
 from jam.storage.da.segments import SegmentShardsDA
 
-from jam.types.protocol.crypto import Hash
+from jam.models.protocol.crypto import Hash
 from jam.utils.merkle import BMRFunctions
 from jam.utils.chainspec import chain_config
 from jam.utils.gather import gather_with_exceptions

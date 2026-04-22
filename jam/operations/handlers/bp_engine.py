@@ -9,8 +9,8 @@ from jam.finality.finality import Finality
 from jam.state.ghost import GhostState
 from jam.state.transitions.safrole.safrole import Safrole
 
-from jam.types.protocol.core import TimeSlot, ValidatorIndex
-from jam.types.protocol.ticket import TicketBody
+from jam.models.protocol.core import TimeSlot, ValidatorIndex
+from jam.models.protocol.ticket import TicketBody
 
 from jam.utils.benchmark import write_json
 from jam.utils.constants import (

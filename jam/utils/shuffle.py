@@ -1,4 +1,4 @@
-from jam.types.protocol.crypto import Hash
+from jam.models.protocol.crypto import Hash
 from tsrkit_types.integers import Uint
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import TypedVector
@@ -50,5 +50,4 @@ def shuffle(h, array: TypedVector[Uint[32]]) -> TypedVector[Uint[32]]:
     random = get_random(h, l)
 
     fisher_yates_with_hash(array, l, random)
-    array.reverse()
-    return array
+    return TypedVector[Uint[32]](list(reversed(array)))

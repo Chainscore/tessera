@@ -3,7 +3,7 @@ from tsrkit_types import Null, Uint, TypedVector
 import asyncio
 from jam.log_setup import node_logger
 
-from jam.types.audit.audit_tranche import (
+from jam.models.audit.audit_tranche import (
     Tranche,
     TrancheState,
     AuditRecord,
@@ -13,9 +13,9 @@ from jam.types.audit.audit_tranche import (
 )
 from jam.network.protocols.ce_144 import NoShow, Announcement
 from jam.network.protocols.ce_145 import Judgment
-from jam.types.protocol.core import ValidatorIndex, TrancheIndex
-from jam.types.protocol.crypto import HeaderHash, Ed25519Public
-from jam.types.work.report import WorkReportHash
+from jam.models.protocol.core import ValidatorIndex, TrancheIndex
+from jam.models.protocol.crypto import HeaderHash, Ed25519Public
+from jam.models.work.report import WorkReportHash
 
 logger = node_logger
 

@@ -1,8 +1,8 @@
 from jam.block.extrinsics.store import ExtrinsicStore
 from tsrkit_types.sequences import TypedBoundedVector
 from tsrkit_types.struct import structure
-from jam.types.protocol.crypto import BandersnatchRingVrfSignature
-from jam.types.protocol.ticket import TicketAttempt
+from jam.models.protocol.crypto import BandersnatchRingVrfSignature
+from jam.models.protocol.ticket import TicketAttempt
 from jam.utils.constants import MAX_TICKETS_PER_EXTRINSIC
 
 
