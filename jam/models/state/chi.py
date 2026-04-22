@@ -9,7 +9,7 @@ from jam.utils.constants import CORE_COUNT
 """Index of Manager service that can alter Chi"""
 ChiM = ServiceId
 """Can alter Delta"""
-ChiA = ServiceId
+ChiA = TypedArray[ServiceId, CORE_COUNT]
 """Can alter Iota"""
 ChiV = ServiceId
 """Index of service that can create new service accounts"""
