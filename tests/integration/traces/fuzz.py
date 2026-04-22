@@ -248,6 +248,10 @@ def display_state_diff(sock, trace: Trace, header_hash: Bytes32 | bytes, verbose
         elif actual_kv[k] != expected_kv[k]:
             changed.append(k)
 
+    if not missing and not extra and not changed:
+        print("  State diff: KV pairs match (root algorithm difference?)")
+        return
+
     print(f"  State diff: {len(changed)} changed, {len(missing)} missing, {len(extra)} extra keys")
 
     for k in missing:

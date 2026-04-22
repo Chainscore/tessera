@@ -17,7 +17,7 @@ jobs:
     env:
       JAM_LOG_LEVEL: "critical"
       PVM_MODE: "interpreter"
-      CFLAGS: "-O3 -march=native"
+#      CFLAGS: "-O3 -march=native"
       LDFLAGS: "-O3"
       CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
     strategy:
