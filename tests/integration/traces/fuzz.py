@@ -25,6 +25,7 @@ from tsrkit_types import Bytes, Bytes32, U8, U32, TypedVector, String, structure
 
 from jam.block.block import Block
 from jam.block.header import Header
+from jam.utils.trie.merkle import StateTrie
 
 from jam.fuzzer.types import (
     PeerInfo, Version, Initialize, State, KeyValue,
@@ -100,6 +101,39 @@ def do_handshake(sock, verbose=False):
         print(f"  fuzz_version={target_info.fuzz_version}, features=0x{int(target_info.fuzz_features):08x}")
     return True
 
+def _load_trace_from_json(path: Path) -> Trace:
+    with open(path, "r") as f:
+        data = json.load(f)
+
+    def _state_from_json(state_json: dict) -> StateKeyVals:
+        return StateKeyVals(
+            state_root=Bytes32.from_json(state_json["state_root"]),
+            keyvals=TypedVector[KeyVal](
+                [
+                    KeyVal(
+                        key=Bytes[31].from_json(item["key"]),
+                        value=Bytes.from_json(item["value"]),
+                    )
+                    for item in state_json["keyvals"]
+                ]
+            ),
+        )
+
+    return Trace(
+        pre_state=_state_from_json(data["pre_state"]),
+        block=Block.from_json(data["block"]),
+        post_state=_state_from_json(data["post_state"]),
+    )
+
+def load_trace(path: Path) -> Trace:
+    try:
+        return Trace.decode(path.read_bytes())
+    except Exception:
+        json_path = path.with_suffix(".json")
+        if not json_path.exists():
+            raise
+        return _load_trace_from_json(json_path)
+
 def load_genesis_header(genesis_spec: str) -> Header:
     """Load the genesis header from a dev-spec JSON file."""
     with open(genesis_spec, 'r') as f:
@@ -119,6 +153,27 @@ def trace_to_initialize(trace: Trace, genesis_header: Header) -> bytes:
     )
     return init.encode()
 
+
+def initialize_trace(sock, trace: Trace, genesis_header: Header, verbose: bool):
+    init_payload = trace_to_initialize(trace, genesis_header)
+    send_message(sock, TAG_INITIALIZE, init_payload)
+    if verbose:
+        print(f"  TX: Initialize ({len(init_payload)} bytes)")
+
+    tag, payload = recv_message(sock)
+    if tag is None:
+        return False, None, "Connection closed after Initialize"
+    if tag == TAG_ERROR:
+        err = ErrorMessage.decode(payload)
+        return False, None, f"Initialize error: {err.message}"
+    if tag != TAG_STATE_ROOT:
+        return False, None, f"Unexpected tag {tag} after Initialize"
+
+    init_root = payload.hex()
+    if verbose:
+        print(f"  RX: StateRoot (init) = {init_root}")
+    return True, init_root, None
+
 def get_trace_files(trace_dir: Path, module: str, pattern: str):
     """Discover trace .bin files, mirroring test_traces_unified.py logic."""
     if pattern == "all":
@@ -135,11 +190,11 @@ def get_trace_files(trace_dir: Path, module: str, pattern: str):
     files = [f for f in files if f.name not in ("00000000.bin", "genesis.bin")]
     return files
 
-def fetch_state(sock, verbose: bool):
+def fetch_state(sock, header_hash: Bytes32 | bytes, verbose: bool):
     """Send GetState and return a dict of {key_hex: value_hex}."""
-    send_message(sock, TAG_GET_STATE, b'')
+    send_message(sock, TAG_GET_STATE, bytes(header_hash))
     if verbose:
-        print(f"  TX: GetState")
+        print(f"  TX: GetState ({bytes(header_hash).hex()})")
 
     tag, payload = recv_message(sock)
     if tag is None:
@@ -156,9 +211,21 @@ def fetch_state(sock, verbose: bool):
     state = State.decode(payload)
     return {bytes(kv.key).hex(): bytes(kv.value).hex() for kv in state.keyvals}
 
-def display_state_diff(sock, trace: Trace, verbose: bool):
+def fetch_state_with_root(sock, header_hash: Bytes32 | bytes, verbose: bool):
+    actual_kv = fetch_state(sock, header_hash, verbose)
+    if actual_kv is None:
+        return None, None
+
+    trie_input = {
+        Bytes.fromhex(key_hex): Bytes.fromhex(value_hex)
+        for key_hex, value_hex in actual_kv.items()
+    }
+    actual_root, _ = StateTrie().merkelize(trie_input)
+    return actual_kv, actual_root.hex()
+
+def display_state_diff(sock, trace: Trace, header_hash: Bytes32 | bytes, verbose: bool):
     """Fetch actual state from target and diff against expected post_state."""
-    actual_kv = fetch_state(sock, verbose)
+    actual_kv = fetch_state(sock, header_hash, verbose)
     if actual_kv is None:
         print("  Could not fetch state for diff")
         return
@@ -181,10 +248,6 @@ def display_state_diff(sock, trace: Trace, verbose: bool):
         elif actual_kv[k] != expected_kv[k]:
             changed.append(k)
 
-    if not missing and not extra and not changed:
-        print("  State diff: KV pairs match (root algorithm difference?)")
-        return
-
     print(f"  State diff: {len(changed)} changed, {len(missing)} missing, {len(extra)} extra keys")
 
     for k in missing:
@@ -200,7 +263,7 @@ def display_state_diff(sock, trace: Trace, verbose: bool):
         print(f"      expected: {expected_kv[k][:80]}{'...' if len(expected_kv[k]) > 80 else ''}")
         print(f"      actual:   {actual_kv[k][:80]}{'...' if len(actual_kv[k]) > 80 else ''}")
 
-def process_trace(sock, trace: Trace, genesis_header: Header, verbose: bool):
+def process_trace(sock, trace: Trace, genesis_header: Header, verbose: bool, do_initialize: bool):
     """
     Run one trace through the protocol: Initialize -> ImportBlock -> check root.
     On root mismatch, fetches full state and displays key-level diff.
@@ -208,24 +271,14 @@ def process_trace(sock, trace: Trace, genesis_header: Header, verbose: bool):
     """
     expected_root = trace.post_state.state_root.hex()
 
-    # 1. Initialize with pre_state
-    init_payload = trace_to_initialize(trace, genesis_header)
-    send_message(sock, TAG_INITIALIZE, init_payload)
-    if verbose:
-        print(f"  TX: Initialize ({len(init_payload)} bytes)")
-
-    tag, payload = recv_message(sock)
-    if tag is None:
-        return False, None, "Connection closed after Initialize"
-    if tag == TAG_ERROR:
-        err = ErrorMessage.decode(payload)
-        return False, None, f"Initialize error: {err.message}"
-    if tag == TAG_STATE_ROOT:
-        init_root = payload.hex()
-        if verbose:
-            print(f"  RX: StateRoot (init) = {init_root}")
+    if do_initialize:
+        ok, init_root, err_msg = initialize_trace(sock, trace, genesis_header, verbose)
+        if not ok:
+            return False, None, err_msg
     else:
-        return False, None, f"Unexpected tag {tag} after Initialize"
+        init_root = None
+        if verbose:
+            print("  Reusing existing folder session")
 
     # 2. Import block
     block_payload = trace.block.encode()
@@ -237,15 +290,18 @@ def process_trace(sock, trace: Trace, genesis_header: Header, verbose: bool):
     if tag is None:
         return False, None, "Connection closed after ImportBlock"
     if tag == TAG_ERROR:
-        # Block was rejected — state unchanged, so init_root is the current root.
-        # If init_root matches expected, the block was correctly rejected.
-        if init_root == expected_root:
-            return True, init_root, None
-        else:
-            err = ErrorMessage.decode(payload)
-            print(f"  Block rejected: {err.message}")
-            display_state_diff(sock, trace, verbose)
-            return False, init_root, f"Block error: {err.message} (init_root={init_root}, expected={expected_root})"
+        err = ErrorMessage.decode(payload)
+        actual_kv, actual_root = fetch_state_with_root(sock, trace.block.header.hash(), verbose)
+        if actual_root is None:
+            return False, None, f"Block error: {err.message} (could not fetch state after rejection)"
+
+        # Block was rejected, so the parent state should still be visible.
+        if actual_root == expected_root:
+            return True, actual_root, None
+
+        print(f"  Block rejected: {err.message}")
+        display_state_diff(sock, trace, trace.block.header.parent, verbose)
+        return False, actual_root, f"Block error: {err.message} (actual_root={actual_root}, expected={expected_root})"
     if tag != TAG_STATE_ROOT:
         return False, None, f"Unexpected tag {tag} after ImportBlock"
 
@@ -259,7 +315,7 @@ def process_trace(sock, trace: Trace, genesis_header: Header, verbose: bool):
 
     # Root mismatch — fetch full state and show diff
     print(f"  Root mismatch: expected={expected_root}, got={actual_root}")
-    display_state_diff(sock, trace, verbose)
+    display_state_diff(sock, trace, trace.block.header.hash(), verbose)
     return False, actual_root, f"Root mismatch: expected={expected_root}, got={actual_root}"
 
 def main():
@@ -312,6 +368,7 @@ def main():
     passed = 0
     failed = 0
     errors = []
+    active_folder = None
 
     try:
         if not do_handshake(sock, args.verbose):
@@ -327,16 +384,22 @@ def main():
 
             # Load trace
             try:
-                trace = Trace.decode(path.read_bytes())
+                trace = load_trace(path)
             except Exception as e:
                 print(f"  Error decoding trace: {e}")
                 errors.append((path.name, str(e)))
                 continue
 
+            folder_changed = path.parent != active_folder
+            if folder_changed:
+                print("  Session changed: initializing from trace pre_state")
+            else:
+                print("  Reusing existing folder state")
+
             # Process through the protocol
             try:
                 success, actual_root, err_msg = process_trace(
-                    sock, trace, genesis_header, args.verbose
+                    sock, trace, genesis_header, args.verbose, folder_changed
                 )
             except Exception as e:
                 print(f"  Exception: {e}")
@@ -346,10 +409,12 @@ def main():
             if success:
                 print(f"  PASSED (root={actual_root[:16]}...)")
                 passed += 1
+                active_folder = path.parent
             else:
                 print(f"  FAILED: {err_msg}")
                 failed += 1
                 errors.append((path.name, err_msg))
+                active_folder = path.parent
 
     finally:
         sock.close()

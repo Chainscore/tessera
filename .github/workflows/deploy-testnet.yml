@@ -21,7 +21,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,10 +49,10 @@ jobs:
           ACR_LOGIN_SERVER=$(az acr show --name ${{ env.ACR_NAME }} --query loginServer -o tsv)
           ACR_USERNAME=$(az acr credential show --name ${{ env.ACR_NAME }} --query username -o tsv)
           ACR_PASSWORD=$(az acr credential show --name ${{ env.ACR_NAME }} --query "passwords[0].value" -o tsv)
-          
+
           # Delete existing
           az container delete --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.ACI_NAME }} --yes 2>/dev/null || true
-          
+
           # Deploy
           az container create \
             --resource-group ${{ env.RESOURCE_GROUP }} \
@@ -74,7 +74,7 @@ jobs:
           sleep 30
           FQDN=$(az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.ACI_NAME }} --query ipAddress.fqdn -o tsv)
           echo "Deployed to: http://$FQDN:19800"
-          
+
           # Check container is running
           STATE=$(az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.ACI_NAME }} --query instanceView.state -o tsv)
           if [ "$STATE" != "Running" ]; then
