@@ -28,21 +28,21 @@ from jam.block.extrinsics.guarantees import GuaranteesExtrinsic
 from jam.block.extrinsics.assurances import AssurancesExtrinsic
 from jam.block.header import Header, OffendersMark
 from jam.settings import Settings
-from jam.types.state.sigma import Sigma
-from jam.types.state.psi import Psi, PsiG, PsiB, PsiW, PsiO
-from jam.types.state.rho import Rho, OptionalWorkReportState
-from jam.types.state.lambda_ import Lambda_
-from jam.types.state.kappa import Kappa
-from jam.types.protocol.crypto import (
+from jam.models.state.sigma import Sigma
+from jam.models.state.psi import Psi, PsiG, PsiB, PsiW, PsiO
+from jam.models.state.rho import Rho, OptionalWorkReportState
+from jam.models.state.lambda_ import Lambda_
+from jam.models.state.kappa import Kappa
+from jam.models.protocol.crypto import (
     Ed25519Public,
     Ed25519Signature,
     WorkReportHash,
     BandersnatchPublic,
     BlsPublic,
 )
-from jam.types.protocol.core import ValidatorIndex, TimeSlot
-from jam.types.protocol.validators import ValidatorData, ValidatorMetadata
-from jam.types import BandersnatchVrfSignature
+from jam.models.protocol.core import ValidatorIndex, TimeSlot
+from jam.models.protocol.validators import ValidatorData, ValidatorMetadata
+from jam.models import BandersnatchVrfSignature
 from jam.utils.constants import VALIDATOR_COUNT, X
 from jam.utils.dummy.utils import create_dummy_bytes, create_dummy_bytes32
 

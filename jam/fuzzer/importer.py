@@ -145,12 +145,15 @@ async def run_import(db_path: str, import_path: str) -> None:
                 f"State root mismatch after processing {filename}"
             
         except Exception as e:
-            print(f"✗ {os.path.basename(file_path)}: {e}")
+            import traceback
+            print(f"FAIL {os.path.basename(file_path)}: {e}")
+            if os.environ.get('DEBUG'):
+                traceback.print_exc()
             errors += 1
     
     # Show timing table
     if transition_data:
-        print(f"\n⏱️  State Transition Times:")
+        print(f"\nState Transition Times:")
         print("File".ljust(40) + "Time (ms)")
         print("-" * 55)
         

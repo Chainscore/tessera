@@ -8,7 +8,7 @@ from jam.block.block import Block
 from jam.error import JamError
 from jam.finality.finality import Finality
 from jam.log_setup import logger
-from jam.types.protocol.crypto import StateRoot, HeaderHash, Hash
+from jam.models.protocol.crypto import StateRoot, HeaderHash, Hash
 from jam.utils.trie.merkle import StateTrie
 
 
@@ -279,7 +279,7 @@ class StateStorage:
                 self._DB.put(k, v)
 
         # Clear hash cache periodically to prevent memory buildup
-        from jam.types.protocol.crypto import Hash
+        from jam.models.protocol.crypto import Hash
 
         Hash.clear_cache()
 

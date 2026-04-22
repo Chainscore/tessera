@@ -11,10 +11,10 @@ from jam.block.extrinsics.assurances import AvailAssurance, AvailBitField
 
 from jam.state.transitions.assurances.errors import AssurancesError, AssurancesErrorCode
 
-from jam.types.state.rho import OptionalWorkReportState
-from jam.types.state.sigma import Sigma
-from jam.types.protocol.crypto import Ed25519Public, Ed25519Signature, Hash, OpaqueHash
-from jam.types.work import WorkReports
+from jam.models.state.rho import OptionalWorkReportState
+from jam.models.state.sigma import Sigma
+from jam.models.protocol.crypto import Ed25519Public, Ed25519Signature, Hash, OpaqueHash
+from jam.models.work import WorkReports
 from jam.utils.constants import (
     X,
     UNAVAILABLE_WORK_EXPIRY,

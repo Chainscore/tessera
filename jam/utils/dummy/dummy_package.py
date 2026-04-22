@@ -2,13 +2,13 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U32, Uint
 from tsrkit_types.sequences import Vector
 
-from jam.types import RefineContext
-from jam.types.protocol.core import CoreIndex
-from jam.types.protocol.crypto import WorkReportHash
+from jam.models import RefineContext
+from jam.models.protocol.core import CoreIndex
+from jam.models.protocol.crypto import WorkReportHash
 
-from jam.types.work import WorkItems, WorkPackage, Authorizer
-from jam.types.protocol.crypto import OpaqueHash
-from jam.types.work import SegmentRootLookup, WorkPackageBundle
+from jam.models.work import WorkItems, WorkPackage, Authorizer
+from jam.models.protocol.crypto import OpaqueHash
+from jam.models.work import SegmentRootLookup, WorkPackageBundle
 
 from jam.network.protocols.ce_134 import CoreSegment, Credential
 

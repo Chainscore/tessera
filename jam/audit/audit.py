@@ -1,7 +1,7 @@
-from jam.types.state.rho import WorkReportState, OptionalWorkReportState
+from jam.models.state.rho import WorkReportState, OptionalWorkReportState
 from tsrkit_types import Null, TypedVector, Bytes, Uint, U8
 from dot_ring import IETF_VRF, Bandersnatch
-from jam.types.protocol.core import CoreIndex
+from jam.models.protocol.core import CoreIndex
 from jam.block.header.header import Header
 from jam.utils.constants import (
     CURRENT_TIME,
@@ -13,9 +13,9 @@ from jam.utils.shuffle import shuffle
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from jam.audit.assembler import Assembler
 
-from jam.types.protocol.crypto import HeaderHash
-from jam.types import BandersnatchVrfSignature, Ed25519Signature, WorkReportHash
-from jam.types.audit.audit_tranche import (
+from jam.models.protocol.crypto import HeaderHash
+from jam.models import BandersnatchVrfSignature, Ed25519Signature, WorkReportHash
+from jam.models.audit.audit_tranche import (
     Tranche,
     OptionalReports,
     TrancheIndex,
@@ -23,7 +23,7 @@ from jam.types.audit.audit_tranche import (
     CoreOptionalReport,
     CoreReport,
 )
-from jam.types.work.report import WorkReport
+from jam.models.work.report import WorkReport
 from jam.utils.constants import VALIDATOR_COUNT, AUDIT_BIAS_FACTOR, AUDIT_REPORT_ASSIGNED
 from jam.log_setup import logger
 

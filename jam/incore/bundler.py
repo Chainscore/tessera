@@ -19,11 +19,11 @@ from jam.storage.da.mappings import PackageSegmentMap, SegmentErasureMap, Erasur
 from jam.storage.da.segments import SegmentsDA, SegmentShardsDA
 from jam.storage.item_extrinsics import ItemExtrinsics
 
-from jam.types.work.item import WorkItem, TreeRoot
-from jam.types.work.package import WorkPackage, WorkPackageBundle
-from jam.types.work.report import WorkReport
-from jam.types.work.shard import ShardIndex, SegmentShard
-from jam.types.work.manifest import (
+from jam.models.work.item import WorkItem, TreeRoot
+from jam.models.work.package import WorkPackage, WorkPackageBundle
+from jam.models.work.report import WorkReport
+from jam.models.work.shard import ShardIndex, SegmentShard
+from jam.models.work.manifest import (
     Segments,
     SegmentIndex,
     MultiSegments,
@@ -37,7 +37,7 @@ from jam.types.work.manifest import (
     SegmentRootLookup
 )
 
-from jam.types.protocol.core import SegmentRoot
+from jam.models.protocol.core import SegmentRoot
 
 from jam.utils.chainspec import chain_config
 from jam.utils.gather import gather_with_exceptions

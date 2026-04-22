@@ -6,7 +6,7 @@ from tsrkit_types import Bytes
 
 from jam.state.state import setup_state
 from jam.state.utils import construct_state_key
-from jam.types import TimeSlot, ServiceId, AccountData
+from jam.models import TimeSlot, ServiceId, AccountData
 from jam.settings import setup_setting
 from jam.block.block import Block
 from tests.unit.state.test_state_load import simulate_chain

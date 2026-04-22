@@ -3,9 +3,9 @@ from typing import Dict, List
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.integers import U32
 
-from jam.types import OpaqueHash, ValidatorIndex, Sigma
-from jam.types import OpaqueHash, ValidatorIndex, Sigma, ValidatorData
-from jam.types.protocol.core import CoreIndex, TimeSlot
+from jam.models import OpaqueHash, ValidatorIndex, Sigma
+from jam.models import OpaqueHash, ValidatorIndex, Sigma, ValidatorData
+from jam.models.protocol.core import CoreIndex, TimeSlot
 
 from jam.utils.constants import (
     VALIDATOR_COUNT,

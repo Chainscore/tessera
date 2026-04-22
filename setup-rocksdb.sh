@@ -5,7 +5,7 @@ PLATFORM=$(uname -s)
 PROJECT_ROOT=$(pwd)
 LIBS_DIR="$PROJECT_ROOT/libs"
 
-echo "🗿 Setting up RocksDB library for PyInstaller..."
+echo "Setting up RocksDB library for PyInstaller..."
 echo "[INFO] Platform: $PLATFORM"
 echo "[INFO] Project root: $PROJECT_ROOT"
 
@@ -42,7 +42,7 @@ if [ "$PLATFORM" = "Darwin" ]; then
     if [ -n "$FOUND_LIB" ]; then
         echo "[INFO] Found RocksDB library at: $FOUND_LIB"
         cp "$FOUND_LIB" "$LIBS_DIR/librocksdb.dylib"
-        echo "[INFO] ✅ Copied librocksdb.dylib to $LIBS_DIR/"
+        echo "[INFO] Copied librocksdb.dylib to $LIBS_DIR/"
     else
         echo "[ERROR] ❌ RocksDB library not found!"
         echo "[ERROR] Please install RocksDB with: brew install rocksdb"
@@ -94,7 +94,7 @@ elif [ "$PLATFORM" = "Linux" ]; then
     if [ -n "$FOUND_LIB" ]; then
         echo "[INFO] Found RocksDB library at: $FOUND_LIB"
         cp "$FOUND_LIB" "$LIBS_DIR/librocksdb.so"
-        echo "[INFO] ✅ Copied librocksdb.so to $LIBS_DIR/"
+        echo "[INFO] Copied librocksdb.so to $LIBS_DIR/"
     else
         echo "[ERROR] ❌ RocksDB library not found!"
         echo "[ERROR] Please install RocksDB with:"
@@ -109,6 +109,6 @@ else
     exit 1
 fi
 
-echo "[INFO] ✅ RocksDB library setup complete!"
+echo "[INFO] RocksDB library setup complete!"
 echo "[INFO] Library location: $LIBS_DIR/"
 echo "[INFO] PyInstaller will now bundle this library in the binary."

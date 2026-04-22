@@ -2,9 +2,9 @@ from jam.block.extrinsics.store import ExtrinsicStore
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 
-from jam.types.protocol.crypto import Ed25519Signature
-from jam.types.protocol.core import ValidatorIndex, TimeSlot
-from jam.types.work import WorkReport
+from jam.models.protocol.crypto import Ed25519Signature
+from jam.models.protocol.core import ValidatorIndex, TimeSlot
+from jam.models.work import WorkReport
 
 
 @structure

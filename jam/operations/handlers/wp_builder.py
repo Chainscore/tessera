@@ -3,16 +3,16 @@ from jam.operations.dispatcher import NodeDispatcher
 from tsrkit_types import Bytes, U16, Uint
 
 from tsrkit_pvm import Code
-from jam.types import WorkPackage
-from jam.types.protocol.crypto import Hash
-from jam.types.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpec
-from jam.types.work.manifest import Extrinsics, Extrinsic
+from jam.models import WorkPackage
+from jam.models.protocol.crypto import Hash
+from jam.models.work.item import WorkItem, ImportSpecs, ExtrinsicSpecs, ImportSpec
+from jam.models.work.manifest import Extrinsics, Extrinsic
 from jam.utils.constants import EPOCH_LENGTH, SLOT_PERIOD, GENESIS_TS
 from jam.log_setup import node_logger as logger
 from jam.utils.dummy.dummy_package import create_dummy_package
 from jam.network.protocols.ce_133 import WorkPackageSubmission, CE133Data
 from jam.network.protocols.ce_133 import WorkPackageCore
-from jam.types.protocol.core import CoreIndex, Gas, ServiceId, SegmentRoot
+from jam.models.protocol.core import CoreIndex, Gas, ServiceId, SegmentRoot
 
 
 

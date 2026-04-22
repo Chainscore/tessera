@@ -4,11 +4,11 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.null import Null
 
 from jam.state.transitions.disputes.error import DisputesError, DisputesErrorCode
-from jam.types import PsiG, PsiB, PsiW, PsiO, Psi
-from jam.types.state.rho import OptionalWorkReportState
-from jam.types.state.sigma import Sigma
+from jam.models import PsiG, PsiB, PsiW, PsiO, Psi
+from jam.models.state.rho import OptionalWorkReportState
+from jam.models.state.sigma import Sigma
 from jam.block import Block, OffendersMark, DisputesExtrinsic
-from jam.types.protocol.crypto import Hash
+from jam.models.protocol.crypto import Hash
 from jam.utils.constants import EPOCH_LENGTH, VALIDATORS_SUPER_MAJORITY, VALIDATORS_WONKY, X
 
 # Define minimum requirements

@@ -2,7 +2,7 @@ from enum import Enum
 
 from tsrkit_types import Uint, U8
 
-from jam.types.protocol.crypto import Hash
+from jam.models.protocol.crypto import Hash
 from tsrkit_types.bytes import Bytes
 
 

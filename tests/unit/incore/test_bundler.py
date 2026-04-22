@@ -15,8 +15,8 @@ from jam.storage.da.mappings import (
 )
 from jam.storage.da.reports import ReportsDA
 
-from jam.types.protocol.core import CoreIndex, ValidatorIndex
-from jam.types.work import Extrinsics, Extrinsic, Assurers
+from jam.models.protocol.core import CoreIndex, ValidatorIndex
+from jam.models.work import Extrinsics, Extrinsic, Assurers
 from jam.utils.benchmark import write_json
 
 from jam.utils.constants import GENESIS_TS

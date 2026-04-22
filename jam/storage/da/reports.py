@@ -1,6 +1,6 @@
 from rockstore import RockStore
 
-from jam.types.work.report import WorkReport, WorkReportHash
+from jam.models.work.report import WorkReport, WorkReportHash
 from jam.storage.da.store import DA
 
 

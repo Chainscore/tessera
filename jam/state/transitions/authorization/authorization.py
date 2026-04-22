@@ -1,5 +1,5 @@
-from jam.types.state.alpha import Alpha, AuthorizationPool
-from jam.types.state.sigma import Sigma
+from jam.models.state.alpha import Alpha, AuthorizationPool
+from jam.models.state.sigma import Sigma
 from jam.block import Block
 from jam.utils.constants import CORE_COUNT, MAX_AUTH_POOL_ITEMS
 

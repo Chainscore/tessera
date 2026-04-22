@@ -10,8 +10,8 @@ from jam.utils.constants import (
     ACCUMULATION_GAS,
 )
 
-from jam.types.work.item import WorkItem
-from jam.types.work.package import WorkPackage
+from jam.models.work.item import WorkItem
+from jam.models.work.package import WorkPackage
 
 from jam.incore.error import ValidatorErrorCode as Code, ValidatorError
 

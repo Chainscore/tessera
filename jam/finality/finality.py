@@ -4,7 +4,7 @@ import time
 from jam.block.block_view import Heads
 from jam.log_setup import block_logger as logger
 from rockstore import RockStore
-from jam.types.protocol.crypto import Hash
+from jam.models.protocol.crypto import Hash
 from jam.block import Block
 from jam.api.rpc.subscription_handlers import subscribe_finalized_block
 from jam.telemetry import emit_event

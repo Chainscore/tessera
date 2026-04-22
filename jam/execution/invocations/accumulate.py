@@ -1,10 +1,10 @@
 from typing import Dict, Tuple
 
-from jam.types import Balance
+from jam.models import Balance
 from tsrkit_types import U32, U64
 from jam.state.accounts import DeltaView
 from jam.state.partial import GhostPartial
-from jam.types.state.accumulation.types import (
+from jam.models.state.accumulation.types import (
     DeferredTransfers,
     AccumulationInputs,
     AccuContextX,
@@ -17,9 +17,9 @@ from jam.execution.invocations.functions.general_fns import GeneralFunctions
 from jam.execution.invocations.protocol import InvocationInfo, InvocationProtocol
 from tsrkit_types.null import Null
 from tsrkit_types.integers import Uint
-from jam.types.protocol.core import Gas, ServiceId, TimeSlot
-from jam.types.protocol.crypto import Hash, OpaqueHash
-from jam.types.protocol.merkle import OptionHash
+from jam.models.protocol.core import Gas, ServiceId, TimeSlot
+from jam.models.protocol.crypto import Hash, OpaqueHash
+from jam.models.protocol.merkle import OptionHash
 from jam.execution.invocations.functions.accumulate_fns import (
     AccumulateFunctions,
     check,

@@ -1,9 +1,9 @@
 from typing import Self
-from jam.types.protocol.ticket import TicketBody
+from jam.models.protocol.ticket import TicketBody
 from jam.utils.constants import EPOCH_LENGTH, TICKET_SUBMISSION_END
 from jam.utils.util_fns import outside_in
 from tsrkit_types import U64, TypedArray, Option, Null
-from jam.types.state.sigma import Sigma
+from jam.models.state.sigma import Sigma
 
 
 class TicketsMarkData(TypedArray[TicketBody, EPOCH_LENGTH]):

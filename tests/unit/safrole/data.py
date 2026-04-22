@@ -1,21 +1,21 @@
 import os
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from py_ark_vrf.py_ark_vrf import secret_from_seed
+from dot_ring import secret_from_seed
 
 from jam.state.ghost import GhostState
-from jam.types import Hash
-from jam.types.state.eta import Eta
+from jam.models import Hash
+from jam.models.state.eta import Eta
 from jam.state.state import State
 from tsrkit_types import U32, Bytes, U16
 from jam.block import Block
-from jam.types.state.kappa import Kappa
-from jam.types.state.gamma import GammaP, GammaA, GammaS, GammaZ
-from jam.types.state.psi import PsiO
-from jam.types.state.iota import Iota
-from jam.types.state.lambda_ import Lambda_
+from jam.models.state.kappa import Kappa
+from jam.models.state.gamma import GammaP, GammaA, GammaS, GammaZ
+from jam.models.state.psi import PsiO
+from jam.models.state.iota import Iota
+from jam.models.state.lambda_ import Lambda_
 from jam.block import TicketsExtrinsic
-from jam.types.protocol.validators import ValidatorData, ValidatorMetadata, IPAddress
+from jam.models.protocol.validators import ValidatorData, ValidatorMetadata, IPAddress
 from jam.utils.dummy.dummy_state import create_dummy_state
 
 

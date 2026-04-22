@@ -2,11 +2,11 @@ import asyncio
 import math
 from typing import List
 
-from jam.types import AllValidatorStats, Sigma, WorkReport
+from jam.models import AllValidatorStats, Sigma, WorkReport
 from jam.block.block import Block
 
 
-from jam.types.state.pi import ServiceStat
+from jam.models.state.pi import ServiceStat
 from jam.utils.constants import EPOCH_LENGTH, SEGMENT_SIZE, ROTATION_PERIOD
 from jam.state.transitions.report.guarantee_assignment import assign_fn
 from tsrkit_types import Uint

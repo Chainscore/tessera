@@ -2,14 +2,14 @@ from typing import List, Tuple
 
 from rockstore import RockStore
 
-from jam.types import WorkItem
-from jam.types.protocol.crypto import Hash
-from jam.types.work import ExtrinsicSpecs, ExtrinsicSpec
-from jam.types.work import WorkPackage
+from jam.models import WorkItem
+from jam.models.protocol.crypto import Hash
+from jam.models.work import ExtrinsicSpecs, ExtrinsicSpec
+from jam.models.work import WorkPackage
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U32
 
-from jam.types.work.manifest import MultiExtrinsics, Extrinsic, Extrinsics
+from jam.models.work.manifest import MultiExtrinsics, Extrinsic, Extrinsics
 
 
 class ItemExtrinsics:

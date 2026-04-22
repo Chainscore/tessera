@@ -1,8 +1,8 @@
 from rockstore import RockStore
 
-from jam.types.protocol.core import ErasureRoot
-from jam.types.work.shard import BundleShard, ShardIndex, BundleShardsDict
-from jam.types.work.manifest import Justification
+from jam.models.protocol.core import ErasureRoot
+from jam.models.work.shard import BundleShard, ShardIndex, BundleShardsDict
+from jam.models.work.manifest import Justification
 
 from jam.storage.da.store import DA
 
@@ -55,7 +55,7 @@ class AuditShardsDA(DA):
         key = self.prefix + er_root.encode()
         # Debug: print what we're storing
         if len(data) > 0:
-            from jam.types.protocol.crypto import Hash
+            from jam.models.protocol.crypto import Hash
             first_key = list(data.keys())[0]
             first_hash = Hash.blake2b(data[first_key].encode()).hex()[:16]
             print(f"[AuditShardsDA] put_batch(er_root={er_root.hex()[:16]}) -> first shard hash: {first_hash}")
@@ -83,7 +83,7 @@ class AuditShardsDA(DA):
         bs_dict = BundleShardsDict.decode(data)
         # Debug: print first shard hash to verify correct data
         if len(bs_dict) > 0:
-            from jam.types.protocol.crypto import Hash
+            from jam.models.protocol.crypto import Hash
             first_key = list(bs_dict.keys())[0]
             first_hash = Hash.blake2b(bs_dict[first_key].encode()).hex()[:16]
             print(f"[AuditShardsDA] get(er_root={er_root.hex()[:16]}) -> first shard hash: {first_hash}")

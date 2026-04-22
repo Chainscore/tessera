@@ -6,9 +6,9 @@ from rockstore import store
 from jam.execution.utils import decode_code_hash
 from jam.state.storage import StateStorage
 from jam.state.utils import construct_state_key
-from jam.types.protocol.core import Balance, ServiceId, TimeSlot, BlobLength
-from jam.types.protocol.crypto import Hash
-from jam.types.state.delta import (
+from jam.models.protocol.core import Balance, ServiceId, TimeSlot, BlobLength
+from jam.models.protocol.crypto import Hash
+from jam.models.state.delta import (
     AccountMetadata,
     Ai,
     Ao,

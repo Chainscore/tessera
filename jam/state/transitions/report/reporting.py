@@ -1,4 +1,4 @@
-from jam.types import ValidatorIndex
+from jam.models import ValidatorIndex
 from math import floor
 from typing import Set, List
 
@@ -10,13 +10,13 @@ from jam.block import Block
 from jam.log_setup import logger
 from jam.state.transitions.report.error import ReportingError, ReportingErrorCode
 from jam.state.transitions.report.guarantee_assignment import assign_fn
-from jam.types.state.pi import AllCoreStats, ServiceStat, AllServiceStats
-from jam.types.state.rho import WorkReportState, OptionalWorkReportState
-from jam.types.state.sigma import Sigma
-from jam.types.state.alpha import Alpha, AuthorizationPool
-from jam.types.state.phi import Phi, AuthorizationQueue
-from jam.types.protocol.crypto import OpaqueHash
-from jam.types.work import WorkReport
+from jam.models.state.pi import AllCoreStats, ServiceStat, AllServiceStats
+from jam.models.state.rho import WorkReportState, OptionalWorkReportState
+from jam.models.state.sigma import Sigma
+from jam.models.state.alpha import Alpha, AuthorizationPool
+from jam.models.state.phi import Phi, AuthorizationQueue
+from jam.models.protocol.crypto import OpaqueHash
+from jam.models.work import WorkReport
 from jam.utils.constants import ACCUMULATION_GAS, MAX_DEPENDENCIES, LOOKUP_ANCHOR_MAX_AGE, X
 from jam.utils.constants import (
     VALIDATOR_COUNT,

@@ -2,8 +2,8 @@ import pytest
 from jam.state.utils import construct_state_key
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U8
-from jam.types.protocol.core import ServiceId
-from jam.types.protocol.crypto import Hash
+from jam.models.protocol.core import ServiceId
+from jam.models.protocol.crypto import Hash
 
 
 def test_single_u8_index():
