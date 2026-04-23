@@ -250,7 +250,7 @@ class GhostState(Sigma):
             phi=Phi.from_json(gen["state"]["auth_queue"]),
             chi=Chi(
                 chi_m=ServiceId(0),
-                chi_a=ServiceId(0),
+                chi_a=ChiA([ServiceId(0) for _ in range(CORE_COUNT)]),
                 chi_v=ServiceId(0),
                 chi_r=ServiceId(0),
                 chi_z=ChiZ({})
