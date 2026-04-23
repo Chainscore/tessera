@@ -233,6 +233,19 @@ uv run python scripts/run_minifuzz.py --tessera . --mode both --socket /tmp/jam_
 uv run python scripts/run_minifuzz.py --tessera . --mode no_forks -y
 ```
 
+### Parallel trace runner
+
+```bash
+uv run python scripts/run_traces_parallel.py --help
+uv run python scripts/run_traces_parallel.py --module "*6948" --pattern "*296.bin" -j 8 --no-rpc
+uv run python scripts/run_traces_parallel.py --module "*" --pattern "*.bin" -j 16 --no-rpc
+```
+
+Notes:
+
+- `genesis.bin`, `genesis.json`, and `00000000.json` are skipped automatically.
+- `-j` is the worker count. Start with `6` to `8` if you still want the machine responsive.
+
 ### Raw trace replay helper
 
 ```bash
