@@ -209,9 +209,7 @@ class Reporting:
                 )
 
         Reporting.ensure_valid_report_result(state, block)
-        # Check core assignments
         Reporting.ensure_correct_assignments(state, block)
-        Reporting.ensure_signature(state, block)
 
         # Context anchor block must be present in Beta
         for report in all_reports:
@@ -288,6 +286,8 @@ class Reporting:
                 ReportingErrorCode.DUPLICATE_PACKAGE, "Duplicate Work Package detected"
             )
 
+        Reporting.ensure_signature(state, block)
+
         pi_core = AllCoreStats.empty()
         pi_service = AllServiceStats({})
 
@@ -335,20 +335,41 @@ class Reporting:
 
         Sources :  https://graypaper.fluffylabs.dev/#/38c4e62/158501154502?v=0.7.0
         """
+        curr_rotation = int(state.tau) // ROTATION_PERIOD
+        prev_rotation = curr_rotation - 1
+        curr_epoch = int(state.tau) // EPOCH_LENGTH
+        has_prev_rotation = int(state.tau) >= ROTATION_PERIOD
+        prev_rotation_epoch = (
+            (int(state.tau) - ROTATION_PERIOD) // EPOCH_LENGTH
+            if has_prev_rotation
+            else None
+        )
+
+        guarantee_validator_keys = []
+
         for x in block.extrinsic.guarantees:
+            report_rotation = int(x.slot) // ROTATION_PERIOD
+
+            if report_rotation == curr_rotation:
+                validator_set = state.kappa
+            elif has_prev_rotation and report_rotation == prev_rotation:
+                validator_set = (
+                    state.kappa if prev_rotation_epoch == curr_epoch else state.lambda_
+                )
+            else:
+                raise ReportingError(
+                    ReportingErrorCode.REPORT_EPOCH_BEFORE_LAST,
+                    "Report must be in current or prior rotation only",
+                )
+
+            validator_keys = {
+                y.validator_index: validator_set[y.validator_index].ed25519
+                for y in x.signatures
+            }
+            guarantee_validator_keys.append((x, validator_keys))
+
             for y in x.signatures:
-                public_key = None
-                if (
-                    x.slot == block.header.slot
-                    or x.slot != block.header.slot
-                    and floor((int(block.header.slot) - ROTATION_PERIOD) / EPOCH_LENGTH)
-                    == floor(block.header.slot / EPOCH_LENGTH)
-                ):
-                    public_key = state.kappa[y.validator_index].ed25519
-                elif x.slot != block.header.slot and floor(
-                    (int(block.header.slot) - ROTATION_PERIOD) / EPOCH_LENGTH
-                ) != floor(block.header.slot / EPOCH_LENGTH):
-                    public_key = state.lambda_[y.validator_index].ed25519
+                public_key = validator_keys[y.validator_index]
 
                 # Handle Offenders
                 if public_key in state.psi.offenders:
@@ -357,6 +378,9 @@ class Reporting:
                         "Banned validators are not authorized to sign reports.",
                     )
 
+        for x, validator_keys in guarantee_validator_keys:
+            for y in x.signatures:
+                public_key = validator_keys[y.validator_index]
                 signature = y.signature
 
                 try:
@@ -407,6 +431,12 @@ class Reporting:
 
         delta = state.delta
         for x in results:
+            if len(x.report.digests) == 0:
+                raise ReportingError(
+                    ReportingErrorCode.MISSING_WORK_RESULTS,
+                    "Work report must contain at least one result",
+                )
+
             total_accumulate_gas = 0
             for y in x.report.digests:
                 # --------------- bad_service_id -------------------

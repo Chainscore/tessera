@@ -218,7 +218,7 @@ class StorageView:
 
     def __getitem__(self, key: Bytes):
         data = self.store.get(self.get_key(key))
-        return Bytes(data) if data else data
+        return Bytes(data) if data is not None else None
 
     def get(self, key):
         return self.__getitem__(key)
@@ -243,7 +243,7 @@ class StorageView:
     def __delitem__(self, key: Bytes):
         curr_value = self[key]
         storage_key = self.get_key(key)
-        if curr_value:
+        if curr_value is not None:
             meta_view = AccountDataView(self.id, self.store)
             meta_view.num_i = meta_view.num_i - 1
             meta_view.num_o = meta_view.num_o - len(curr_value) - 34 - len(key)
@@ -260,7 +260,7 @@ class PreImageView:
 
     def __getitem__(self, key: Bytes[32]):
         data = self.store.get(self.get_key(key))
-        return Bytes(data) if data else data
+        return Bytes(data) if data is not None else None
 
     def get(self, key):
         return self.__getitem__(key)
@@ -290,7 +290,7 @@ class TimestampsView:
     def __getitem__(self, key: LookupTable):
         storage_key = self.get_key(key)
         data = self.store.get(storage_key)
-        return Timestamps.decode(data) if data else data
+        return Timestamps.decode(data) if data is not None else None
 
     def get(self, key):
         return self.__getitem__(key)
