@@ -32,7 +32,7 @@ from .types import PeerInfo, Version, Initialize, State, KeyValue, ErrorMessage
 
 from .handlers import read_message, send_message, handle_handshake
 from ..block.extrinsics.extrinsic import Extrinsic
-from ..types import HeaderHash
+from ..models import HeaderHash
 
 
 def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optional[str] = None):

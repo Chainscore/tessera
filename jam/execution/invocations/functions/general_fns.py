@@ -215,30 +215,26 @@ class GeneralFunctions(INVF):
             raise PvmError(PANIC)
 
         hash_key = OpaqueHash(memory.read(int(hash_addr), 32))
-        if a is not None and a.preimages[hash_key]:
-            # Directly get data
-            v = a.preimages[hash_key]
-            if not v:
-                logger.error("Failed key check")
-                raise PvmError(PANIC)
-
-            f = min(registers[10], len(v))
-            l = min(registers[11], len(v) - f)
-
-            if not memory.is_accessible(output_addr, l, Accessibility.WRITE):
-                logger.error(
-                    "Host call lookup: memory not accessible for output",
-                    output_addr=output_addr,
-                    required_size=l,
-                )
-                raise PvmError(PANIC)
-
-            registers[7] = len(v)
-            memory.write(output_addr, v[f : f + l])
-            return CONTINUE, gas, registers, memory, context
-        else:
+        v = a.preimages[hash_key] if a is not None else None
+        if v is None:
             registers[7] = HostStatus.NONE.value
             return CONTINUE, gas, registers, memory, context
+
+        f = min(registers[10], len(v))
+        l = min(registers[11], len(v) - f)
+
+        if l > 0 and not memory.is_accessible(output_addr, l, Accessibility.WRITE):
+            logger.error(
+                "Host call lookup: memory not accessible for output",
+                output_addr=output_addr,
+                required_size=l,
+            )
+            raise PvmError(PANIC)
+
+        registers[7] = len(v)
+        if l > 0:
+            memory.write(output_addr, v[f : f + l])
+        return CONTINUE, gas, registers, memory, context
 
     @staticmethod
     @INVF.register(3, gas_cost=10)
@@ -346,7 +342,7 @@ class GeneralFunctions(INVF):
         a = service_data.storage
 
         curr_value = a[k]
-        storage_len = len(curr_value) if curr_value else HostStatus.NONE.value
+        storage_len = len(curr_value) if curr_value is not None else HostStatus.NONE.value
 
         if vz == 0:
             del a[k]
