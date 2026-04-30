@@ -317,6 +317,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Fetch jam-conformance protocol fixtures
+        run: |
+          git clone --depth 1 https://github.com/davxy/jam-conformance /tmp/jam-conformance
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -332,6 +336,7 @@ jobs:
       - name: Smoke test Docker image
         run: |
           chmod +x scripts/test-docker-fuzz-image.sh
+          JAM_CONFORMANCE_EXAMPLES_ROOT=/tmp/jam-conformance/fuzz-proto/examples/0.7.2 \
           ./scripts/test-docker-fuzz-image.sh chainscore/tessera:ci tiny tessera-fuzz-ci 50
 
   docker-release:
@@ -343,6 +348,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Fetch jam-conformance protocol fixtures
+        run: |
+          git clone --depth 1 https://github.com/davxy/jam-conformance /tmp/jam-conformance
 
       - name: Get version
         id: version
@@ -379,6 +388,7 @@ jobs:
       - name: Smoke test release Docker image
         run: |
           chmod +x scripts/test-docker-fuzz-image.sh
+          JAM_CONFORMANCE_EXAMPLES_ROOT=/tmp/jam-conformance/fuzz-proto/examples/0.7.2 \
           ./scripts/test-docker-fuzz-image.sh ghcr.io/chainscore/tessera:${{ steps.version.outputs.version }} tiny tessera-fuzz-release-test 50
 
       - name: Push tested Docker image

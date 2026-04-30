@@ -5,6 +5,7 @@ IMAGE_REF="${1:-chainscore/tessera:local}"
 SPEC="${2:-tiny}"
 CONTAINER_NAME="${3:-tessera-fuzz-test}"
 CASE_COUNT="${4:-50}"
+EXAMPLES_ROOT="${JAM_CONFORMANCE_EXAMPLES_ROOT:-test-suites/ext/jam-conformance/fuzz-proto/examples/0.7.2}"
 
 DATA_DIR="$(mktemp -d /tmp/tessera-docker-data.XXXXXX)"
 SOCK_DIR="$(mktemp -d /tmp/tessera-docker-sock.XXXXXX)"
@@ -45,7 +46,7 @@ if [ ! -S "${SOCK_PATH}" ]; then
   exit 1
 fi
 
-python3 - "${SOCK_PATH}" "${CASE_COUNT}" <<'PY'
+python3 - "${SOCK_PATH}" "${CASE_COUNT}" "${EXAMPLES_ROOT}" <<'PY'
 import socket
 import struct
 import sys
@@ -53,7 +54,10 @@ from pathlib import Path
 
 sock_path = sys.argv[1]
 case_count = int(sys.argv[2])
-base_root = Path("test-suites/ext/jam-conformance/fuzz-proto/examples/0.7.2")
+base_root = Path(sys.argv[3])
+
+if not base_root.exists():
+    raise SystemExit(f"examples root does not exist: {base_root}")
 
 def send_and_recv(sock: socket.socket, payload: bytes) -> bytes:
     sock.sendall(struct.pack("<I", len(payload)))
