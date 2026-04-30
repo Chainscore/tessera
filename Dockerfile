@@ -26,17 +26,6 @@ WORKDIR /app
 # Copy the entire application
 COPY . .
 
-# Build PVM cython
-RUN if [ -d deps/tsrkit-pvm ]; then \
-        cd deps/tsrkit-pvm && \
-        echo "[INFO] Building tsrkit-pvm with Cython optimizations..." && \
-        # careful with -march=native (non-portable); remove if portability needed
-        PVM_BUILD_MODE=cython /root/.local/bin/uv run python setup.py build_ext --inplace --force; \
-        cd /app; \
-    else \
-        echo "[WARN] deps/tsrkit-pvm not found, skipping tsrkit-pvm build"; \
-    fi
-
 RUN uv sync
 
 # Run the application

@@ -293,13 +293,59 @@ SPEC=tiny PATTERN="*.json" JAM_LOG_LEVEL=debug ./scripts/run-stf-tiny-verbose.sh
 
 ## W3F Trace Harness
 
-Unified trace runner:
+Unified trace runner for JAM conformance traces:
 
 ```bash
 uv run pytest test-suites/harness/w3f/traces/test_traces_unified.py -q --no-rpc
 uv run pytest test-suites/harness/w3f/traces/test_traces_unified.py --module "*" --pattern "*00000176.bin" -s --no-rpc
 uv run pytest test-suites/harness/w3f/traces/test_traces_unified.py --module "*6948" --pattern "*296.bin" -s --no-rpc
 ```
+
+Linear unified trace runner for W3F Davxy traces:
+
+```bash
+TMPDIR=~/tmpjam ASYNC=1 JAM_LOG_LEVEL=debug uv run pytest test-suites/harness/w3f/traces/test_traces_linear_unified.py --module storage_light --pattern "*.bin" --no-rpc -s -vvv
+TMPDIR=~/tmpjam ASYNC=1 JAM_LOG_LEVEL=debug uv run pytest test-suites/harness/w3f/traces/test_traces_linear_unified.py --module "*" --pattern "*.bin" --no-rpc -s -vvv
+```
+
+Davxy trace modules currently present:
+
+- `fallback`
+- `fuzzy`
+- `fuzzy_light`
+- `preimages`
+- `preimages_light`
+- `safrole`
+- `storage`
+- `storage_light`
+
+Safer all-modules Davxy loop:
+
+```bash
+TMPDIR=~/tmpjam ASYNC=1 JAM_LOG_LEVEL=debug \
+for m in fallback fuzzy fuzzy_light preimages preimages_light safrole storage storage_light; do
+  echo "== $m =="
+  uv run pytest test-suites/harness/w3f/traces/test_traces_linear_unified.py \
+    --module "$m" \
+    --pattern "*.bin" \
+    --no-rpc \
+    -s -vvv || break
+done
+```
+
+Repo helper for Davxy traces:
+
+```bash
+./scripts/run-davxy-traces.sh
+MODULE=safrole ./scripts/run-davxy-traces.sh
+PATTERN="*.bin" JAM_LOG_LEVEL=debug TMPDIR=~/tmpjam ./scripts/run-davxy-traces.sh
+```
+
+Notes:
+
+- `test_traces_unified.py` reads from `test-suites/ext/jam-conformance/fuzz-reports/0.7.2/traces`.
+- `test_traces_linear_unified.py` reads from `test-suites/ext/w3f-davxy/traces`.
+- For `test_traces_linear_unified.py`, prefer passing `--module` explicitly because shared trace `conftest.py` defaults are tied to the JAM conformance trace tree.
 
 Other trace harness variants present:
 

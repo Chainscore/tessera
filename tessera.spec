@@ -1,6 +1,11 @@
-import os, sys, pathlib, glob, importlib, platform, site
+import sys, pathlib, platform, site
 from PyInstaller.building.build_main import Analysis, PYZ, EXE, COLLECT
-from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules, collect_data_files
+from PyInstaller.utils.hooks import (
+    collect_dynamic_libs,
+    collect_submodules,
+    collect_data_files,
+    copy_metadata,
+)
 
 # ------------------------------------------------------------------ #
 # Robust repo-root detection
@@ -13,15 +18,9 @@ else:                                             # PyInstaller exec
 print(">> Starting Tessera PyInstaller build...")
 
 # ------------------------------------------------------------------ #
-# Dep-paths relative to repo root
-rust_dep_paths = [
-    project_root / 'deps' / 'py-ark-vrf',
-    project_root / 'deps' / 'tsrkit-asm' / 'python',
-    project_root / 'deps' / 'tsrkit-pvm',
-    project_root / 'deps' / 'tsrkit-types',
-    project_root / 'deps' / 'rockstore' / 'src',
-    project_root,
-]
+# Only the repo itself needs to be on the search path; third-party packages
+# are resolved from the active environment.
+analysis_paths = [project_root]
 
 # ------------------------------------------------------------------ #
 # Native binaries - detect platform-specific library extension
@@ -49,11 +48,11 @@ bitarray_venv_path = project_root / '.venv/lib/python3.12/site-packages/bitarray
 essential_files = []
 
 # ------------------------------------------------------------------ #
-# Include py_ecc .dist-info so importlib.metadata.version() works
-py_ecc_site = pathlib.Path(site.getsitepackages()[0])
-for dist_info in py_ecc_site.glob('py_ecc-*.dist-info'):
-    print(f">> Adding py_ecc metadata: {dist_info}")
-    essential_files.append((str(dist_info), 'py_ecc-*.dist-info'))
+# Include distribution metadata for packages that query importlib.metadata
+for package_name in ["py_ecc", "dot_ring", "rockstore", "tsrkit_pvm", "tsrkit_asm", "tsrkit_types"]:
+    metadata_entries = copy_metadata(package_name)
+    essential_files.extend(metadata_entries)
+    print(f">> Added metadata for {package_name}: {metadata_entries}")
 
 if bitarray_venv_path.exists():
     # Include the entire bitarray package
@@ -72,33 +71,6 @@ binaries += collect_dynamic_libs('tsrkit_pvm')
 
 # gmpy2 compiled extension + shared libs
 binaries += collect_dynamic_libs('gmpy2')
-
-# Collect from build directory (standard build output)
-pvm_build_glob = project_root.glob('deps/tsrkit-pvm/build/**/*.so')
-for so_file in pvm_build_glob:
-    rel_dest = str(so_file.relative_to(project_root / 'deps/tsrkit-pvm/build')).replace(so_file.name, '')
-    binaries.append((str(so_file), rel_dest.rstrip('/')))
-
-# Collect from in-place builds (build_ext --inplace output)
-pvm_inplace_glob = project_root.glob('deps/tsrkit-pvm/tsrkit_pvm/**/*.so')
-for so_file in pvm_inplace_glob:
-    rel_dest = str(so_file.relative_to(project_root / 'deps/tsrkit-pvm')).replace(so_file.name, '')
-    binaries.append((str(so_file), rel_dest.rstrip('/')))
-
-# Also check for .pyd files on Windows and .dylib on macOS
-for ext in ['*.pyd', '*.dylib']:
-    for so_file in project_root.glob(f'deps/tsrkit-pvm/tsrkit_pvm/**/{ext}'):
-        rel_dest = str(so_file.relative_to(project_root / 'deps/tsrkit-pvm')).replace(so_file.name, '')
-        binaries.append((str(so_file), rel_dest.rstrip('/')))
-
-# ------------------------------------------------------------------ #
-# SRS file (needed by py-ark-vrf) - use relative path
-srs_path = project_root / 'deps' / 'py-ark-vrf' / 'bandersnatch_ring.srs'
-if srs_path.exists():
-    essential_files.extend([
-        (str(srs_path), '.'),
-        (str(srs_path), 'py_ark_vrf')
-    ])
 
 # dot-ring files
 dot_ring_datas = collect_data_files(
@@ -131,7 +103,6 @@ hidden = (
     + collect_submodules('tsrkit_asm')
     + collect_submodules('tsrkit_types')
     + collect_submodules('rockstore')
-    + collect_submodules('py_ark_vrf')
     + collect_submodules('bitarray')
     + collect_submodules('py_ecc')
 )
@@ -151,7 +122,7 @@ excluded_modules = [
 
 a = Analysis(
     ['jam/cli.py'],
-    pathex=[str(p) for p in rust_dep_paths],
+    pathex=[str(p) for p in analysis_paths],
     binaries=binaries,
     datas=essential_files,
     hiddenimports=hidden,
