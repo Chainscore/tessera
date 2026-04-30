@@ -1,4 +1,4 @@
-name: Binary Build
+name: Build & Release Tessera Targets
 
 on:
   push:
@@ -9,15 +9,42 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
+  release-eligibility:
+    name: Check Release Eligibility
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    outputs:
+      on_main: ${{ steps.check.outputs.on_main }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check tag commit is on main
+        id: check
+        run: |
+          git fetch origin main --depth=1
+          TAG_COMMIT="${GITHUB_SHA}"
+          if git merge-base --is-ancestor "${TAG_COMMIT}" "origin/main"; then
+            echo "on_main=true" >> "$GITHUB_OUTPUT"
+            echo "Tag commit is reachable from origin/main"
+          else
+            echo "on_main=false" >> "$GITHUB_OUTPUT"
+            echo "Tag commit is not reachable from origin/main"
+          fi
+
   build:
     name: Build ${{ matrix.os }}-${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: ${{ matrix.timeout-minutes || 60 }}
     env:
       JAM_LOG_LEVEL: "critical"
       PVM_MODE: "interpreter"
-#      CFLAGS: "-O3 -march=native"
       LDFLAGS: "-O3"
       CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
     strategy:
@@ -167,9 +194,9 @@ jobs:
 
   release:
     name: Create Public Release
-    needs: build
+    needs: [release-eligibility, build]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    if: startsWith(github.ref, 'refs/tags/v') && needs.release-eligibility.outputs.on_main == 'true'
 
     steps:
       - name: Checkout code
@@ -216,6 +243,9 @@ jobs:
           body: |
             ## Tessera Binary Release v${{ steps.version.outputs.version }}
 
+            Docker image:
+            `ghcr.io/chainscore/tessera:v${{ steps.version.outputs.version }}`
+
             ### Downloads
 
             Choose the appropriate binary for your platform:
@@ -239,6 +269,26 @@ jobs:
             ./tessera-node --fuzzer --socket /tmp/jam_conformance.sock
             ```
 
+            ### Docker
+
+            Pull the release image:
+            ```bash
+            docker pull ghcr.io/chainscore/tessera:v${{ steps.version.outputs.version }}
+            ```
+
+            Run in conformance target mode:
+            ```bash
+            docker run --rm \
+              -e JAM_FUZZ=1 \
+              -e JAM_FUZZ_SPEC=tiny \
+              -e JAM_FUZZ_DATA_PATH=/data \
+              -e JAM_FUZZ_SOCK_PATH=/sock/jam_target.sock \
+              -e JAM_FUZZ_LOG_LEVEL=info \
+              -v /tmp/tessera-data:/data \
+              -v /tmp/tessera-sock:/sock \
+              ghcr.io/chainscore/tessera:v${{ steps.version.outputs.version }}
+            ```
+
             ### Build Info
 
             - **Python**: 3.12
@@ -256,3 +306,82 @@ jobs:
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
         env:
           GITHUB_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
+
+  docker:
+    name: Build Docker Image
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.fuzz
+          load: true
+          push: false
+          tags: chainscore/tessera:ci
+
+      - name: Smoke test Docker image
+        run: |
+          chmod +x scripts/test-docker-fuzz-image.sh
+          ./scripts/test-docker-fuzz-image.sh chainscore/tessera:ci tiny tessera-fuzz-ci 50
+
+  docker-release:
+    name: Build And Push Docker Image
+    needs: [release-eligibility, build, release]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') && needs.release-eligibility.outputs.on_main == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build release Docker image locally
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.fuzz
+          load: true
+          push: false
+          tags: |
+            ghcr.io/chainscore/tessera:${{ steps.version.outputs.version }}
+            ghcr.io/chainscore/tessera:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+
+      - name: Smoke test release Docker image
+        run: |
+          chmod +x scripts/test-docker-fuzz-image.sh
+          ./scripts/test-docker-fuzz-image.sh ghcr.io/chainscore/tessera:${{ steps.version.outputs.version }} tiny tessera-fuzz-release-test 50
+
+      - name: Push tested Docker image
+        run: |
+          docker push ghcr.io/chainscore/tessera:${{ steps.version.outputs.version }}
+          docker push ghcr.io/chainscore/tessera:latest

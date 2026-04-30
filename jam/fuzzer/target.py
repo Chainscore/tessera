@@ -7,15 +7,13 @@ types including block imports, state operations, and root queries.
 """
 import json
 import socket
-import time
 import os
-from pathlib import Path
 import sys
 import shutil
 from typing import Optional
 
 from jam.block.block import Block
-from tsrkit_types import Bytes, Bytes32, U8, U32, TypedVector, String, structure
+from tsrkit_types import Bytes, U8, U32, TypedVector, String
 
 from .constants import (
     TAG_PEER_INFO,
@@ -33,6 +31,17 @@ from .types import PeerInfo, Version, Initialize, State, KeyValue, ErrorMessage
 from .handlers import read_message, send_message, handle_handshake
 from ..block.extrinsics.extrinsic import Extrinsic
 from ..models import HeaderHash
+
+
+def clear_directory_contents(path: str) -> None:
+    """Remove everything inside a directory without removing the directory itself."""
+    os.makedirs(path, exist_ok=True)
+    for entry in os.listdir(path):
+        entry_path = os.path.join(path, entry)
+        if os.path.isdir(entry_path) and not os.path.islink(entry_path):
+            shutil.rmtree(entry_path)
+        else:
+            os.unlink(entry_path)
 
 
 def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optional[str] = None):
@@ -209,9 +218,8 @@ async def run_fuzzer_target(
         record_path: Optional path to record session data
     """
     
-    # Clean up and setup database
-    if os.path.exists(db_path):
-        shutil.rmtree(db_path)
+    # Clean up and setup database contents without removing the mounted root.
+    clear_directory_contents(db_path)
     
     from jam.log_setup import setup_logging
     setup_logging("default", "fuzzer-target")
@@ -228,6 +236,7 @@ async def run_fuzzer_target(
         
     try:
         sock.bind(socket_path)
+        os.chmod(socket_path, 0o777)
         sock.listen(1)
         print(f"🛰️  Tessera JAM Fuzzer Target | Listening on {sock.getsockname()}")
         run_fuzzer_target_loop(sock, db_path, record_path)
@@ -241,5 +250,5 @@ async def run_fuzzer_target(
         if os.path.exists(socket_path):
             os.remove(socket_path)
         if os.path.exists(db_path):
-            shutil.rmtree(db_path)
+            clear_directory_contents(db_path)
         print("🧹 Cleanup complete.")
