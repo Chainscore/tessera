@@ -15,6 +15,13 @@ chmod 777 "${DATA_DIR}" "${SOCK_DIR}"
 
 cleanup() {
   docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+  docker run --rm \
+    -v "${DATA_DIR}:/cleanup-data" \
+    -v "${SOCK_DIR}:/cleanup-sock" \
+    --entrypoint /bin/sh \
+    "${IMAGE_REF}" \
+    -c 'rm -rf /cleanup-data/* /cleanup-data/.[!.]* /cleanup-data/..?* /cleanup-sock/* /cleanup-sock/.[!.]* /cleanup-sock/..?*' \
+    >/dev/null 2>&1 || true
   rm -rf "${DATA_DIR}" "${SOCK_DIR}"
 }
 
