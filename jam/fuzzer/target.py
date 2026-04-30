@@ -32,7 +32,6 @@ from .handlers import read_message, send_message, handle_handshake
 from ..block.extrinsics.extrinsic import Extrinsic
 from ..models import HeaderHash
 
-
 def clear_directory_contents(path: str) -> None:
     """Remove everything inside a directory without removing the directory itself."""
     os.makedirs(path, exist_ok=True)

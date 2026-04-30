@@ -74,6 +74,7 @@ uv run poe update-deps
 ./dist/tessera-node --help
 ```
 
+
 ## Docker Images
 
 ### Fuzz image build
@@ -209,6 +210,7 @@ The web-app/runner will do the same kind of lifecycle automatically:
 - wait for the socket
 - run the fuzzer against that socket
 - stop the container
+
 
 Docker-based binary test harness:
 
