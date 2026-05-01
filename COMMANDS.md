@@ -74,6 +74,144 @@ uv run poe update-deps
 ./dist/tessera-node --help
 ```
 
+
+## Docker Images
+
+### Fuzz image build
+
+The publishable conformance image is built from `Dockerfile.fuzz`, not the main `Dockerfile`.
+
+Helper script:
+
+```bash
+sudo ./build-docker.sh
+sudo ./build-docker.sh chainscore/tessera local
+```
+
+Raw build:
+
+```bash
+sudo docker build -f Dockerfile.fuzz -t chainscore/tessera:local .
+```
+
+### Fuzz image run
+
+Helper script:
+
+```bash
+./run-docker-fuzz.sh
+./run-docker-fuzz.sh chainscore/tessera local tiny
+./run-docker-fuzz.sh chainscore/tessera local full
+```
+
+Raw run:
+
+```bash
+mkdir -p "$PWD/.docker-fuzz-data"
+mkdir -p /tmp/tessera-sock
+
+sudo docker rm -f tessera-fuzz >/dev/null 2>&1 || true
+
+sudo docker run -d \
+  --name tessera-fuzz \
+  -e JAM_FUZZ=1 \
+  -e JAM_FUZZ_SPEC=tiny \
+  -e JAM_FUZZ_DATA_PATH=/data \
+  -e JAM_FUZZ_SOCK_PATH=/sock/jam_target.sock \
+  -e JAM_FUZZ_LOG_LEVEL=info \
+  -v "$PWD/.docker-fuzz-data:/data:Z" \
+  -v /tmp/tessera-sock:/sock:Z \
+  chainscore/tessera:local
+```
+
+Inspect and stop:
+
+```bash
+sudo docker logs -f tessera-fuzz
+ls -l /tmp/tessera-sock/jam_target.sock
+sudo docker rm -f tessera-fuzz
+```
+
+Protocol smoke test against a built local image:
+
+```bash
+chmod +x scripts/test-docker-fuzz-image.sh
+./scripts/test-docker-fuzz-image.sh chainscore/tessera:local tiny tessera-fuzz-test
+```
+
+Run a larger protocol regression against 50 `no_forks` and 50 `forks` pairs:
+
+```bash
+chmod +x scripts/test-docker-fuzz-image.sh
+./scripts/test-docker-fuzz-image.sh chainscore/tessera:local tiny tessera-fuzz-test 50
+```
+
+### Normal mode from the same fuzz image
+
+`Dockerfile.fuzz` is dual-mode:
+
+- default entrypoint behavior: normal multi-node startup
+- `JAM_FUZZ=1`: conformance target mode
+
+Run normal mode:
+
+```bash
+sudo docker run --rm chainscore/tessera:local
+```
+
+### Published image names
+
+- On release tags like `v0.7.2`: `ghcr.io/chainscore/tessera:v0.7.2`
+- On release tags like `v0.7.2`: `ghcr.io/chainscore/tessera:latest`
+- On `workflow_dispatch` runs without a tag: the workflow uses the resolved version string for the image tag
+
+### Simulating the conformance workflow locally
+
+Start the target image:
+
+```bash
+./run-docker-fuzz.sh chainscore/tessera local tiny
+```
+
+Then point `minifuzz` at the host-visible socket:
+
+```bash
+python3 ../tessera-doom/test-suites/ext/jam-conformance/fuzz-proto/minifuzz/minifuzz.py \
+  -d "/home/darkknight/Chainscore Labs/Tesseract/tessera-doom/test-suites/ext/jam-conformance/fuzz-proto/examples/0.7.2/no_forks" \
+  --target-sock /tmp/tessera-sock/jam_target.sock
+```
+
+```bash
+python3 ../tessera-doom/test-suites/ext/jam-conformance/fuzz-proto/minifuzz/minifuzz.py \
+  -d "/home/darkknight/Chainscore Labs/Tesseract/tessera-doom/test-suites/ext/jam-conformance/fuzz-proto/examples/0.7.2/forks" \
+  --target-sock /tmp/tessera-sock/jam_target.sock
+```
+
+### How the release image is expected to run in conformance tooling
+
+Equivalent raw command shape for the published image:
+
+```bash
+docker run --rm \
+  -e JAM_FUZZ=1 \
+  -e JAM_FUZZ_SPEC=tiny \
+  -e JAM_FUZZ_DATA_PATH=/data \
+  -e JAM_FUZZ_SOCK_PATH=/sock/jam_target.sock \
+  -e JAM_FUZZ_LOG_LEVEL=info \
+  -v /tmp/tessera-data:/data \
+  -v /tmp/tessera-sock:/sock \
+  ghcr.io/chainscore/tessera:v0.7.2
+```
+
+The web-app/runner will do the same kind of lifecycle automatically:
+
+- pull the image
+- start the container with `JAM_FUZZ_*`
+- wait for the socket
+- run the fuzzer against that socket
+- stop the container
+
+
 Docker-based binary test harness:
 
 ```bash
@@ -155,13 +293,59 @@ SPEC=tiny PATTERN="*.json" JAM_LOG_LEVEL=debug ./scripts/run-stf-tiny-verbose.sh
 
 ## W3F Trace Harness
 
-Unified trace runner:
+Unified trace runner for JAM conformance traces:
 
 ```bash
 uv run pytest test-suites/harness/w3f/traces/test_traces_unified.py -q --no-rpc
 uv run pytest test-suites/harness/w3f/traces/test_traces_unified.py --module "*" --pattern "*00000176.bin" -s --no-rpc
 uv run pytest test-suites/harness/w3f/traces/test_traces_unified.py --module "*6948" --pattern "*296.bin" -s --no-rpc
 ```
+
+Linear unified trace runner for W3F Davxy traces:
+
+```bash
+TMPDIR=~/tmpjam ASYNC=1 JAM_LOG_LEVEL=debug uv run pytest test-suites/harness/w3f/traces/test_traces_linear_unified.py --module storage_light --pattern "*.bin" --no-rpc -s -vvv
+TMPDIR=~/tmpjam ASYNC=1 JAM_LOG_LEVEL=debug uv run pytest test-suites/harness/w3f/traces/test_traces_linear_unified.py --module "*" --pattern "*.bin" --no-rpc -s -vvv
+```
+
+Davxy trace modules currently present:
+
+- `fallback`
+- `fuzzy`
+- `fuzzy_light`
+- `preimages`
+- `preimages_light`
+- `safrole`
+- `storage`
+- `storage_light`
+
+Safer all-modules Davxy loop:
+
+```bash
+TMPDIR=~/tmpjam ASYNC=1 JAM_LOG_LEVEL=debug \
+for m in fallback fuzzy fuzzy_light preimages preimages_light safrole storage storage_light; do
+  echo "== $m =="
+  uv run pytest test-suites/harness/w3f/traces/test_traces_linear_unified.py \
+    --module "$m" \
+    --pattern "*.bin" \
+    --no-rpc \
+    -s -vvv || break
+done
+```
+
+Repo helper for Davxy traces:
+
+```bash
+./scripts/run-davxy-traces.sh
+MODULE=safrole ./scripts/run-davxy-traces.sh
+PATTERN="*.bin" JAM_LOG_LEVEL=debug TMPDIR=~/tmpjam ./scripts/run-davxy-traces.sh
+```
+
+Notes:
+
+- `test_traces_unified.py` reads from `test-suites/ext/jam-conformance/fuzz-reports/0.7.2/traces`.
+- `test_traces_linear_unified.py` reads from `test-suites/ext/w3f-davxy/traces`.
+- For `test_traces_linear_unified.py`, prefer passing `--module` explicitly because shared trace `conftest.py` defaults are tied to the JAM conformance trace tree.
 
 Other trace harness variants present:
 
