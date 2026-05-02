@@ -18,11 +18,6 @@ if [ -z "${JAM_FUZZ:-}" ]; then
     }
 
     start envs/40000.env
-    start envs/40001.env
-    start envs/40002.env
-    start envs/40003.env
-    start envs/40004.env
-    start envs/40005.env
 
     cleanup() {
         kill $(jobs -p) 2>/dev/null || true
