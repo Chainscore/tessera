@@ -138,8 +138,13 @@ def setup_logging(theme: str = "default", node_name: Optional[str] = None):
     all_levels = [root_level] + list(module_levels.values())
     min_level = min(all_levels)
 
-    # Create logs directory if it doesn't exist
-    os.makedirs("logs", exist_ok=True)
+    log_dir = os.environ.get("JAM_LOG_DIR", "logs")
+    file_logging_enabled = True
+    try:
+        os.makedirs(log_dir, exist_ok=True)
+    except (PermissionError, OSError) as e:
+        file_logging_enabled = False
+        print(f"WARNING: Could not create log directory {log_dir}: {e}. File logging disabled.")
 
     # Configure logging with two handlers: stream and file
     # Configure logging with two handlers: stream and file
@@ -152,22 +157,27 @@ def setup_logging(theme: str = "default", node_name: Optional[str] = None):
     }
 
     # Try to configure file handler
-    log_file = f"logs/app_{node_name}_{os.getpid()}.log" if node_name else f"logs/app_{os.getpid()}.log"
-    try:
-        # Check if we can write to the log file
-        with open(log_file, "a"):
-            pass
-        
-        handlers["file"] = {
-            "level": min_level,
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": log_file,
-            "formatter": "json",
-            "maxBytes": 10485760,  # 10MB
-            "backupCount": 7,
-        }
-    except (PermissionError, OSError) as e:
-        print(f"WARNING: Could not write to log file {log_file}: {e}. File logging disabled.")
+    log_file = (
+        os.path.join(log_dir, f"app_{node_name}_{os.getpid()}.log")
+        if node_name
+        else os.path.join(log_dir, f"app_{os.getpid()}.log")
+    )
+    if file_logging_enabled:
+        try:
+            # Check if we can write to the log file
+            with open(log_file, "a"):
+                pass
+
+            handlers["file"] = {
+                "level": min_level,
+                "class": "logging.handlers.RotatingFileHandler",
+                "filename": log_file,
+                "formatter": "json",
+                "maxBytes": 10485760,  # 10MB
+                "backupCount": 7,
+            }
+        except (PermissionError, OSError) as e:
+            print(f"WARNING: Could not write to log file {log_file}: {e}. File logging disabled.")
 
     logging.config.dictConfig({
         "version": 1,
