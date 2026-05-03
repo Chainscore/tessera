@@ -61,13 +61,16 @@ def get_test_vector_files(import_path: str) -> List[Path]:
     path = Path(import_path)
 
     if path.is_file():
+        if path.name == "genesis.bin":
+            raise ValueError(
+                "genesis.bin is a special bootstrap vector and is not supported by the trace importer"
+            )
         if path.suffix.lower() == '.bin':
             return [path]
         raise ValueError(f"Must be BIN file: {import_path}")
     
     elif path.is_dir():
-        files = [f for f in path.glob("*.bin")]
-        # files.sort()
+        files = sorted(f for f in path.glob("*.bin") if f.name != "genesis.bin")
         return files
     
     raise ValueError(f"Path not found: {import_path}")
