@@ -31,6 +31,7 @@ docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
 
 docker run -d \
   --name "${CONTAINER_NAME}" \
+  --user "$(id -u):$(id -g)" \
   -e JAM_FUZZ=1 \
   -e JAM_FUZZ_SPEC="${SPEC}" \
   -e JAM_FUZZ_DATA_PATH=/data \

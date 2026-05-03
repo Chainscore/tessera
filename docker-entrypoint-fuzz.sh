@@ -2,6 +2,7 @@
 set -eu
 
 cd /app
+VENV_BIN="/app/.venv/bin"
 
 if [ -z "${JAM_FUZZ:-}" ]; then
     export TELEMETRY_HOST="${TELEMETRY_HOST:-localhost:9000}"
@@ -11,9 +12,9 @@ if [ -z "${JAM_FUZZ:-}" ]; then
       envfile="$1"
       nodename=$(basename "$envfile" .env)
       if [ -n "$TELEMETRY_HOST" ]; then
-          uv run jam --env "$envfile" --telemetry "$TELEMETRY_HOST" > "/app/logs/${nodename}.log" 2>&1 &
+          "$VENV_BIN/jam" --env "$envfile" --telemetry "$TELEMETRY_HOST" > "/app/logs/${nodename}.log" 2>&1 &
       else
-          uv run jam --env "$envfile" > "/app/logs/${nodename}.log" 2>&1 &
+          "$VENV_BIN/jam" --env "$envfile" > "/app/logs/${nodename}.log" 2>&1 &
       fi
     }
 
@@ -45,12 +46,13 @@ mkdir -p "$JAM_FUZZ_DATA_PATH"
 mkdir -p "$(dirname "$JAM_FUZZ_SOCK_PATH")"
 
 export JAM_CHAIN_SPEC="$JAM_FUZZ_SPEC"
+export JAM_LOG_DIR="$JAM_FUZZ_DATA_PATH/logs"
 
 if [ -n "${JAM_FUZZ_LOG_LEVEL:-}" ]; then
     export JAM_LOG_LEVEL="$JAM_FUZZ_LOG_LEVEL"
 fi
 
-exec uv run python jam/cli.py \
+exec "$VENV_BIN/python" jam/cli.py \
     --fuzzer \
     --db "$JAM_FUZZ_DATA_PATH" \
     --socket "$JAM_FUZZ_SOCK_PATH" \
