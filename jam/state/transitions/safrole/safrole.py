@@ -84,7 +84,7 @@ class Safrole:
                 except Exception as e:
                     raise SafroleError(
                         SafroleErrorCode.BAD_TICKET_PROOF,
-                        f"Ticket {t} VRF Proof is invalid",
+                        f"Ticket {t.attempt} VRF Proof is invalid",
                     )
                 vrf_ids.append(vrf_op)
                 if i > 0:
@@ -181,12 +181,12 @@ class Safrole:
                 ):
                     raise SafroleError(
                         SafroleErrorCode.BAD_TICKET_PROOF,
-                        f"Ticket {ticket} VRF Proof is invalid",
+                        f"Ticket {ticket.attempt} VRF Proof is invalid",
                     )
             except Exception:
                 raise SafroleError(
                     SafroleErrorCode.BAD_TICKET_PROOF,
-                    f"Ticket {ticket} VRF Proof is invalid",
+                    f"Ticket {ticket.attempt} VRF Proof is invalid",
                 )
 
         # 2. Accumulate entropy

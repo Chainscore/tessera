@@ -182,16 +182,19 @@ class DeltaView:
     def __init__(self, store: StateStorage):
         self.store = store
 
+    @staticmethod
+    def _account_key(key: ServiceId) -> bytes:
+        return bytes(construct_state_key((255, key)))
+
     def __getitem__(self, key: ServiceId):
-        data = self.store.get(bytes(construct_state_key((255, key))))
+        data = self.store.get(self._account_key(key))
         if data is None:
             return None
         return Account(id=key, store=self.store)
 
     def get(self, key: ServiceId, default=None):
-        if key in self:
-            return self[key]
-        return default
+        account = self[key]
+        return default if account is None else account
 
     def __setitem__(self, key: ServiceId, value: AccountData):
         account = Account(id=key, store=self.store)
@@ -204,11 +207,10 @@ class DeltaView:
             account.lookup[k] = v
 
     def __contains__(self, key: ServiceId):
-        return self.store.get(bytes(construct_state_key((255, key)))) is not None
+        return self.store.get(self._account_key(key)) is not None
 
     def __delitem__(self, key: ServiceId):
-        account_s_key = bytes(construct_state_key((255, key)))
-        self.store.delete(account_s_key)
+        self.store.delete(self._account_key(key))
 
 
 class StorageView:

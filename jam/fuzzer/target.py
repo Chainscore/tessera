@@ -6,10 +6,13 @@ for conformance testing. It handles handshakes and processes various message
 types including block imports, state operations, and root queries.
 """
 import json
+import gc
 import socket
 import os
 import sys
 import shutil
+import platform
+from datetime import datetime
 from typing import Optional
 
 from jam.block.block import Block
@@ -43,6 +46,120 @@ def clear_directory_contents(path: str) -> None:
             os.unlink(entry_path)
 
 
+def _read_text(path: str) -> str | None:
+    try:
+        with open(path) as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+
+def _format_bytes(value: int | None) -> str:
+    if value is None:
+        return "unknown"
+    units = ["B", "KiB", "MiB", "GiB", "TiB"]
+    size = float(value)
+    for unit in units:
+        if abs(size) < 1024 or unit == units[-1]:
+            return f"{size:.1f}{unit}" if unit != "B" else f"{int(size)}B"
+        size /= 1024
+    return f"{value}B"
+
+
+def _process_rss() -> str:
+    raw = _read_text("/proc/self/statm")
+    if not raw:
+        return "unknown"
+    parts = raw.split()
+    if len(parts) < 2 or not parts[1].isdigit():
+        return "unknown"
+    try:
+        page_size = os.sysconf("SC_PAGE_SIZE")
+    except (OSError, ValueError):
+        return "unknown"
+    return _format_bytes(int(parts[1]) * page_size)
+
+
+def _host_memory_value(name: str) -> int | None:
+    raw = _read_text("/proc/meminfo")
+    if not raw:
+        return None
+    for line in raw.splitlines():
+        key, _, rest = line.partition(":")
+        if key != name:
+            continue
+        parts = rest.strip().split()
+        if parts and parts[0].isdigit():
+            return int(parts[0]) * 1024
+    return None
+
+
+def _format_cpu_set(cpus: set[int]) -> str:
+    if not cpus:
+        return "unknown"
+    ranges: list[str] = []
+    start = prev = sorted(cpus)[0]
+    for cpu in sorted(cpus)[1:]:
+        if cpu == prev + 1:
+            prev = cpu
+            continue
+        ranges.append(str(start) if start == prev else f"{start}-{prev}")
+        start = prev = cpu
+    ranges.append(str(start) if start == prev else f"{start}-{prev}")
+    return ",".join(ranges)
+
+
+def _filesystem_available(path: str) -> str:
+    try:
+        stats = os.statvfs(path)
+    except OSError:
+        return "unknown"
+    block_size = stats.f_frsize or stats.f_bsize
+    return _format_bytes(block_size * stats.f_bavail)
+
+
+def _print_fuzzer_system_info(db_path: str, socket_path: str, record_path: Optional[str]) -> None:
+    try:
+        affinity = os.sched_getaffinity(0)
+    except AttributeError:
+        affinity = set()
+
+    cgroup_text = _read_text("/proc/1/cgroup") or ""
+    in_container = os.path.exists("/.dockerenv") or any(
+        marker in cgroup_text for marker in ("docker", "kubepods", "containerd")
+    )
+
+    print("[system] fuzzer startup")
+    print(
+        "[system] "
+        f"time={datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} "
+        f"pid={os.getpid()} "
+        f"python={sys.version.split()[0]} "
+        f"platform={platform.system()}-{platform.release()} "
+        f"container={in_container}"
+    )
+    print(
+        "[system] "
+        f"cpu={os.cpu_count()} "
+        f"affinity={_format_cpu_set(affinity)} "
+        f"ram={_format_bytes(_host_memory_value('MemTotal'))} "
+        f"available={_format_bytes(_host_memory_value('MemAvailable'))}"
+    )
+    print(
+        "[system] "
+        f"db={db_path} "
+        f"file_available={_filesystem_available(db_path)} "
+        f"socket={socket_path} "
+        f"recording={record_path or 'disabled'}"
+    )
+    print(
+        "[system] "
+        f"JAM_LOG_LEVEL={os.environ.get('JAM_LOG_LEVEL', 'unset')} "
+        f"PVM_MODE={os.environ.get('PVM_MODE', 'unset')} "
+        f"JAM_FUZZ_STATE_STATS_INTERVAL={os.environ.get('JAM_FUZZ_STATE_STATS_INTERVAL', '10')}"
+    )
+
+
 def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optional[str] = None):
     """
     The main server loop that listens for connections and handles messages.
@@ -57,6 +174,11 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
     json_data = {"blocks": []} if record_enabled else None
     SESSION_ID = 0
     record_index = 0
+    try:
+        state_stats_interval = int(os.environ.get("JAM_FUZZ_STATE_STATS_INTERVAL", "10"))
+    except ValueError:
+        state_stats_interval = 10
+    state_stats_interval = max(0, state_stats_interval)
 
     while True:
         print("V0.7.2")
@@ -82,8 +204,9 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
             block_count = 0
 
             # Initialize state
-            from jam.state.state import state as _state, State
-            state = _state
+            from jam.state.state import state, State
+            from jam.state.storage import StateRecord, StateStorage
+            from jam.block.block_view import viewer
 
             while True:
                 tag, payload = read_message(conn)
@@ -98,29 +221,65 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
 
                 if tag == TAG_IMPORT_BLOCK:
                     block_count += 1
-                    print(f"📦 Received Block #{block_count} ({len(payload)} bytes)")
+                    received_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+                    print(
+                        f"{received_at} Received Block #{block_count} "
+                        f"({len(payload)} bytes, rss={_process_rss()})"
+                    )
 
+                    block = None
+                    accepted_block = False
                     try:
                         block = Block.decode(payload)
 
-                        from jam.block.block_view import viewer
                         viewer.record_block(block, settings.main_db)
 
                         if record_enabled and json_data:
                             json_data["blocks"].append(block.to_json())
+                        transition_start = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+                        print(">> Starting Block transition", transition_start)
                         valid_block = State._force_transition(block, False, True)
+                        transition_end = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+                        print(">> Block transition complete", transition_end)
                         if valid_block:
-                            post_state = State.load(block.header.hash())
-                            send_message(conn, TAG_STATE_ROOT, post_state.root)
+                            accepted_block = True
+                            hh = block.header.hash()
+                            record_data = settings.main_db.get(StateStorage.get_storage_key(hh))
+                            if record_data is None:
+                                state_root = State.load(hh).root
+                            else:
+                                state_root = StateRecord.decode(record_data).roots.curr
+                            send_message(conn, TAG_STATE_ROOT, state_root)
 
                             record_index += 1
                         else:
+                            viewer.discard(block, settings.main_db)
                             send_message(conn, TAG_ERROR, String("Invalid block. Error message unavailable").encode())
                     except Exception as e:
+                        if block is not None and not accepted_block:
+                            viewer.discard(block, settings.main_db)
                         print(f"❌ Block processing failed: {e}", file=sys.stderr)
                         # Send Error message for protocol-defined failures
                         error_msg = ErrorMessage(message=String(f"Block import failed: {str(e)}"))
                         send_message(conn, TAG_ERROR, error_msg.encode())
+                    finally:
+                        if os.environ.get("JAM_FUZZ_VISUALIZE") == "1":
+                            viewer.visualize()
+
+                        log_stats = state_stats_interval and block_count % state_stats_interval == 0
+                        ended_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+                        print(f"{ended_at} Finished Block #{block_count}")
+                        if log_stats:
+                            gc.collect()
+                            stats = State.instance_stats()
+                            print(
+                                f"{ended_at} [state] "
+                                f"block={block_count} "
+                                f"live={stats['live']} "
+                                f"created={stats['created']} "
+                                f"destroyed={stats['destroyed']} "
+                                f"rss={_process_rss()}"
+                            )
 
                 elif tag == TAG_INITIALIZE:
                     print(f"🔧 Received Initialize command ({len(payload)} bytes)")
@@ -217,11 +376,11 @@ async def run_fuzzer_target(
         record_path: Optional path to record session data
     """
     
-    # Clean up and setup database contents without removing the mounted root.
-    clear_directory_contents(db_path)
-    
+    os.makedirs(db_path, exist_ok=True)
+
     from jam.log_setup import setup_logging
     setup_logging("default", "fuzzer-target")
+    _print_fuzzer_system_info(db_path, socket_path, record_path)
 
     # Ensure the socket does not already exist
     if os.path.exists(socket_path):
@@ -248,6 +407,4 @@ async def run_fuzzer_target(
         sock.close()
         if os.path.exists(socket_path):
             os.remove(socket_path)
-        if os.path.exists(db_path):
-            clear_directory_contents(db_path)
         print("🧹 Cleanup complete.")

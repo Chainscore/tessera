@@ -4,7 +4,7 @@ import time
 from jam.block.block_view import Heads
 from jam.log_setup import block_logger as logger
 from rockstore import RockStore
-from jam.models.protocol.crypto import Hash
+from jam.models.protocol.crypto import Hash, HeaderHash
 from jam.block import Block
 from jam.api.rpc.subscription_handlers import subscribe_finalized_block
 from jam.telemetry import emit_event
@@ -27,19 +27,16 @@ class Finality:
     HEADS_KEY = bytes(Hash.blake2b(b"LATEST_HEADS"))
     META_KEY = bytes(Hash.blake2b(b"BLOCK_META"))
 
+    FINALITY_CONFIRMATION_DEPTH = 2
+
     @classmethod
     def finalise(cls, block: Block, kv: RockStore, initial: bool = True, sch_ts: int = 18):
         """Finalizes block and updates Block View."""
 
         header_hash = block.header.hash()
 
-        if initial:
-            logger.info(f"Finalized {header_hash.encode().hex()[0:16]}...")
-            kv.put(cls.FINAL_KEY, header_hash.encode())
-        else:
-            time.sleep(sch_ts)
-            logger.info(f"Finalized {header_hash.encode().hex()[0:16]}...")
-            kv.put(cls.FINAL_KEY, header_hash.encode())
+        logger.info(f"Finalized {header_hash.encode().hex()[0:16]}...")
+        kv.put(cls.FINAL_KEY, header_hash.encode())
 
         emit_event(FinalizedBlockChanged(slot=U32(block.header.slot), hash=Bytes32(header_hash.encode())))
         
@@ -52,6 +49,52 @@ class Finality:
         kv.put(ts_key, header_hash)
         from jam.block.block_view import viewer
         viewer.finalize(block, kv)
+
+    @classmethod
+    def advance_finalized(cls, head_block: Block, kv: RockStore, depth: int = None):
+        """Finalize the ancestor `depth` blocks behind `head_block`, settling its
+        state into the base store and pruning losing forks. Advance-forward-only."""
+        import jam.state.state as state_mod
+        from jam.block.block_view import viewer
+
+        if depth is None:
+            depth = cls.FINALITY_CONFIRMATION_DEPTH
+
+        target = head_block
+        for _ in range(depth):
+            parent_hh = target.header.parent
+            if parent_hh == HeaderHash(32):
+                return
+            parent_block = Block.load(parent_hh, kv)
+            if parent_block is None:
+                return
+            target = parent_block
+
+        f_hh = target.header.hash()
+
+        current_final = cls.load_final(kv)
+        if current_final is None:
+            return
+        if f_hh == current_final.header.hash():
+            return
+        if int(target.header.slot) <= int(current_final.header.slot):
+            return
+
+        if viewer.load_ghost(f_hh) is None:
+            return
+
+        base = state_mod.state.store
+        updates, _final_root = base.load_cache(f_hh, apply_trie=True)
+        for k, v in updates.items():
+            try:
+                if v is None:
+                    base._DB.delete(k)
+                else:
+                    base._DB.put(k, v)
+            except Exception:
+                pass
+
+        cls.finalise(target, kv, initial=True)
 
     @classmethod
     def set_head(cls, block: Block, kv: RockStore):

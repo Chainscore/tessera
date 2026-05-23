@@ -11,6 +11,10 @@ from jam.log_setup import logger
 from jam.models.protocol.crypto import StateRoot, HeaderHash, Hash
 from jam.utils.trie.merkle import StateTrie
 
+Bytes31 = Bytes[31]
+Bytes32 = Bytes[32]
+_MISSING = object()
+
 
 @structure
 class Updates:
@@ -24,7 +28,7 @@ class Roots:
     curr: StateRoot
 
 
-class StateUpdates(Dictionary[Bytes[31], Updates]): ...
+class StateUpdates(Dictionary[Bytes31, Updates]): ...
 
 
 @structure
@@ -118,13 +122,13 @@ class StateStorage:
         _updates = {}
 
         # Exit if block does not exist in our history
-        target_block = Block.load(hh, kv)
-        if target_block is None:
+        target_header = Block.load_header(hh, kv)
+        if target_header is None:
             return _updates, None
 
         # Fetch sync direction.
         # 1 for Ahead of finality. 0 for Behind of finality.
-        ahead = target_block.header.slot >= finalized_block.header.slot
+        ahead = target_header.slot >= finalized_block.header.slot
 
         if ahead:
             head_from = hh
@@ -148,15 +152,15 @@ class StateStorage:
 
             records.append(StateRecord.decode(data))
 
-            block = Block.load(curr_head, kv)
-            if block is None:
+            parent_hash = Block.load_parent_hash(curr_head, kv)
+            if parent_hash is None:
                 raise JamError("Block missing for header hash:", curr_head.hex())
 
             # Stop if we've reached genesis (parent is zero hash)
-            if block.header.parent == HeaderHash(32):
+            if parent_hash == HeaderHash(32):
                 break
 
-            curr_head = block.header.parent
+            curr_head = parent_hash
 
         if ahead:
             records.reverse()
@@ -181,7 +185,7 @@ class StateStorage:
                     if normalized_v is None:
                         trie_deletes.append(Bytes(k))
                     else:
-                        trie_updates[Bytes[32](k)] = Bytes(normalized_v)
+                        trie_updates[Bytes32(k)] = Bytes(normalized_v)
 
             # Apply the cache and verify state root
             if apply_trie and self._TRIE is not None:
@@ -220,8 +224,10 @@ class StateStorage:
         trie_deletes = []
 
         if hh:
-            block = Block.load(hh, kv)
-            previous_updates, _ = self.load_cache(block.header.parent, False)
+            parent_hash = Block.load_parent_hash(hh, kv)
+            if parent_hash is None:
+                raise JamError("Block missing for header hash:", hh.hex())
+            previous_updates, _ = self.load_cache(parent_hash, False)
         else:
             previous_updates = {}
 
@@ -232,7 +238,7 @@ class StateStorage:
             if k in previous_updates and previous_updates[k] == v:
                 continue
 
-            stored_key = Bytes[31](k)
+            stored_key = Bytes31(k)
 
             if kv and hh:
                 updates = Updates(
@@ -244,7 +250,7 @@ class StateStorage:
             if v is None:
                 trie_deletes.append(Bytes(k))
             else:
-                trie_updates[Bytes[32](k)] = Bytes(v)
+                trie_updates[Bytes32(k)] = Bytes(v)
 
         # Batch process trie updates for better performance
         if trie_updates:
@@ -300,8 +306,10 @@ class StateStorage:
             self._TRIE.update(Bytes(key_bytes), Bytes(value_bytes))
 
     def get(self, key_bytes: bytes, fill_cache: bool = True, skip_cache=False) -> bytes | None:
-        if key_bytes in self._updates.keys() and not skip_cache:
-            return self._updates[key_bytes]
+        if not skip_cache:
+            cached = self._updates.get(key_bytes, _MISSING)
+            if cached is not _MISSING:
+                return cached
         return self._DB.get(key_bytes, fill_cache)
 
     def delete(self, key_bytes: bytes, sync=False):

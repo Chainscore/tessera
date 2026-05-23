@@ -57,7 +57,7 @@ class Reporting:
         known_packages = set(known_packages)
         for epoch_queue in pre_omega:
             for queue_el in epoch_queue:
-                known_packages.update(queue_el.report.context.prerequisites)
+                known_packages.add(queue_el.report.package_spec.hash)
         for deps in pre_xi:
             known_packages.update(deps)
 

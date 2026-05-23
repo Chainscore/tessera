@@ -27,9 +27,7 @@ class Preimages:
 
         # Go through each preimage in the block
         for preimage in block.extrinsic.preimages:
-            # Find the account
-            account = state.delta[preimage.requester]
-            # If the preimage to add does not have lookup metadata, throw unneeded error
+            account = pre_state.delta[preimage.requester]
             hashed_blob = Hash.blake2b(preimage.blob)
             lookup_key = LookupTable(hash=hashed_blob, length=BlobLength(len(preimage.blob)))
 
@@ -46,10 +44,11 @@ class Preimages:
             hashed_blob = Hash.blake2b(preimage.blob)
             lookup_key = LookupTable(Bytes[32](hashed_blob), BlobLength(len(preimage.blob)))
 
-            account.preimages[hashed_blob] = preimage.blob
-            metadata = account.lookup[lookup_key]
-            metadata.append(block.header.slot)
-            account.lookup[lookup_key] = metadata
+            metadata = account.lookup.get(lookup_key)
+            if metadata is not None:
+                account.preimages[hashed_blob] = preimage.blob
+                metadata.append(block.header.slot)
+                account.lookup[lookup_key] = metadata
             if preimage.requester not in pi.services:
                 pi.services[preimage.requester] = ServiceStat.empty()
             curr_service_stat = pi.services[preimage.requester]

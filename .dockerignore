@@ -12,3 +12,14 @@ polkajam
 logs/
 *.swp
 .DS_Store
+.claude/
+.codex/
+.serena/
+.docker-fuzz-data/
+.tmpjam/
+.tmpjam-*/
+test-analysis/
+test-logs/
+PERF_HANDOFF.md
+*.log
+

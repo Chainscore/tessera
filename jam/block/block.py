@@ -38,7 +38,34 @@ class Block:
 
     @staticmethod
     def genesis(path="dev-spec.json") -> "Block":
-        return Block(header=Header.genesis(path), extrinsic=Extrinsic.empty())
+        try:
+            return Block(header=Header.genesis(path), extrinsic=Extrinsic.empty())
+        except TypeError:
+            from jam.block.header import EpochMark, OffendersMark, TicketsMark
+            from jam.models import (
+                BandersnatchVrfSignature,
+                OpaqueHash,
+                StateRoot,
+                TimeSlot,
+                ValidatorIndex,
+            )
+            from tsrkit_types import Null
+
+            return Block(
+                header=Header(
+                    parent=HeaderHash(32),
+                    parent_state_root=StateRoot(32),
+                    extrinsic_hash=OpaqueHash(32),
+                    slot=TimeSlot(0),
+                    epoch_mark=EpochMark(Null),
+                    tickets_mark=TicketsMark(Null),
+                    author_index=ValidatorIndex(0),
+                    entropy_source=BandersnatchVrfSignature(96),
+                    offenders_mark=OffendersMark([]),
+                    seal=BandersnatchVrfSignature(96),
+                ),
+                extrinsic=Extrinsic.empty(),
+            )
 
     def load_parent(self, db: RockStore) -> "Block":
         """
@@ -59,6 +86,29 @@ class Block:
         if data is None:
             return None
         return cls.decode(data)
+
+    @classmethod
+    def load_header(cls, header_hash: HeaderHash, db: RockStore) -> Header | None:
+        if header_hash == bytes(32):
+            return Header.genesis()
+
+        data = db.get(cls.get_storage_key_block(header_hash))
+        if data is None:
+            return None
+
+        header, _ = Header.decode_from(data)
+        return header
+
+    @classmethod
+    def load_parent_hash(cls, header_hash: HeaderHash, db: RockStore) -> HeaderHash | None:
+        if header_hash == bytes(32):
+            return HeaderHash(32)
+
+        data = db.get(cls.get_storage_key_block(header_hash))
+        if data is None:
+            return None
+
+        return HeaderHash(data[:32])
 
     @classmethod
     def load_w_ts(cls, ts: TimeSlot, db: RockStore) -> "Block" | List["Block"]:

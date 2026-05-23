@@ -2,17 +2,23 @@ from tsrkit_types.bytes import Bytes
 # from Crypto.Hash import keccak
 from sha3 import keccak_256
 
-# Public key types
-BandersnatchPublic = Bytes[32]
-Ed25519Public = Bytes[32]
-BlsPublic = Bytes[144]
+Bytes32 = Bytes[32]
+Bytes64 = Bytes[64]
+Bytes96 = Bytes[96]
+Bytes144 = Bytes[144]
+Bytes784 = Bytes[784]
 
-BandersnatchRingRoot = Bytes[144]
+# Public key types
+BandersnatchPublic = Bytes32
+Ed25519Public = Bytes32
+BlsPublic = Bytes144
+
+BandersnatchRingRoot = Bytes144
 
 # Signature types
-Ed25519Signature = Bytes[64]
-BandersnatchVrfSignature = Bytes[96]
-BandersnatchRingVrfSignature = Bytes[784]
+Ed25519Signature = Bytes64
+BandersnatchVrfSignature = Bytes96
+BandersnatchRingVrfSignature = Bytes784
 
 from hashlib import blake2b, sha256, sha512, sha3_256
 import os
@@ -26,7 +32,7 @@ class Hash:
     _cache_max_size = 1000
 
     @staticmethod
-    def blake2b(data: bytes, digest_size: int = 32) -> Bytes[32]:
+    def blake2b(data: bytes, digest_size: int = 32) -> Bytes32:
         """Blake2b hash function with caching"""
 
         if not isinstance(data, bytes):
@@ -37,7 +43,7 @@ class Hash:
             if data in Hash._blake2b_cache:
                 return Hash._blake2b_cache[data]
 
-            result = Bytes[32](blake2b(data, digest_size=digest_size).digest())
+            result = Bytes32(blake2b(data, digest_size=digest_size).digest())
 
             # Simple cache eviction when full
             if len(Hash._blake2b_cache) >= Hash._cache_max_size:
@@ -49,7 +55,7 @@ class Hash:
             Hash._blake2b_cache[data] = result
             return result
         else:
-            return Bytes[32](blake2b(data, digest_size=digest_size).digest())
+            return Bytes32(blake2b(data, digest_size=digest_size).digest())
 
     @staticmethod
     def clear_cache():
@@ -57,54 +63,54 @@ class Hash:
         Hash._blake2b_cache.clear()
 
     @staticmethod
-    def sha256(data: bytes) -> Bytes[32]:
+    def sha256(data: bytes) -> Bytes32:
         """SHA256 hash function"""
         if not isinstance(data, bytes):
             data = bytes(data)
-        return Bytes[32](sha256(data).digest())
+        return Bytes32(sha256(data).digest())
 
     @staticmethod
-    def sha512(data: bytes) -> Bytes[64]:
+    def sha512(data: bytes) -> Bytes64:
         """SHA512 hash function"""
         if not isinstance(data, bytes):
             data = bytes(data)
-        return Bytes[64](sha512(data).digest())
+        return Bytes64(sha512(data).digest())
 
     @staticmethod
-    def sha3256(data: bytes) -> Bytes[32]:
+    def sha3256(data: bytes) -> Bytes32:
         """SHA3_256 hash function"""
         if not isinstance(data, bytes):
             data = bytes(data)
-        return Bytes[32](sha3_256(data).digest())
+        return Bytes32(sha3_256(data).digest())
 
     @staticmethod
-    def keccak256(data: bytes) -> Bytes[32]:
+    def keccak256(data: bytes) -> Bytes32:
         """Keccak-256 hash function (optimized)"""
         if not isinstance(data, bytes):
             data = bytes(data)
-        return Bytes[32](keccak_256(data).digest())
+        return Bytes32(keccak_256(data).digest())
 
 
 # Hash types
-class HeaderHash(Bytes[32]):
+class HeaderHash(Bytes32):
     ...
 
 
-class StateRoot(Bytes[32]):
+class StateRoot(Bytes32):
     ...
 
 
-class BeefyRoot(Bytes[32]):
+class BeefyRoot(Bytes32):
     ...
 
 
-class OpaqueHash(Bytes[32]):
+class OpaqueHash(Bytes32):
     ...
 
 
-class Entropy(Bytes[32]):
+class Entropy(Bytes32):
     ...
 
 
-class WorkReportHash(Bytes[32]):
+class WorkReportHash(Bytes32):
     ...

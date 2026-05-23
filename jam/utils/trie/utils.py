@@ -6,8 +6,12 @@ from jam.models.protocol.crypto import Hash
 from tsrkit_types.bytes import Bytes
 
 
-ZERO_HASH = Bytes[32]([0] * 32)
-NodeHash = Bytes[32]
+Bytes32 = Bytes[32]
+Bytes64 = Bytes[64]
+Uint8 = Uint[8]
+
+ZERO_HASH = Bytes32([0] * 32)
+NodeHash = Bytes32
 
 
 # Allowed types for DB node objects.
@@ -18,7 +22,7 @@ class NodeType(Enum):
     EMPTY = 3
 
 
-def encode_branch(left_hash: Bytes[32] = ZERO_HASH, right_hash: Bytes[32] = ZERO_HASH) -> Bytes[64]:
+def encode_branch(left_hash: Bytes32 = ZERO_HASH, right_hash: Bytes32 = ZERO_HASH) -> Bytes64:
     """Encode a branch node (B function in D.3)
 
     For a branch, we:
@@ -35,7 +39,7 @@ def encode_branch(left_hash: Bytes[32] = ZERO_HASH, right_hash: Bytes[32] = ZERO
     result[1:32] = left_hash[1:]     # Copy rest of left hash
     result[32:64] = right_hash       # Copy right hash
     
-    return Bytes[64](bytes(result))
+    return Bytes64(bytes(result))
 
 
 def encode_leaf(key: Bytes, value: Bytes) -> Bytes[64]:
@@ -62,12 +66,10 @@ def encode_leaf(key: Bytes, value: Bytes) -> Bytes[64]:
         # Store key and value
         val_bits = value.to_bits() + [False] * (256 - len(value) * 8)
         # Rest is already zeroed
-        node_bits = (
-            [True, False] + Bytes(Uint[8](len(value)).encode()).to_bits()[2:] + key_bits + val_bits
-        )
-        return Bytes[64].from_bits(node_bits)
+        node_bits = [True, False] + Bytes(Uint8(len(value)).encode()).to_bits()[2:] + key_bits + val_bits
+        return Bytes64.from_bits(node_bits)
     else:
         # Regular leaf - second bit is 1
         val_bits = Hash.blake2b(bytes(value)).to_bits()
         node_bits = [True, True, False, False, False, False, False, False] + key_bits + val_bits
-        return Bytes[64].from_bits(node_bits)
+        return Bytes64.from_bits(node_bits)

@@ -204,7 +204,7 @@ class GeneralFunctions(INVF):
         a: None | AccountData = None
         if service_index == lookup_key or lookup_key == 2**64 - 1:
             a = service_data
-        elif lookup_key in accounts:
+        else:
             a = accounts[lookup_key]
 
         # Must be able to read the 32-byte hash_addr
@@ -266,7 +266,7 @@ class GeneralFunctions(INVF):
         a: None | AccountData = None
         if service_key == service_index:
             a = service_data
-        elif service_key in accounts:
+        else:
             a = accounts[service_key]
 
         key_start, key_len, o = registers[8 : 8 + 3]
@@ -396,11 +396,14 @@ class GeneralFunctions(INVF):
             target_service = service_index
 
 
-        if target_service > 2**32-1 or target_service not in accounts:
+        if target_service > 2**32-1:
             registers[7] = HostStatus.NONE.value
             return CONTINUE, gas, registers, memory, context
 
         acc: AccountData = accounts[target_service]
+        if acc is None:
+            registers[7] = HostStatus.NONE.value
+            return CONTINUE, gas, registers, memory, context
 
         v = (
             bytes(acc.service.code_hash)

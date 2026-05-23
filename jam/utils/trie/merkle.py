@@ -15,6 +15,14 @@ from jam.models.protocol.crypto import Hash
 from rockstore import RockStore
 from tsrkit_types.bytes import Bytes
 
+Bytes32 = Bytes[32]
+Bytes64 = Bytes[64]
+
+
+def _encoded_key_bit(encoded, bit_index: int) -> int:
+    pos = 8 + bit_index
+    return 1 if (encoded[pos >> 3] & (0x80 >> (pos & 7))) else 0
+
 
 class StateTrie:
     """
@@ -27,47 +35,24 @@ class StateTrie:
     """
 
     # Dictionary mapping a node hash to Node data (encoded data [ba64], bit_index, left and right node hashes)
-    nodes: Dict[Bytes[32], Node]
+    nodes: Dict[Bytes32, Node]
     # Cache the root
-    root_hash: Bytes[32]
+    root_hash: Bytes32
 
     def __init__(self):
         self.nodes = {}
-        self.root_hash = Bytes[32](32)
+        self.root_hash = Bytes32(32)
 
     def __deepcopy__(self, memo):
-        """Custom deepcopy to avoid UTF-8 decoding issues with Bytes objects."""
         new_trie = StateTrie.__new__(StateTrie)
         memo[id(self)] = new_trie
-        
-        # Copy root_hash - create new Bytes from raw bytes
-        new_trie.root_hash = Bytes[32](bytes(self.root_hash))
-        
-        # Copy nodes dictionary with proper Bytes handling
-        new_nodes = {}
-        for key, node in self.nodes.items():
-            # Create new Bytes key from raw bytes
-            new_key = Bytes[32](bytes(key))
-            
-            # Create new Node with copied Bytes
-            new_encoded = Bytes[64](bytes(node.encoded))
-            new_left = Bytes[32](bytes(node.left)) if node.left is not None else None
-            new_right = Bytes[32](bytes(node.right)) if node.right is not None else None
-            
-            new_node = Node(
-                encoded=new_encoded,
-                bit_index=node.bit_index,
-                left=new_left,
-                right=new_right,
-            )
-            new_nodes[new_key] = new_node
-        
-        new_trie.nodes = new_nodes
+        new_trie.root_hash = Bytes32(bytes(self.root_hash))
+        new_trie.nodes = dict(self.nodes)
         return new_trie
 
     def _merkelize_recursive(
-        self, leaves: List[Bytes[64]], bit_index: int
-    ) -> Tuple[NodeHash, Bytes[64]]:
+        self, leaves: List[Bytes64], bit_index: int
+    ) -> Tuple[NodeHash, Bytes64]:
         """
         Core recursive routine to build a balanced binary Merkle trie:
         - Splits items along bit_index into left/right subsets.
@@ -80,7 +65,7 @@ class StateTrie:
 
         # Empty subtree => return ZERO_HASH and a 64-byte zero encoding
         if not leaves:
-            return ZERO_HASH, Bytes[64]([0] * 64)
+            return ZERO_HASH, Bytes64([0] * 64)
 
         # Single-item subtree => leaf
         if len(leaves) == 1:
@@ -149,7 +134,7 @@ class StateTrie:
         self.nodes.clear()
         self.root_hash = ZERO_HASH
 
-    def update(self, key: Bytes[32], new_value: Bytes) -> NodeHash:
+    def update(self, key: Bytes32, new_value: Bytes) -> NodeHash:
         """
         Update a single leaf value 'new_value' at 'key', then update only
         the branch nodes on its path, rewiring hashes upward to the root.
@@ -164,7 +149,7 @@ class StateTrie:
         )
         return self.root_hash
 
-    def batch_update(self, updates: Dict[Bytes[32], Bytes]) -> NodeHash:
+    def batch_update(self, updates: Dict[Bytes32, Bytes]) -> NodeHash:
         """
         Efficiently update multiple key-value pairs in a single operation.
         
@@ -191,7 +176,7 @@ class StateTrie:
             self.root_hash = self._reconstruct_root(self.root_hash, node)
         return self.root_hash
     
-    def _extract_current_state(self) -> Dict[Bytes[32], Bytes]:
+    def _extract_current_state(self) -> Dict[Bytes32, Bytes]:
         """
         Extract all current key-value pairs from the trie by traversing all leaf nodes.
         This is used for efficient batch updates.
@@ -203,7 +188,7 @@ class StateTrie:
         self._traverse_for_leaves(self.root_hash, state)
         return state
     
-    def _traverse_for_leaves(self, node_hash: NodeHash, state: Dict[Bytes[32], Bytes]) -> None:
+    def _traverse_for_leaves(self, node_hash: NodeHash, state: Dict[Bytes32, Bytes]) -> None:
         """
         Recursively traverse the trie starting from node_hash to find all leaf nodes.
         """
@@ -227,15 +212,15 @@ class StateTrie:
                 # Check the first byte to determine leaf type
                 first_byte = encoded_data[0]
                 if first_byte & 0b11000000 == 0b11000000:  # LEAF_NORMAL (bits 11)
-                    key = Bytes[32](encoded_data[1:33])
+                    key = Bytes32(encoded_data[1:33])
                     value = Bytes(encoded_data[33:])
                     state[key] = value
                 elif first_byte & 0b11000000 == 0b10000000:  # LEAF_EMBEDDED (bits 10)
-                    key = Bytes[32](encoded_data[1:33])
+                    key = Bytes32(encoded_data[1:33])
                     value = Bytes(encoded_data[33:])
                     state[key] = value
 
-    def _reconstruct_root(self, root: Bytes[32], node: Node, bit_index=0) -> NodeHash:
+    def _reconstruct_root(self, root: Bytes32, node: Node, bit_index=0) -> NodeHash:
         # Recompute branch nodes in reverse path
         current_node = self.nodes.get(root)
         # Empty slot
@@ -246,7 +231,7 @@ class StateTrie:
         # Found a leaf
         elif current_node.type is not NodeType.BRANCH:
             # If updating an existing key with a new value
-            if current_node.key_bits_248 == node.key_bits_248:
+            if bytes(current_node.encoded)[1:32] == bytes(node.encoded)[1:32]:
                 nh = NodeHash(Hash.blake2b(node.encoded))
                 self.nodes[nh] = node
                 return nh
@@ -257,17 +242,19 @@ class StateTrie:
         # Branch [update]
         else:
             # if 0, go left
-            if node.key_bits_248[bit_index] == 0:
-                current_node.left = self._reconstruct_root(
+            if _encoded_key_bit(node.encoded, bit_index) == 0:
+                new_left = self._reconstruct_root(
                     current_node.left, node, bit_index=bit_index + 1
                 )
+                new_right = current_node.right
             else:
-                current_node.right = self._reconstruct_root(
+                new_left = current_node.left
+                new_right = self._reconstruct_root(
                     current_node.right, node, bit_index=bit_index + 1
                 )
 
             new_encoded = encode_branch(
-                current_node.left or ZERO_HASH, current_node.right or ZERO_HASH
+                new_left or ZERO_HASH, new_right or ZERO_HASH
             )
             # Cache the encoded data before hashing to reduce duplicate computations
             encoded_bytes = bytes(new_encoded)
@@ -276,13 +263,13 @@ class StateTrie:
             self.nodes[new_parent_hash] = Node(
                 encoded=new_encoded,
                 bit_index=bit_index,
-                left=current_node.left,
-                right=current_node.right,
+                left=new_left,
+                right=new_right,
             )
 
             return new_parent_hash
 
-    def get_boundaries(self, key: Bytes[31]) -> TypedVector[Bytes[64]]:
+    def get_boundaries(self, key: Bytes[31]) -> TypedVector[Bytes64]:
         """
         Provides a list of "boundary" nodes, covering the path from the root to the given key.
         The list should include only nodes on these paths, and should not include duplicate nodes.
@@ -295,7 +282,7 @@ class StateTrie:
         """
         key_in_ques = self.root_hash
         bit_index = 0
-        ret = TypedVector[Bytes[64]]([self.nodes[key_in_ques].encoded])
+        ret = TypedVector[Bytes64]([self.nodes[key_in_ques].encoded])
 
         while self.nodes[key_in_ques].encoded[1:32] != key:
             # Fast bit check without full conversion
@@ -314,7 +301,7 @@ class StateTrie:
             bit_index += 1
         return ret
 
-    def delete(self, key: Bytes[32]) -> NodeHash:
+    def delete(self, key: Bytes32) -> NodeHash:
         """
         Remove the leaf with `key` from the trie.
         • If the key is absent, the trie is left unchanged and the current
@@ -334,7 +321,7 @@ class StateTrie:
         return self.root_hash
 
     def _delete_recursive(
-        self, subtree_hash: Bytes[32], key_bits: List[int], bit_index: int
+        self, subtree_hash: Bytes32, key_bits: List[int], bit_index: int
     ) -> Tuple[NodeHash, bool]:
         """
         Returns (new_subtree_hash, removed_flag).
@@ -392,7 +379,7 @@ class StateTrie:
         return new_branch_hash, True
 
     # Helper: tiny inline leaf check to avoid an extra Node lookup
-    def _is_leaf(self, h: Bytes[32]) -> bool:
+    def _is_leaf(self, h: Bytes32) -> bool:
         if h == ZERO_HASH:
             return False
         n = self.nodes.get(h)
