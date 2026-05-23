@@ -10,8 +10,7 @@ from jam.network.connection import NodeConnection
 from jam.block.extrinsics.tickets import TicketEnvelope
 from jam.state.state import State
 from jam.utils.constants import VALIDATOR_COUNT, EPOCH_LENGTH
-from dot_ring import RingVRF, Bandersnatch
-from dot_ring.vrf.ring.ring_root import RingRoot
+from dot_ring import Bandersnatch, RingRoot, RingVRF
 from jam.utils.constants import X
 
 
@@ -148,11 +147,15 @@ class SafroleTicketProxyDistribution(NetworkProtocol):
             eta = state.eta[2]
             vals = [bytes(k.bandersnatch) for k in state.gamma.p]
             attempt = U8(data.epoch_ticket.ticket.attempt)
-            
-            ring_root = RingVRF[Bandersnatch].construct_ring_root(vals)
+
+            from jam.state.transitions.safrole.safrole import Safrole
+
+            ring = Safrole.build_ring(vals)
+            ring_root = RingRoot.from_bytes(bytes(state.gamma.z))
             verification = ring_proof.verify(
                 X.TICKET.value + eta + bytes([attempt]),
                 b"",
+                ring,
                 ring_root,
             )
             # check if you are supposed to be a proxy and ticket is valid

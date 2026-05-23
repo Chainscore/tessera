@@ -33,7 +33,7 @@ dependencies = [
     "deepdiff>=8.6.1",
     "pre-commit>=4.0.1",
     "safe-pysha3>=1.0.5",
-    "dot-ring>=0.1.6",
+    "dot-ring>=0.1.7",
     "gmpy2>=2.2.2",
     "tsrkit-rs>=0.1.1",
 ]

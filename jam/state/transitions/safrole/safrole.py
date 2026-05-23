@@ -1,5 +1,4 @@
 from copy import copy
-from typing import List
 
 from jam.models.protocol.ticket import TicketBody
 from .errors import SafroleError, SafroleErrorCode
@@ -22,7 +21,6 @@ from jam.utils.constants import (
 )
 from jam.models.protocol.crypto import (
     BandersnatchPublic,
-    BandersnatchRingVrfSignature,
     BlsPublic,
     Ed25519Public,
     Hash,
@@ -30,15 +28,36 @@ from jam.models.protocol.crypto import (
 )
 from jam.models.state.gamma import GammaP, GammaSFallback, GammaA, GammaZ
 from jam.models.protocol.validators import ValidatorData, ValidatorMetadata
-# dot_ring is used for Ring VRF operations
-from dot_ring import RingVRF, Bandersnatch, IETF_VRF
-from dot_ring.vrf.ring.ring_root import RingRoot
+from dot_ring import Bandersnatch, Ring, RingRoot, RingVRF
+from dot_ring.ring_proof.params import RingProofParams
 
 
 class Safrole:
+    SECRET_T_ROWS = 256
+
     @staticmethod
-    def compute_ring_root(keys: List[BandersnatchPublic]) -> GammaZ:
-        ring_root = RingVRF[Bandersnatch].construct_ring_root(keys)
+    def ring_params_for_key_count(key_count: int) -> RingProofParams:
+        params = RingProofParams()
+        if key_count <= params.max_ring_size:
+            return params
+
+        min_domain_size = key_count + Safrole.SECRET_T_ROWS + params.padding_rows
+        domain_size = 1 << (min_domain_size - 1).bit_length()
+        return RingProofParams(domain_size=domain_size, max_ring_size=key_count)
+
+    @staticmethod
+    def build_ring(keys: list[bytes]) -> Ring:
+        key_bytes = [bytes(key) for key in keys]
+        return Ring(key_bytes, Safrole.ring_params_for_key_count(len(key_bytes)))
+
+    @staticmethod
+    def build_ring_root(keys: list[bytes]) -> tuple[Ring, RingRoot]:
+        ring = Safrole.build_ring(keys)
+        return ring, RingRoot.from_ring(ring, ring.params)
+
+    @staticmethod
+    def compute_ring_root(keys: list[BandersnatchPublic]) -> GammaZ:
+        _, ring_root = Safrole.build_ring_root(keys)
         return GammaZ(ring_root.to_bytes())
 
     @staticmethod
@@ -111,7 +130,7 @@ class Safrole:
                 "Tickets are not allowed after TICKET_SUBMISSION_END",
             )
 
-        ring_root = None
+        ring = None
 
         # 4. Epoch transition
         if new_epoch > old_epoch:
@@ -119,7 +138,6 @@ class Safrole:
             state.lambda_ = Lambda_(pre_state.kappa)
             state.kappa = Kappa(gamma.p)
             filtered_validators = []
-            pubkeys = []
 
             for k in pre_state.iota:
                 if k.ed25519 in state.psi.offenders:
@@ -132,11 +150,9 @@ class Safrole:
                             metadata=ValidatorMetadata.decode(bytes(128)),
                         )
                     )
-                    pubkeys.append(bytes(32))
                 else:
                     # Not an offender, keep the original validator data
                     filtered_validators.append(k)
-                    pubkeys.append(bytes(k.bandersnatch))
 
             gamma.p = GammaP(filtered_validators)
 
@@ -165,11 +181,13 @@ class Safrole:
             # if pre_state.gamma.p != pre_state.kappa:
             # if pre_state.gamma.p != state.gamma.p:
             pubkeys = [bytes(k.bandersnatch) for k in gamma.p]
-            ring_root = RingVRF[Bandersnatch].construct_ring_root(pubkeys)
+            ring, ring_root = Safrole.build_ring_root(pubkeys)
             gamma.z = GammaZ(ring_root.to_bytes())
 
         # Get ring root for ticket validation (may be from state if no epoch transition)
-        ring_root = RingRoot.from_bytes(gamma.z)
+        if ring is None:
+            ring = Safrole.build_ring([bytes(k.bandersnatch) for k in gamma.p])
+        ring_root = RingRoot.from_bytes(bytes(gamma.z))
 
         for ticket in tickets:
             try:
@@ -177,6 +195,7 @@ class Safrole:
                 if not vrf.verify(
                     X.TICKET.value + eta[2] + bytes([ticket.attempt]),
                     b"",
+                    ring,
                     ring_root,
                 ):
                     raise SafroleError(
