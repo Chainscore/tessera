@@ -185,6 +185,7 @@ class Reporting:
             for wp_hash, exports_root in x.reported.items():
                 beta_wp_hashes.add(wp_hash)
                 recent_exports_roots[wp_hash] = exports_root
+        dependency_packages = wp_hash_set | beta_wp_hashes
 
         rho_package_hashes = set()
         for pending_wr in pre_state.rho:
@@ -256,11 +257,7 @@ class Reporting:
                 *context.prerequisites,
             ]
             for prereq in all_prerequisites:
-                if (
-                    prereq not in wp_hash_set
-                    and prereq not in beta_wp_hashes
-                    and prereq not in known_packages
-                ):
+                if prereq not in dependency_packages:
                     raise ReportingError(
                         ReportingErrorCode.DEPENDENCY_MISSING,
                         "prerequisite's hash should match the package_specification's hash of any of the reports",
