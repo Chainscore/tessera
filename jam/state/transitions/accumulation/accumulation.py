@@ -39,7 +39,8 @@ if TYPE_CHECKING:
 
 
 def _timing(label: str) -> None:
-    print(label, datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+    # print(label, datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+    pass
 
 
 class Accumulation:

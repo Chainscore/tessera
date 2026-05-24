@@ -66,7 +66,8 @@ from dot_ring import RingVRF, Bandersnatch, IETF_VRF
 
 
 def _timing(label: str) -> None:
-    print(label, datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+    # print(label, datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+    pass
 
 
 class State:

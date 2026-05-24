@@ -174,7 +174,32 @@ class StateTrie:
                 bit_index=0,
             )
             self.root_hash = self._reconstruct_root(self.root_hash, node)
+        # self.prune_unreachable()
         return self.root_hash
+
+    def prune_unreachable(self) -> None:
+        if self.root_hash == ZERO_HASH:
+            self.nodes.clear()
+            return
+
+        reachable = set()
+        stack = [self.root_hash]
+        while stack:
+            node_hash = stack.pop()
+            if node_hash == ZERO_HASH or node_hash in reachable:
+                continue
+            node = self.nodes.get(node_hash)
+            if node is None:
+                continue
+            reachable.add(node_hash)
+            if node.type == NodeType.BRANCH:
+                if node.left is not None:
+                    stack.append(node.left)
+                if node.right is not None:
+                    stack.append(node.right)
+
+        if len(reachable) != len(self.nodes):
+            self.nodes = {node_hash: self.nodes[node_hash] for node_hash in reachable}
     
     def _extract_current_state(self) -> Dict[Bytes32, Bytes]:
         """

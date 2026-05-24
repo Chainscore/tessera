@@ -268,6 +268,7 @@ class BlockView:
             if child.header != ghost_block.header:
                 self._detach_subtree(child, kv)
 
+        ghost_block.detach_from_parent()
         del pre_final
 
         self.final = ghost_block

@@ -29,6 +29,7 @@ from jam.models.protocol.crypto import (
 from jam.models.state.gamma import GammaP, GammaSFallback, GammaA, GammaZ
 from jam.models.protocol.validators import ValidatorData, ValidatorMetadata
 from dot_ring import Bandersnatch, Ring, RingRoot, RingVRF
+from dot_ring.ring_proof.constants import PaddingPoint
 from dot_ring.ring_proof.params import RingProofParams
 
 
@@ -48,7 +49,12 @@ class Safrole:
     @staticmethod
     def build_ring(keys: list[bytes]) -> Ring:
         key_bytes = [bytes(key) for key in keys]
-        return Ring(key_bytes, Safrole.ring_params_for_key_count(len(key_bytes)))
+        params = Safrole.ring_params_for_key_count(len(key_bytes))
+        ring = Ring([], params)
+        for i, key in enumerate(key_bytes):
+            point = params.cv.point.string_to_point(key)
+            ring.nm_points[i] = PaddingPoint if isinstance(point, str) else (point.x, point.y)
+        return ring
 
     @staticmethod
     def build_ring_root(keys: list[bytes]) -> tuple[Ring, RingRoot]:

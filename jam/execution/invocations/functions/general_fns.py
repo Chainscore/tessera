@@ -396,14 +396,11 @@ class GeneralFunctions(INVF):
             target_service = service_index
 
 
-        if target_service > 2**32-1:
+        if target_service > 2**32-1 or target_service not in accounts:
             registers[7] = HostStatus.NONE.value
             return CONTINUE, gas, registers, memory, context
 
         acc: AccountData = accounts[target_service]
-        if acc is None:
-            registers[7] = HostStatus.NONE.value
-            return CONTINUE, gas, registers, memory, context
 
         v = (
             bytes(acc.service.code_hash)

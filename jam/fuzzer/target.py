@@ -236,11 +236,11 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
 
                         if record_enabled and json_data:
                             json_data["blocks"].append(block.to_json())
-                        transition_start = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-                        print(">> Starting Block transition", transition_start)
+                        # transition_start = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+                        # print(">> Starting Block transition", transition_start)
                         valid_block = State._force_transition(block, False, True)
-                        transition_end = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-                        print(">> Block transition complete", transition_end)
+                        # transition_end = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+                        # print(">> Block transition complete", transition_end)
                         if valid_block:
                             accepted_block = True
                             hh = block.header.hash()
@@ -270,7 +270,8 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                         ended_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
                         print(f"{ended_at} Finished Block #{block_count}")
                         if log_stats:
-                            gc.collect()
+                            if os.environ.get("JAM_FUZZ_FORCE_GC") == "1":
+                                gc.collect()
                             stats = State.instance_stats()
                             print(
                                 f"{ended_at} [state] "
