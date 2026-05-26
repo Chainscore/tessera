@@ -1,4 +1,5 @@
 from copy import copy
+from functools import lru_cache
 
 from jam.models.protocol.ticket import TicketBody
 from .errors import SafroleError, SafroleErrorCode
@@ -48,7 +49,11 @@ class Safrole:
 
     @staticmethod
     def build_ring(keys: list[bytes]) -> Ring:
-        key_bytes = [bytes(key) for key in keys]
+        return Safrole._build_ring(tuple(bytes(key) for key in keys))
+
+    @staticmethod
+    @lru_cache(maxsize=16)
+    def _build_ring(key_bytes: tuple[bytes, ...]) -> Ring:
         params = Safrole.ring_params_for_key_count(len(key_bytes))
         ring = Ring([], params)
         for i, key in enumerate(key_bytes):
@@ -60,6 +65,11 @@ class Safrole:
     def build_ring_root(keys: list[bytes]) -> tuple[Ring, RingRoot]:
         ring = Safrole.build_ring(keys)
         return ring, RingRoot.from_ring(ring, ring.params)
+
+    @staticmethod
+    @lru_cache(maxsize=16)
+    def ring_root_from_bytes(data: bytes) -> RingRoot:
+        return RingRoot.from_bytes(data)
 
     @staticmethod
     def compute_ring_root(keys: list[BandersnatchPublic]) -> GammaZ:
@@ -101,6 +111,7 @@ class Safrole:
             Safrole.ensure_valid_tickets_count_before_epoch_end(block)
 
             vrf_ids = []
+            parsed_vrfs = []
             for i, t in enumerate(tickets):
                 Safrole.ensure_valid_attempt(t)
                 try:
@@ -112,6 +123,7 @@ class Safrole:
                         f"Ticket {t.attempt} VRF Proof is invalid",
                     )
                 vrf_ids.append(vrf_op)
+                parsed_vrfs.append(ring_proof)
                 if i > 0:
                     Safrole.ensure_tickets_order(vrf_ids[i-1], vrf_op)
 
@@ -193,11 +205,13 @@ class Safrole:
         # Get ring root for ticket validation (may be from state if no epoch transition)
         if ring is None:
             ring = Safrole.build_ring([bytes(k.bandersnatch) for k in gamma.p])
-        ring_root = RingRoot.from_bytes(bytes(gamma.z))
+        ring_root = Safrole.ring_root_from_bytes(bytes(gamma.z))
 
-        for ticket in tickets:
+        parsed_vrfs = parsed_vrfs if ticket_submission_active and count > 0 else []
+
+        for i, ticket in enumerate(tickets):
             try:
-                vrf = RingVRF[Bandersnatch].from_bytes(ticket.signature)
+                vrf = parsed_vrfs[i] if parsed_vrfs else RingVRF[Bandersnatch].from_bytes(ticket.signature)
                 if not vrf.verify(
                     X.TICKET.value + eta[2] + bytes([ticket.attempt]),
                     b"",
@@ -274,10 +288,11 @@ class Safrole:
         """
         # Loop through epoch size
         fallback = []
+        entropy_bytes = bytes(entropy)
         for i in range(EPOCH_LENGTH):
             # Add entropy to encoded4(i)
-            hashed = Hash.blake2b(bytes(entropy) + U32(i).encode())
-            index, _ = U32.decode_from(bytes(Bytes(hashed[:4])))
+            hashed = Hash.blake2b(entropy_bytes + U32(i).encode())
+            index, _ = U32.decode_from(hashed[:4])
             val_key = validators[int(index) % len(validators)].bandersnatch
             fallback.append(val_key)
         return GammaS(GammaSFallback(fallback))

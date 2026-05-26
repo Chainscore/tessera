@@ -162,11 +162,11 @@ class Block:
         )
 
         # HeaderHash -> Block
-        hh_key = self.get_storage_key_block(self.header.hash())
+        hh_key = self.get_storage_key_block(hh)
         db.put(hh_key, block_encoded)
 
         # Return the HeaderHash
-        return HeaderHash(hh)
+        return hh
 
     def validate(self, state, prestate, settings) -> bool:
         return self.header.validate(state, prestate, settings) and self.extrinsic.validate(self.header)

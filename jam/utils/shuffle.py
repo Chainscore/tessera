@@ -1,10 +1,9 @@
 from jam.models.protocol.crypto import Hash
-from tsrkit_types.integers import Uint
-from tsrkit_types.bytes import Bytes
+from tsrkit_types.integers import U32
 from tsrkit_types.sequences import TypedVector
 
 
-def fisher_yates_with_hash(array: TypedVector[Uint[32]], l: int, random_array):
+def fisher_yates_with_hash(array: TypedVector[U32], l: int, random_array):
     """
     Description:
         This function takes three arguments: an array, the length of the array, and a random_array. It shuffles the given array based on the indices provided in random_array and returns the shuffled array.
@@ -34,15 +33,15 @@ def get_random(h, l):
     """
     random = []
     for i in range(l):
-        new_h = h + Uint[32](i // 8).encode()
+        new_h = h + U32(i // 8).encode()
         new_hash = Hash.blake2b(new_h)
         new_hash_slice = new_hash[((4 * i) % 32) : ((4 * i) % 32) + 4]
-        num = Uint[32].decode(bytes(Bytes(new_hash_slice)))
+        num, _ = U32.decode_from(new_hash_slice)
         random.append(num)
     return random
 
 
-def shuffle(h, array: TypedVector[Uint[32]]) -> TypedVector[Uint[32]]:
+def shuffle(h, array: TypedVector[U32]) -> TypedVector[U32]:
     l = len(array)
     if not isinstance(h, bytes):
         h = bytes.fromhex(h)
@@ -50,4 +49,4 @@ def shuffle(h, array: TypedVector[Uint[32]]) -> TypedVector[Uint[32]]:
     random = get_random(h, l)
 
     fisher_yates_with_hash(array, l, random)
-    return TypedVector[Uint[32]](list(reversed(array)))
+    return TypedVector[U32](list(reversed(array)))

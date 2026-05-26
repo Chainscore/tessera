@@ -1,7 +1,7 @@
 from typing import Tuple, Union
 from jam.models import Hash
 from tsrkit_types.bytes import Bytes
-from tsrkit_types.integers import U8, U32, Uint
+from tsrkit_types.integers import U8, U32
 
 
 def construct_state_key(input: Union[U8, Tuple[U32, Bytes], Tuple[U8, U32]]) -> Bytes:
@@ -22,7 +22,7 @@ def construct_state_key(input: Union[U8, Tuple[U32, Bytes], Tuple[U8, U32]]) -> 
         if isinstance(input[0], (U8, int)) and isinstance(input[1], (U32, int)):
             # Case 2: (U8, ServiceId - U32)
             index, service_id = input
-            service_id_encoded = Uint[32](service_id).encode()
+            service_id_encoded = U32(service_id).encode()
             sequence[0] = index
             start = 1
             for i, s_byte in enumerate(service_id_encoded):
@@ -33,7 +33,7 @@ def construct_state_key(input: Union[U8, Tuple[U32, Bytes], Tuple[U8, U32]]) -> 
             # Case 3: (ServiceId, Bytes)
             service_id, key = input
             hash_bytes = Hash.blake2b(key)
-            service_id_encoded = Uint[32](service_id).encode()
+            service_id_encoded = U32(service_id).encode()
             seq_pointer = 0
             a_pointer = 0
             while seq_pointer < 31:

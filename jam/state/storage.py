@@ -62,6 +62,7 @@ class StateStorage:
         self._TRIE = trie
         self._DB = db
         self._updates = _cache_updates if _cache_updates is not None else {}
+        self._base_updates = self._updates.copy()
         self._cache_mode = cache_mode
         self._prop_cache = {}
         # Keys that existed before this store was created (inherited from parent clone)
@@ -204,6 +205,9 @@ class StateStorage:
                         actual_root=self._TRIE.root_hash.hex(),
                     )
 
+        if apply_trie and self._TRIE is not None:
+            self._TRIE.prune_unreachable()
+
         return _updates, final_root
 
     def record_cache(self, hh: HeaderHash | None = None, kv: RockStore | None = None):
@@ -227,7 +231,7 @@ class StateStorage:
             parent_hash = Block.load_parent_hash(hh, kv)
             if parent_hash is None:
                 raise JamError("Block missing for header hash:", hh.hex())
-            previous_updates, _ = self.load_cache(parent_hash, False)
+            previous_updates = self._base_updates
         else:
             previous_updates = {}
 
@@ -259,6 +263,8 @@ class StateStorage:
         # Process deletes individually (could be optimized further if needed)
         for key in trie_deletes:
             self._TRIE.delete(key)
+
+        self._TRIE.prune_unreachable()
 
         posterior_root = StateRoot(self._TRIE.root_hash)
         roots = Roots(prev=prior_root, curr=posterior_root)
@@ -294,6 +300,7 @@ class StateStorage:
 
     def clear(self):
         self._updates = {}
+        self._base_updates = {}
         self._prop_cache = {}
 
     def put(self, key_bytes: bytes, value_bytes: bytes, sync: bool = False):

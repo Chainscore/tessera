@@ -64,7 +64,7 @@ from tsrkit_types import U32, U64, Bytes32, String
 from tsrkit_types.sequences import TypedVector
 from dot_ring import RingVRF, Bandersnatch, IETF_VRF
 
-
+Bytes31 = Bytes[31]
 def _timing(label: str) -> None:
     # print(label, datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
     pass
@@ -159,7 +159,7 @@ class State:
                 self._transform(node.right, state_dict)
             return
 
-        key = Bytes[31].from_bits(node.encoded.slice_bits(8, 256))
+        key = Bytes31.from_bits(node.encoded.slice_bits(8, 256))
         key_bytes = bytes(key)
 
         if key_bytes in self.store._updates:
@@ -198,6 +198,7 @@ class State:
         """
         updates, _root = self.store.load_cache(header_hash)
         self.store._updates = updates
+        self.store._base_updates = updates.copy()
         self.store.settle_cache()
 
     @classmethod
@@ -219,6 +220,7 @@ class State:
         # Note: If Header Hash is not passed, cache remains empty
         cache, final_root = state_snapshot.store.load_cache(header_hash, apply_trie=True)
         state_snapshot.store._updates = cache
+        state_snapshot.store._base_updates = cache.copy()
 
         # Set the expected root directly from stored records
         # This is tracked separately since we don't mutate the trie
@@ -237,6 +239,7 @@ class State:
         store_snapshot = StateStorage(None, state.store._DB)
         cache, final_root = store_snapshot.load_cache(header_hash, apply_trie=False)
         store_snapshot._updates = cache
+        store_snapshot._base_updates = cache.copy()
         snapshot = cls(store_snapshot)
         snapshot._cached_root = final_root
         return snapshot
@@ -299,7 +302,12 @@ class State:
             and cls._head_trie is not None
             and cls._head_updates is not None
         ):
-            return cls(StateStorage(cls._head_trie, state.store._DB, cls._head_updates.copy()))
+            trie = cls._head_trie
+            updates = cls._head_updates.copy()
+            cls._head_hash = None
+            cls._head_trie = None
+            cls._head_updates = None
+            return cls(StateStorage(trie, state.store._DB, updates))
         cached = cls._trie_cache.get(HeaderHash(header_hash))
         if cached is not None:
             cls._trie_cache.move_to_end(HeaderHash(header_hash))
@@ -377,7 +385,7 @@ class State:
         from jam.finality.finality import Finality
 
         try:
-            header_hash = HeaderHash(block.header.hash())
+            header_hash = block.header.hash()
             event_id = id(block) & 0xFFFFFFFFFFFFFFFF
 
             # Emit Importing event
@@ -481,9 +489,7 @@ class State:
 
             # Calculate Merkle root of Accumulation Outputs
             accumulate_root = bmr_merklizer.wb_merklize(
-                TypedVector[Bytes](
-                    [Bytes(comm.service_id.encode() + comm.output.encode()) for comm in self.theta]
-                ),
+                [Bytes(comm.service_id.encode() + comm.output.encode()) for comm in self.theta],
                 Hash.keccak256,
             )
             _timing(">> Beta transition start")

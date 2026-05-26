@@ -376,6 +376,7 @@ class Reporting:
                     )
 
         for x, validator_keys in guarantee_validator_keys:
+            message = X.GUARANTEE.value + bytes(x.report.hash())
             for y in x.signatures:
                 public_key = validator_keys[y.validator_index]
                 signature = y.signature
@@ -383,7 +384,7 @@ class Reporting:
                 try:
                     Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(
                         bytes(signature),
-                        X.GUARANTEE.value + bytes(x.report.hash()),
+                        message,
                     )
                 except InvalidSignature:
                     raise ReportingError(
@@ -437,7 +438,8 @@ class Reporting:
             total_accumulate_gas = 0
             for y in x.report.digests:
                 # --------------- bad_service_id -------------------
-                if y.service_id not in delta:
+                account = delta[y.service_id]
+                if account is None:
                     raise ReportingError(
                         ReportingErrorCode.BAD_SERVICE_ID,
                         f"Service ID {y.service_id} not found in state accounts",
@@ -446,7 +448,7 @@ class Reporting:
                 # --------------- bad_code_hash -------------------
                 # https://graypaper.fluffylabs.dev/#/38c4e62/161300162600?v=0.7.0
                 # Eq 11.42
-                if y.code_hash != delta[y.service_id].service.code_hash:
+                if y.code_hash != account.service.code_hash:
                     raise ReportingError(
                         ReportingErrorCode.BAD_CODE_HASH,
                         "Result code_hash should match with state's delta code_hash",
@@ -455,7 +457,7 @@ class Reporting:
                 # --------------- service_item_gas_too_low -------------------
                 # https://graypaper.fluffylabs.dev/#/38c4e62/158b0215a302?v=0.7.0
                 # Eq 11.30
-                if y.accumulate_gas < delta[y.service_id].service.min_gas:
+                if y.accumulate_gas < account.service.min_gas:
                     raise ReportingError(
                         ReportingErrorCode.SERVICE_ITEM_GAS_TOO_LOW,
                         "For every report its accumulate gas should be greater than the delta's min_gas",

@@ -22,5 +22,7 @@ class InvocationFunctions(Protocol):
             return ExecutionStatus.OUT_OF_GAS, gas, registers, memory, context
         call = cls.HANDLERS[host_call]
         gas -= call["gas"]
+        if gas < 0:
+            return ExecutionStatus.OUT_OF_GAS, gas, registers, memory, context
         
         return call["execute"](gas=gas, registers=registers, memory=memory, context=context, **args)
