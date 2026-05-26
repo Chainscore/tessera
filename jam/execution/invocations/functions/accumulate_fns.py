@@ -324,9 +324,15 @@ class AccumulateFunctions(INVF):
             registers[7] = HostStatus.CASH.value
             return CONTINUE, gas, registers, memory, context
         else:
+            # Variable gas, check if it goes oog
+            if gas < l:
+                return ExecutionStatus.OUT_OF_GAS, gas, registers, memory, context
+
             registers[7] = HostStatus.OK.value
+
             context.x.deferred_transfers.append(t)
             delta[context.x.s_index].service.balance = Balance(new_balance_sender)
+
             gas = gas - l
             return CONTINUE, gas, registers, memory, context
 

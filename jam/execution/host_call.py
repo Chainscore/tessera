@@ -50,10 +50,7 @@ class PsiH:
                 program, current_pc, current_gas, registers, memory, logger
             )
 
-            if remaining_gas < 0:
-                return ExecutionStatus.OUT_OF_GAS, current_pc, remaining_gas, registers, memory, context
 
-            
             if status == ExecutionStatus.HALT:
                 return status, current_pc, remaining_gas, registers, memory, context
             elif status == ExecutionStatus.PANIC:
