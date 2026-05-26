@@ -94,7 +94,6 @@ class Reporting:
             # Debug Rho
             rho_val = rho[report.core_index].unwrap()
             if rho_val != Null:
-                print(f"DEBUG: Core {report.core_index} ENGAGED! Value: {rho_val}")
                 raise ReportingError(
                     ReportingErrorCode.CORE_ENGAGED,
                     "The core index mentioned in report should be available in rho",
