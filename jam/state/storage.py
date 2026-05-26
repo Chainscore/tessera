@@ -2,7 +2,7 @@ from typing import Self
 from collections import OrderedDict
 
 from rockstore import RockStore
-from tsrkit_types import Bytes, structure, Dictionary
+from tsrkit_types import Bytes, structure, Dictionary, Null, Option
 
 from jam.block.block import Block
 from jam.error import JamError
@@ -13,13 +13,14 @@ from jam.utils.trie.merkle import StateTrie
 
 Bytes31 = Bytes[31]
 Bytes32 = Bytes[32]
+StateUpdateValue = Option[Bytes]
 _MISSING = object()
 
 
 @structure
 class Updates:
-    prev: Bytes
-    curr: Bytes
+    prev: StateUpdateValue
+    curr: StateUpdateValue
 
 
 @structure
@@ -35,6 +36,17 @@ class StateUpdates(Dictionary[Bytes31, Updates]): ...
 class StateRecord:
     updates: StateUpdates
     roots: Roots
+
+
+def _encode_update_value(value: bytes | None) -> StateUpdateValue:
+    return StateUpdateValue(Null if value is None else Bytes(value))
+
+
+def _decode_update_value(value: StateUpdateValue) -> bytes | None:
+    unwrapped = value.unwrap()
+    if unwrapped == Null:
+        return None
+    return bytes(unwrapped)
 
 
 class StateStorage:
@@ -179,7 +191,7 @@ class StateStorage:
             # Collect updates
             for k, u in items:
                 v = getattr(u, use_attr)
-                normalized_v = None if v == Bytes(0) else bytes(v)
+                normalized_v = _decode_update_value(v)
 
                 _updates[k] = normalized_v
                 if apply_trie:
@@ -246,8 +258,8 @@ class StateStorage:
 
             if kv and hh:
                 updates = Updates(
-                    prev=Bytes(prev_val) if prev_val else Bytes(0),
-                    curr=Bytes(v) if v else Bytes(0),
+                    prev=_encode_update_value(prev_val),
+                    curr=_encode_update_value(v),
                 )
                 _state_cache[stored_key] = updates
 
