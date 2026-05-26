@@ -282,6 +282,7 @@ class Accumulation:
         for t in deferred_transfers:
             services.add(t.receiver)
 
+        ordered_services = sorted(services, key=int)
 
         # Accumulated gas by each service
         # u in 12.19
@@ -304,7 +305,7 @@ class Accumulation:
         # Accumulation of reported services (W) &
         # always accumulate services (CHI_Z)
         # --------------------------------------
-        for service in services:
+        for service in ordered_services:
             (
                 partial_state,
                 _transfers,
