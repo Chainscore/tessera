@@ -326,6 +326,7 @@ class AccumulateFunctions(INVF):
         else:
             # Variable gas, check if it goes oog
             if gas < l:
+                gas = gas - l
                 return ExecutionStatus.OUT_OF_GAS, gas, registers, memory, context
 
             registers[7] = HostStatus.OK.value
