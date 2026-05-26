@@ -1,14 +1,11 @@
 from enum import Enum
 
-from tsrkit_types import Uint, U8
-
 from jam.models.protocol.crypto import Hash
 from tsrkit_types.bytes import Bytes
 
 
 Bytes32 = Bytes[32]
 Bytes64 = Bytes[64]
-Uint8 = Uint[8]
 
 ZERO_HASH = Bytes32([0] * 32)
 NodeHash = Bytes32
@@ -55,21 +52,15 @@ def encode_leaf(key: Bytes, value: Bytes) -> Bytes[64]:
         - First 31 bytes store key
         - Last 32 bytes store hash of value
     """
-    # First bit is 1 for leaf nodes
+    node = bytearray(64)
+    key_part = bytes(key)[:31]
+    node[1:1 + len(key_part)] = key_part
 
-    # Set first 31 bytes of key to 1:32
-    key_bits = Bytes(key).slice_bits(0, 248)
-        
     if len(value) <= 32:
-        # Embedded value leaf
-        # 6-bit - size of value
-        # Store key and value
-        val_bits = value.to_bits() + [False] * (256 - len(value) * 8)
-        # Rest is already zeroed
-        node_bits = [True, False] + Bytes(Uint8(len(value)).encode()).to_bits()[2:] + key_bits + val_bits
-        return Bytes64.from_bits(node_bits)
+        node[0] = 0x80 | len(value)
+        node[32:32 + len(value)] = bytes(value)
     else:
-        # Regular leaf - second bit is 1
-        val_bits = Hash.blake2b(bytes(value)).to_bits()
-        node_bits = [True, True, False, False, False, False, False, False] + key_bits + val_bits
-        return Bytes64.from_bits(node_bits)
+        node[0] = 0xC0
+        node[32:64] = Hash.blake2b(bytes(value))
+
+    return Bytes64(bytes(node))
