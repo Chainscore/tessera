@@ -50,6 +50,8 @@ export JAM_LOG_DIR="$JAM_FUZZ_DATA_PATH/logs"
 
 if [ -n "${JAM_FUZZ_LOG_LEVEL:-}" ]; then
     export JAM_LOG_LEVEL="$JAM_FUZZ_LOG_LEVEL"
+else
+    export JAM_LOG_LEVEL="${JAM_LOG_LEVEL:-info}"
 fi
 
 export JAM_STATE_TRIE_CACHE_LIMIT="${JAM_STATE_TRIE_CACHE_LIMIT:-2}"
