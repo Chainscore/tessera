@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 import asyncio
+import os
 import weakref
 from collections import OrderedDict
 from copy import copy, deepcopy
@@ -50,7 +51,7 @@ from jam.state.transitions import (
     Preimages,
     Statistics,
 )
-from jam.api.rpc.subscription_handlers import subscribe_statistics
+from jam.api.rpc.subscription_handlers import subscribe_statistics, subscriptions_enabled
 from jam.telemetry import emit_event
 from jam.telemetry.events import (
     BestBlockChanged,
@@ -70,6 +71,13 @@ def _timing(label: str) -> None:
     pass
 
 
+def _env_int(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, str(default)))
+    except ValueError:
+        return default
+
+
 class State:
     """
     State implementation that uses dynamic components fetched from Db
@@ -87,7 +95,7 @@ class State:
     _head_trie: StateTrie | None = None
     _head_updates: dict[bytes, bytes | None] | None = None
     _trie_cache: OrderedDict[HeaderHash, tuple[StateTrie, dict[bytes, bytes | None]]] = OrderedDict()
-    _trie_cache_limit = 8
+    _trie_cache_limit = max(0, _env_int("JAM_STATE_TRIE_CACHE_LIMIT", 8))
 
     # State Components
     alpha = make_state_prop(1, Alpha)
@@ -562,7 +570,8 @@ class State:
 
 
                 # Publishes updates of the statistics stored in chain state
-                asyncio.create_task(subscribe_statistics(state.pi))
+                if subscriptions_enabled():
+                    asyncio.create_task(subscribe_statistics(state.pi))
 
                 block.extrinsic.clear_from_stores()
 

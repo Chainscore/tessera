@@ -52,6 +52,8 @@ if [ -n "${JAM_FUZZ_LOG_LEVEL:-}" ]; then
     export JAM_LOG_LEVEL="$JAM_FUZZ_LOG_LEVEL"
 fi
 
+export JAM_STATE_TRIE_CACHE_LIMIT="${JAM_STATE_TRIE_CACHE_LIMIT:-2}"
+
 exec "$VENV_BIN/python" jam/cli.py \
     --fuzzer \
     --db "$JAM_FUZZ_DATA_PATH" \

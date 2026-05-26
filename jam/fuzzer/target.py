@@ -156,7 +156,8 @@ def _print_fuzzer_system_info(db_path: str, socket_path: str, record_path: Optio
         "[system] "
         f"JAM_LOG_LEVEL={os.environ.get('JAM_LOG_LEVEL', 'unset')} "
         f"PVM_MODE={os.environ.get('PVM_MODE', 'unset')} "
-        f"JAM_FUZZ_STATE_STATS_INTERVAL={os.environ.get('JAM_FUZZ_STATE_STATS_INTERVAL', '10')}"
+        f"JAM_FUZZ_STATE_STATS_INTERVAL={os.environ.get('JAM_FUZZ_STATE_STATS_INTERVAL', '10')} "
+        f"JAM_STATE_TRIE_CACHE_LIMIT={os.environ.get('JAM_STATE_TRIE_CACHE_LIMIT', '8')}"
     )
 
 
@@ -194,11 +195,11 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                 print(">> Connected to", peer.to_json())
                 try:
                     db_ = db_path + str(SESSION_ID)
-                    settings = setup_setting(db_, 1, "fuzzer", 40001)
+                    settings = setup_setting(db_, 1, "fuzzer", 40001, rpc_flag=False)
                 except Exception as e:
                     SESSION_ID += 1
                     db_ = db_path + str(SESSION_ID)
-                    settings = setup_setting(db_, 1, "fuzzer", 40001)
+                    settings = setup_setting(db_, 1, "fuzzer", 40001, rpc_flag=False)
 
 
             block_count = 0

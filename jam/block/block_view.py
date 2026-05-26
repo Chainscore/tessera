@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path
 from typing import List, Optional, Dict
 
-from jam.api.rpc.subscription_handlers import subscribe_best_block
+from jam.api.rpc.subscription_handlers import subscribe_best_block, subscriptions_enabled
 from jam.block import Block
 from jam.models.protocol.core import TimeSlot
 from jam.models.protocol.crypto import OpaqueHash, HeaderHash
@@ -303,7 +303,8 @@ class BlockView:
             self.best = best
 
             # publish updates of the head of the "best" chain.
-            asyncio.create_task(subscribe_best_block(best.header))
+            if subscriptions_enabled():
+                asyncio.create_task(subscribe_best_block(best.header))
 
     def visualize(self, *, show_status: bool = True, show_slot: bool = True, color: bool = True):
         """

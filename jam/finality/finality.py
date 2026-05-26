@@ -6,7 +6,7 @@ from jam.log_setup import block_logger as logger
 from rockstore import RockStore
 from jam.models.protocol.crypto import Hash, HeaderHash
 from jam.block import Block
-from jam.api.rpc.subscription_handlers import subscribe_finalized_block
+from jam.api.rpc.subscription_handlers import subscribe_finalized_block, subscriptions_enabled
 from jam.telemetry import emit_event
 from jam.telemetry.events import FinalizedBlockChanged
 from tsrkit_types import U32, Bytes32
@@ -41,7 +41,8 @@ class Finality:
         emit_event(FinalizedBlockChanged(slot=U32(block.header.slot), hash=Bytes32(header_hash.encode())))
         
         # publish updates of the latest finalized block
-        asyncio.create_task(subscribe_finalized_block(header_hash))
+        if subscriptions_enabled():
+            asyncio.create_task(subscribe_finalized_block(header_hash))
 
         # Timeslot -> HeaderHash
         # on finalization of block, store ts - block mapping
