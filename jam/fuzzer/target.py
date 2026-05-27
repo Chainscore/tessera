@@ -12,6 +12,8 @@ import os
 import sys
 import shutil
 import platform
+import tracemalloc
+from collections import defaultdict
 from datetime import datetime
 from typing import Optional
 
@@ -52,6 +54,13 @@ def _read_text(path: str) -> str | None:
             return f.read().strip()
     except OSError:
         return None
+
+
+def _env_int(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, str(default)))
+    except ValueError:
+        return default
 
 
 def _format_bytes(value: int | None) -> str:
@@ -306,6 +315,76 @@ def _format_gc_stats() -> str:
     )
 
 
+def _format_gc_probe() -> str:
+    if os.environ.get("JAM_FUZZ_GC_PROBE", "0") != "1":
+        return "gcprobe=off"
+    before = _process_memory_snapshot()
+    collected = gc.collect()
+    after = _process_memory_snapshot()
+    before_rss = before.get("rss")
+    after_rss = after.get("rss")
+    before_private = before.get("private")
+    after_private = after.get("private")
+    rss_delta = before_rss - after_rss if before_rss is not None and after_rss is not None else None
+    private_delta = (
+        before_private - after_private
+        if before_private is not None and after_private is not None
+        else None
+    )
+    return (
+        f"gcprobe=collected={collected},"
+        f"rss_before={_format_bytes(before_rss)},"
+        f"rss_after={_format_bytes(after_rss)},"
+        f"rss_freed={_format_bytes(rss_delta)},"
+        f"private_before={_format_bytes(before_private)},"
+        f"private_after={_format_bytes(after_private)},"
+        f"private_freed={_format_bytes(private_delta)}"
+    )
+
+
+def _format_state_trie_stats(current_state, state_cls) -> str:
+    try:
+        store = getattr(current_state, "store", None)
+        trie = getattr(store, "_TRIE", None)
+        trie_nodes = len(getattr(trie, "nodes", {}) or {}) if trie is not None else 0
+        updates = len(getattr(store, "_updates", {}) or {}) if store is not None else 0
+        prop_cache = getattr(store, "_prop_cache", {}) if store is not None else {}
+        prop_cache_buckets = len(prop_cache or {})
+        prop_cache_entries = 0
+        for value in (prop_cache or {}).values():
+            try:
+                prop_cache_entries += len(value)
+            except TypeError:
+                prop_cache_entries += 1
+
+        trie_cache = getattr(state_cls, "_trie_cache", {}) or {}
+        trie_cache_nodes = 0
+        trie_cache_updates = 0
+        for cached_trie, cached_updates in trie_cache.values():
+            trie_cache_nodes += len(getattr(cached_trie, "nodes", {}) or {})
+            trie_cache_updates += len(cached_updates or {})
+
+        head_trie = getattr(state_cls, "_head_trie", None)
+        head_nodes = len(getattr(head_trie, "nodes", {}) or {}) if head_trie is not None else 0
+        head_updates = getattr(state_cls, "_head_updates", None)
+        head_update_count = len(head_updates or {})
+
+        return (
+            f"trie=nodes={trie_nodes},"
+            f"updates={updates},"
+            f"propcache_buckets={prop_cache_buckets},"
+            f"propcache_entries={prop_cache_entries},"
+            f"head_nodes={head_nodes},"
+            f"head_updates={head_update_count},"
+            f"cache_entries={len(trie_cache)},"
+            f"cache_nodes={trie_cache_nodes},"
+            f"cache_updates={trie_cache_updates},"
+            f"cache_limit={getattr(state_cls, '_trie_cache_limit', 'unknown')}"
+        )
+    except Exception as exc:
+        return f"trie=error:{type(exc).__name__}"
+
+
 def _format_fd_stats() -> str:
     fd_dir = "/proc/self/fd"
     try:
@@ -354,6 +433,166 @@ def _format_process_io() -> str:
         f"cancelled={_format_bytes(values.get('cancelled_write_bytes'))},"
         f"syscr={values.get('syscr', 0)},"
         f"syscw={values.get('syscw', 0)}"
+    )
+
+
+def _configure_memory_debugging() -> None:
+    enabled = os.environ.get("JAM_FUZZ_TRACEMALLOC") == "1"
+    frames = _env_int("JAM_FUZZ_TRACEMALLOC_FRAMES", 10)
+    if enabled and not tracemalloc.is_tracing():
+        tracemalloc.start(max(1, frames))
+
+
+def _format_tracemalloc_stats() -> str:
+    if not tracemalloc.is_tracing():
+        return "tracemalloc=off"
+    current, peak = tracemalloc.get_traced_memory()
+    return f"tracemalloc=current={_format_bytes(current)},peak={_format_bytes(peak)}"
+
+
+def _format_source_location(filename: str, lineno: int) -> str:
+    try:
+        path = os.path.relpath(filename, os.getcwd())
+    except ValueError:
+        path = filename
+    return f"{path.replace(' ', '%20')}:{lineno}"
+
+
+def _format_tracemalloc_top() -> str:
+    limit = _env_int("JAM_FUZZ_TRACEMALLOC_TOP", 0)
+    if limit <= 0:
+        return "pyalloctop=off"
+    if not tracemalloc.is_tracing():
+        return "pyalloctop=tracemalloc_off"
+    try:
+        snapshot = tracemalloc.take_snapshot()
+        stats = snapshot.statistics("lineno")[:limit]
+    except Exception as exc:
+        return f"pyalloctop=error:{type(exc).__name__}"
+    parts = []
+    for stat in stats:
+        frame = stat.traceback[0]
+        parts.append(
+            f"{_format_source_location(frame.filename, frame.lineno)}"
+            f"={stat.count}/{_format_bytes(stat.size)}"
+        )
+    return "pyalloctop=" + ";".join(parts) if parts else "pyalloctop=empty"
+
+
+def _format_object_census_top() -> str:
+    limit = _env_int("JAM_FUZZ_OBJECT_CENSUS_TOP", 0)
+    if limit <= 0:
+        return "objcensus=off"
+    by_type: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+    try:
+        objects = gc.get_objects()
+        for obj in objects:
+            typ = type(obj)
+            name = f"{typ.__module__}.{typ.__qualname__}".replace(" ", "%20")
+            row = by_type[name]
+            row[0] += 1
+            try:
+                row[1] += sys.getsizeof(obj)
+            except TypeError:
+                pass
+    except Exception as exc:
+        return f"objcensus=error:{type(exc).__name__}"
+
+    top = sorted(by_type.items(), key=lambda item: item[1][1], reverse=True)[:limit]
+    parts = [f"{name}={count}/{_format_bytes(size)}" for name, (count, size) in top]
+    return f"objcensus=total={len(objects)},top=" + ";".join(parts)
+
+
+def _format_smaps_anon_top() -> str:
+    limit = _env_int("JAM_FUZZ_SMAPS_TOP", 5)
+    if limit <= 0:
+        return "anonmaps=off"
+    raw = _read_text("/proc/self/smaps")
+    if not raw:
+        return "anonmaps=unknown"
+
+    entries: list[dict[str, int | str]] = []
+    current: dict[str, int | str] | None = None
+    for line in raw.splitlines():
+        first = line.split(maxsplit=1)[0] if line else ""
+        if "-" in first and first[0].isalnum():
+            if current is not None:
+                entries.append(current)
+            parts = line.split(maxsplit=5)
+            current = {
+                "name": parts[5] if len(parts) > 5 else "[anon]",
+                "rss": 0,
+                "private": 0,
+                "anonymous": 0,
+            }
+            continue
+        if current is None:
+            continue
+        key, _, rest = line.partition(":")
+        parts = rest.strip().split()
+        if not parts or not parts[0].isdigit():
+            continue
+        value = int(parts[0]) * 1024
+        if key == "Rss":
+            current["rss"] = value
+        elif key == "Anonymous":
+            current["anonymous"] = value
+        elif key in ("Private_Clean", "Private_Dirty"):
+            current["private"] = int(current["private"]) + value
+    if current is not None:
+        entries.append(current)
+
+    top = sorted(entries, key=lambda item: int(item["anonymous"]), reverse=True)[:limit]
+    parts = []
+    for entry in top:
+        anonymous = int(entry["anonymous"])
+        if anonymous <= 0:
+            continue
+        name = str(entry["name"]).replace(" ", "%20")
+        if name.startswith("/"):
+            name = os.path.basename(name)
+        parts.append(
+            f"{name}=anon:{_format_bytes(anonymous)},"
+            f"rss:{_format_bytes(int(entry['rss']))},"
+            f"private:{_format_bytes(int(entry['private']))}"
+        )
+    return "anonmaps=" + ";".join(parts) if parts else "anonmaps=empty"
+
+
+def _format_malloc_trim_probe() -> str:
+    interval = _env_int("JAM_FUZZ_MALLOC_TRIM_INTERVAL", 0)
+    if interval <= 0:
+        return "trim=off"
+    # The caller only invokes this on the chosen interval. Run GC first so the
+    # trim result answers whether freed arenas are being held by libc.
+    gc.collect()
+    before = _process_memory_snapshot()
+    try:
+        import ctypes
+
+        libc = ctypes.CDLL(None)
+        result = int(libc.malloc_trim(0))
+    except Exception as exc:
+        return f"trim=error:{type(exc).__name__}"
+    after = _process_memory_snapshot()
+    before_rss = before.get("rss")
+    after_rss = after.get("rss")
+    before_private = before.get("private")
+    after_private = after.get("private")
+    rss_delta = before_rss - after_rss if before_rss is not None and after_rss is not None else None
+    private_delta = (
+        before_private - after_private
+        if before_private is not None and after_private is not None
+        else None
+    )
+    return (
+        f"trim=result={result},"
+        f"rss_before={_format_bytes(before_rss)},"
+        f"rss_after={_format_bytes(after_rss)},"
+        f"rss_freed={_format_bytes(rss_delta)},"
+        f"private_before={_format_bytes(before_private)},"
+        f"private_after={_format_bytes(after_private)},"
+        f"private_freed={_format_bytes(private_delta)}"
     )
 
 
@@ -513,6 +752,15 @@ def _print_fuzzer_system_info(db_path: str, socket_path: str, record_path: Optio
         f"JAM_FUZZ_STATE_STATS_INTERVAL={os.environ.get('JAM_FUZZ_STATE_STATS_INTERVAL', '10')} "
         f"JAM_STATE_TRIE_CACHE_LIMIT={os.environ.get('JAM_STATE_TRIE_CACHE_LIMIT', '8')}"
     )
+    print(
+        "[system] "
+        f"JAM_FUZZ_TRACEMALLOC={os.environ.get('JAM_FUZZ_TRACEMALLOC', '0')} "
+        f"JAM_FUZZ_TRACEMALLOC_TOP={os.environ.get('JAM_FUZZ_TRACEMALLOC_TOP', '0')} "
+        f"JAM_FUZZ_OBJECT_CENSUS_TOP={os.environ.get('JAM_FUZZ_OBJECT_CENSUS_TOP', '0')} "
+        f"JAM_FUZZ_SMAPS_TOP={os.environ.get('JAM_FUZZ_SMAPS_TOP', '5')} "
+        f"JAM_FUZZ_GC_PROBE={os.environ.get('JAM_FUZZ_GC_PROBE', '0')} "
+        f"JAM_FUZZ_MALLOC_TRIM_INTERVAL={os.environ.get('JAM_FUZZ_MALLOC_TRIM_INTERVAL', '0')}"
+    )
 
 
 def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optional[str] = None):
@@ -627,6 +875,10 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                         if log_stats:
                             if os.environ.get("JAM_FUZZ_FORCE_GC") == "1":
                                 gc.collect()
+                            trim_interval = _env_int("JAM_FUZZ_MALLOC_TRIM_INTERVAL", 0)
+                            trim_stats = "trim=off"
+                            if trim_interval > 0 and block_count % trim_interval == 0:
+                                trim_stats = _format_malloc_trim_probe()
                             stats = State.instance_stats()
                             print(
                                 f"{ended_at} [state] "
@@ -638,12 +890,19 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                                 f"{_format_cgroup_memory()} "
                                 f"{_format_cgroup_events()} "
                                 f"{_format_gc_stats()} "
+                                f"{_format_gc_probe()} "
                                 f"{_format_fd_stats()} "
                                 f"{_format_process_io()} "
+                                f"{_format_tracemalloc_stats()} "
+                                f"{_format_smaps_anon_top()} "
+                                f"{trim_stats} "
+                                f"{_format_state_trie_stats(state, State)} "
                                 f"{_format_block_view(viewer)} "
                                 f"{_format_db_sizes(settings._data_path)} "
                                 f"{_format_db_file_breakdown(settings._data_path)} "
                                 f"{_format_rocksdb_properties(settings)} "
+                                f"{_format_tracemalloc_top()} "
+                                f"{_format_object_census_top()} "
                                 f"{_format_log_dir_size()}"
                             )
 
@@ -745,6 +1004,7 @@ async def run_fuzzer_target(
     os.makedirs(db_path, exist_ok=True)
 
     from jam.log_setup import setup_logging
+    _configure_memory_debugging()
     setup_logging("default", "fuzzer-target")
     _print_fuzzer_system_info(db_path, socket_path, record_path)
 
