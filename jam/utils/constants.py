@@ -87,6 +87,23 @@ K = MAX_TICKETS_PER_EXTRINSIC
 LOOKUP_ANCHOR_MAX_AGE = chain_config.lookup_anchor_max_age
 L = LOOKUP_ANCHOR_MAX_AGE
 
+# Retention window (in timeslots) for historical blocks, headers and per-block
+# state diffs. Sized to the deepest protocol-bounded lookback so every operation
+# resolves: the lookup-anchor max age L (refinement/auditing reach back this far),
+# plus recent-history H and a margin covering finality depth and shallow forks.
+# This is a per-spec constant, independent of run length, which is what keeps a
+# long-running target's storage bounded. Overridable via env for experimentation.
+def _retention_default() -> int:
+    import os
+
+    try:
+        return int(os.environ["JAM_STATE_HISTORY_RETENTION"])
+    except (KeyError, ValueError):
+        return L + RECENT_HISTORY_SIZE + 64
+
+
+STATE_HISTORY_RETENTION = max(0, _retention_default())
+
 # N — Ticket entries per validator.
 TICKET_ENTRIES_PER_VALIDATOR = chain_config.tickets_per_validator
 N = TICKET_ENTRIES_PER_VALIDATOR

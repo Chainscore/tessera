@@ -563,8 +563,13 @@ class State:
                 else:
                     try:
                         Finality.advance_finalized(block, _set.main_db)
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.warning(
+                            "Failed to advance finalized block",
+                            error=repr(exc),
+                            hh=header_hash.hex(),
+                            slot=int(block.header.slot),
+                        )
                     head_updates, _ = self.store.load_cache(header_hash, apply_trie=False)
                     State.remember_head(header_hash, self, head_updates)
 

@@ -97,6 +97,21 @@ class Finality:
 
         cls.finalise(target, kv, initial=True)
 
+        lag = int(head_block.header.slot) - int(target.header.slot)
+        logger.debug(
+            "Finality advanced",
+            finalized_slot=int(target.header.slot),
+            head_slot=int(head_block.header.slot),
+            lag=lag,
+        )
+        if lag > cls.FINALITY_CONFIRMATION_DEPTH * 4:
+            logger.warning(
+                "Finality lagging behind head; finalized history is not being pruned",
+                finalized_slot=int(target.header.slot),
+                head_slot=int(head_block.header.slot),
+                lag=lag,
+            )
+
     @classmethod
     def set_head(cls, block: Block, kv: RockStore):
         """Records new blocks and update heads of chains."""

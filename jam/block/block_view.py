@@ -87,8 +87,12 @@ class BlockView:
         # map Header Hash -> GhostBlock for quick lookup
         self._index_map = dict[HeaderHash, GhostBlock]({})
 
+        # Highest slot whose finalized history has already been pruned.
+        self._pruned_upto_slot = 0
+
     def initialize(self, kv: RockStore):
         self._index_map = {}
+        self._pruned_upto_slot = 0
         from jam.finality.finality import Finality
 
         if not kv.get(Finality.FINAL_KEY):
@@ -185,6 +189,50 @@ class BlockView:
             except Exception:
                 pass
 
+    def prune_history(self, kv: RockStore):
+        """Delete finalized blocks, metadata and per-block state diffs older than
+        the retention window behind the finalized slot.
+
+        Every protocol-bounded lookback (lookup anchor, recent history, finality,
+        shallow forks) is covered by STATE_HISTORY_RETENTION, so anything older is
+        never read again. This keeps storage bounded over long runs regardless of
+        the number of imported blocks."""
+        from jam.state.storage import StateStorage
+        from jam.utils.constants import STATE_HISTORY_RETENTION
+
+        threshold = int(self.final.slot) - STATE_HISTORY_RETENTION
+        if threshold <= self._pruned_upto_slot:
+            return
+
+        from_slot = self._pruned_upto_slot + 1
+        pruned_blocks = 0
+        for slot in range(from_slot, threshold + 1):
+            slot_key = Block.get_storage_key_slot(TimeSlot(slot))
+            hh = kv.get(slot_key)
+            if hh:
+                for key in (
+                    Block.get_storage_key_block(hh),
+                    Block.get_storage_key_meta(hh),
+                    StateStorage.get_storage_key(hh),
+                ):
+                    try:
+                        kv.delete(key)
+                    except Exception:
+                        pass
+                try:
+                    kv.delete(slot_key)
+                except Exception:
+                    pass
+                pruned_blocks += 1
+
+        self._pruned_upto_slot = threshold
+        print(
+            f"[prune] finalized={int(self.final.slot)} "
+            f"slots={from_slot}..{threshold} pruned_blocks={pruned_blocks} "
+            f"retention={STATE_HISTORY_RETENTION} pruned_upto={self._pruned_upto_slot}",
+            flush=True,
+        )
+
     def _detach_subtree(self, ghost: "GhostBlock", kv: RockStore):
         stack = [ghost]
         while stack:
@@ -277,6 +325,7 @@ class BlockView:
         kv.put(meta_key, meta.encode())
 
         self.revalidate_view()
+        self.prune_history(kv)
 
     def best_block(self):
         curr_head = self.final
