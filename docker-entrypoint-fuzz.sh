@@ -55,6 +55,7 @@ else
 fi
 
 export JAM_STATE_TRIE_CACHE_LIMIT="${JAM_STATE_TRIE_CACHE_LIMIT:-2}"
+export JAM_FUZZ_STATE_STATS_INTERVAL="${JAM_FUZZ_STATE_STATS_INTERVAL:-1000}"
 
 exec "$VENV_BIN/python" jam/cli.py \
     --fuzzer \
