@@ -43,7 +43,13 @@ trap cleanup EXIT INT TERM
 
 case "${1:-test}" in
     "build")
-        docker build -f Dockerfile.tessera-bin-test -t $IMAGE_NAME .
+        docker build -t "$IMAGE_NAME" - <<'DOCKERFILE'
+FROM debian:stable-slim
+RUN apt-get update && apt-get install -y socat procps time && rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /tessera /test-vectors && useradd -m -u 1000 fuzzer && chown -R fuzzer:fuzzer /tessera /test-vectors
+WORKDIR /tessera
+USER fuzzer
+DOCKERFILE
         ;;
     "test")
         echo "Testing tessera-node with vector path: $VECTOR_PATH"

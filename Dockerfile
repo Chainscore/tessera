@@ -1,7 +1,5 @@
-# Dockerfile
 FROM python:3.12-slim
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
@@ -14,23 +12,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     cargo \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv via shell installer
-RUN curl -sSL https://astral.sh/uv/install.sh | sh -s --  \
-  && echo "uv installed to:" && which uv || true
+RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
 
-ENV PATH="/root/.local/bin:$PATH"
+ENV PYTHONUNBUFFERED=1
 
-# Set working directory
 WORKDIR /app
 
-# Copy the entire application
 COPY . .
 
 RUN uv sync
 
-# Run the application
-# Copy entrypoint script
-COPY docker-entrypoint.sh /usr/local/bin/
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

@@ -1,136 +1,181 @@
-
 ![Tessera Logo](guidelines/cover.svg)
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/Chainscore/tessera/build-binaries.yml?branch=main)](https://github.com/Chainscore/tessera/actions)
-[![Test Status](https://img.shields.io/github/actions/workflow/status/Chainscore/tessera/pytest.yml?branch=main&label=tests)](https://github.com/Chainscore/tessera/actions)
-[![Code Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen)](https://github.com/Chainscore/tessera)
+[![Tests](https://img.shields.io/github/actions/workflow/status/Chainscore/tessera/pytest.yml?branch=main&label=tests)](https://github.com/Chainscore/tessera/actions)
 
+# Tessera
 
----
+Tessera is Chainscore Labs' Python implementation of the JAM protocol. It includes the JAM state transition, Safrole, PVM execution, block validation, RocksDB-backed state storage, and node networking.
 
-## About
+## Releases
 
-Tessera is a Python implementation of the JAM (Join-Accumulate Machine) blockchain protocol as specified in the [JAM Graypaper](https://graypaper.com). It implements the core state transition functions, block production (Safrole), work package execution (PVM), and P2P networking required to participate in a JAM-based network.
+Release artifacts are published from tagged builds.
 
-## Installation
+- Binary releases: https://github.com/Chainscore/tessera-releases/releases
+- Docker image: `ghcr.io/chainscore/tessera:<version>`
+- Latest Docker tag: `ghcr.io/chainscore/tessera:latest`
 
-### Requirements
+Binary assets on the release page:
 
-- Python 3.12
-- uv package manager
-- RocksDB system library
+| Platform | Asset |
+|---|---|
+| Linux x86_64 | `tessera-node-Linux-x64.tar.gz` |
+| macOS Apple Silicon | `tessera-node-Darwin-arm64.tar.gz` |
+| macOS Intel | `tessera-node-Darwin-x64.tar.gz` |
 
-### Setup
+## Binary Usage
+
+Download the asset for your platform from the release page, extract it, then run:
 
 ```bash
-# Clone repository (test-suites submodule is optional)
+./tessera-node --help
+```
+
+Run a node:
+
+```bash
+./tessera-node --env envs/40000.env
+```
+
+Run the fuzzer target directly:
+
+```bash
+./tessera-node --fuzzer --socket /tmp/jam_conformance.sock
+```
+
+Import traces or vectors:
+
+```bash
+./tessera-node --import /path/to/traces
+```
+
+## Docker Usage
+
+Pull a release image:
+
+```bash
+docker pull ghcr.io/chainscore/tessera:<version>
+```
+
+The Docker image has one entrypoint with three modes.
+
+### Single Node
+
+Default mode starts one node from `envs/40000.env`. `Disabled Temporarily`
+
+```bash
+docker run --rm ghcr.io/chainscore/tessera:<version>
+```
+
+Select a different bundled node env:
+
+```bash
+docker run --rm \
+  -e TESSERA_NODE=40002 \
+  ghcr.io/chainscore/tessera:<version>
+```
+
+or pass the env file path directly:
+
+```bash
+docker run --rm \
+  -e TESSERA_ENV=envs/40002.env \
+  ghcr.io/chainscore/tessera:<version>
+```
+
+### Six-Node Testnet
+
+`TESTNET=1` starts `envs/40000.env` through `envs/40005.env`. `Disabled Temporarily`
+
+```bash
+docker run --rm \
+  -e TESTNET=1 \
+  ghcr.io/chainscore/tessera:<version>
+```
+
+### Fuzzer Target
+
+`JAM_FUZZ=1` starts the JAM conformance socket target. `FUZZ_MODE=on` is also accepted as an alias.
+
+```bash
+mkdir -p /tmp/tessera-data /tmp/tessera-sock
+
+docker run --rm \
+  -e JAM_FUZZ=1 \
+  -e JAM_FUZZ_SPEC=tiny \
+  -e JAM_FUZZ_DATA_PATH=/data \
+  -e JAM_FUZZ_SOCK_PATH=/sock/jam_target.sock \
+  -e JAM_FUZZ_LOG_LEVEL=info \
+  -v /tmp/tessera-data:/data \
+  -v /tmp/tessera-sock:/sock \
+  ghcr.io/chainscore/tessera:<version>
+```
+
+Use `JAM_FUZZ_SPEC=full` for full-spec conformance runs.
+
+## Source Development
+
+Requirements:
+
+- Python 3.12
+- `uv`
+- RocksDB system library
+- Rust toolchain for dependencies that build native extensions
+
+Setup:
+
+```bash
 git clone --recursive https://github.com/Chainscore/tessera.git
 cd tessera
 
-# Install dependencies
 curl -LsSf https://astral.sh/uv/install.sh | sh
 uv python install 3.12
 
 export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
 uv sync --all-extras
-
-# Initialize database directory
 mkdir -p data/
-
-# Initialize pre-commit hooks
-uv run pre-commit install
 ```
 
-## Usage
-
-### Running a Node
+Run from source:
 
 ```bash
-# Start node with environment configuration
 uv run jam --env envs/40000.env
-
-# Enable validator mode
-uv run jam --env envs/40000.env --validator
-
-# Enable builder mode
-uv run jam --env envs/40000.env --builder
-
-# Disable RPC server
-uv run jam --env envs/40000.env --no-rpc
-
-# Enable telemetry
-uv run jam --env envs/40000.env --telemetry host:port
-
-# Specify database path
-uv run jam --env envs/40000.env --db /path/to/db
 ```
 
-### Building Binary
+Build the local binary:
 
 ```bash
-# Build standalone executable with PyInstaller
 ./build-binary.sh
-
-# Binary output location
-./dist/tessera-node-<OS>-<ARCH>.tar.gz
+./dist/tessera-node --help
 ```
 
-### Testing
+Build the local Docker image:
 
 ```bash
-# Run all tests
-uv run pytest tests/
-
-# Run specific test suite
-uv run pytest tests/unit/safrole/
-uv run pytest tests/unit/execution/
-uv run pytest tests/integration/
-
-# Run with coverage report
-uv run pytest --cov=jam --cov-report=html tests/
+./build-docker.sh chainscore/tessera local
 ```
+
+## Testing
+
+```bash
+uv run pytest tests/
+```
+
+More command examples live in [COMMANDS.md](COMMANDS.md).
 
 ## Architecture
 
-### Core Components
-
-- **State Management** (`jam/state/`): JAM state structure and transitions
-  - Safrole: Block production and validator rotation (VRF-based)
-  - Accumulation: Work report processing and service account updates
-  - Disputes: Guarantor judgement system
-
-- **Execution Engine** (`jam/execution/`): Polkavm (PVM) execution
-  - Host calls: Import, export, gas, read, write, etc.
-  - Invocations: Refine, accumulate, on-transfer handlers
-
-- **Block Processing** (`jam/block/`): Header and extrinsic validation
-  - Tickets: VRF ticket generation and verification
-  - Guarantees: Work report guarantees
-  - Assurances: Availability assurances
-
-- **Operations** (`jam/operations/`): Node operation handlers
-  - Block Producer: Ticket-based block authoring
-  - Conductor: State transition orchestration
-  - Assurer: Work package availability
-
-- **Networking** (`jam/networking/`): QUIC-based P2P protocol
-
-- **Storage** (`jam/db/`): RocksDB-backed state persistence
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make changes with tests
-4. Ensure `uv run pytest` passes
-5. Submit pull request
-
-Follow the code style guidelines in `guidelines/code.md`.
+- `jam/state/`: JAM state model and transition orchestration
+- `jam/state/transitions/`: Safrole, accumulation, authorization, reports, disputes, and related transition logic
+- `jam/execution/`: PVM execution, invocations, host calls, and service execution
+- `jam/block/`: block/header/extrinsic validation
+- `jam/networking/`: QUIC-based node networking
+- `jam/db/`: RocksDB-backed persistence
+- `jam/cli.py`: binary/fuzzer/import CLI entry point
 
 ## License
 
-GNU General Public License v3.0 - see [LICENSE](LICENSE)
+GNU General Public License v3.0. See [LICENSE](LICENSE).
 
 Copyright (c) 2025 [Chainscore Labs](https://chainscorelabs.com/)
