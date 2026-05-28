@@ -379,7 +379,7 @@ wheels = [
 
 [[package]]
 name = "dot-ring"
-version = "0.1.7"
+version = "0.1.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "gmpy2" },
@@ -388,12 +388,11 @@ dependencies = [
     { name = "pytest" },
     { name = "sympy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6e/c9/306f3f69222984a15ac38183d8cbd5de15f2a25b14230d0e2d22d5ccda58/dot_ring-0.1.7.tar.gz", hash = "sha256:5faa9f255cdacc5ff13471344365d7aaa3abfc3854b8c8e764671a32a9423fe5", size = 1793033, upload-time = "2026-05-23T16:02:32.19Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5a/9b/9f1bea57eff78ec18ae8523d25bd1ca6c1ec1cee8b290ace082aeaa11d03/dot_ring-0.1.7-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:651462095284182a36a000455c416fbd09992abb6a3eec1441d2c502ec4ccbc7", size = 1987826, upload-time = "2026-05-23T16:02:15.661Z" },
-    { url = "https://files.pythonhosted.org/packages/40/cc/edf0d349974e22468d20d10d083c093e60fe559f9ae91b6fbe4d162b31e1/dot_ring-0.1.7-cp312-cp312-macosx_11_0_x86_64.whl", hash = "sha256:b7d30e1f3cf8524caaf37eae3344e5d1cd67dcf677259dc594a177ad004f0d47", size = 1991126, upload-time = "2026-05-23T16:02:17.767Z" },
-    { url = "https://files.pythonhosted.org/packages/18/95/c53a34bde9cd3a34b6fa2c3e7b63be6ac585386b76845cf8453691c6fbc2/dot_ring-0.1.7-cp312-cp312-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:79043edf0e30e9524238021984e3f8877870ebfaa1e6516a45c0fe3228a59770", size = 2859825, upload-time = "2026-05-23T16:02:19.665Z" },
-    { url = "https://files.pythonhosted.org/packages/f4/0b/a5f8f93bfbbcfda5dd45eeab6b8ef64b3811f3dd69a082753a79d8feb2b2/dot_ring-0.1.7-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b0c6a4fdb803b6a68e239b68327162e048a444a5f21e43f529a26f7a24adfb8a", size = 2905394, upload-time = "2026-05-23T16:02:21.894Z" },
+    { url = "https://files.pythonhosted.org/packages/46/8f/e9e8d7467f79889e32778e78bb52203abfa4f6d62b3682b8221ce0529220/dot_ring-0.1.8-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:69931b15c4ac14701ff1f81b3503c14603da03f98e5026420de9d50105da53cb", size = 1987986, upload-time = "2026-05-28T07:51:53.005Z" },
+    { url = "https://files.pythonhosted.org/packages/8f/74/c842267077eb45377737c7dbf975d92b7ee3faed3f724a13d9f3fe56dc5b/dot_ring-0.1.8-cp312-cp312-macosx_11_0_x86_64.whl", hash = "sha256:9be32194589763c9980f4f430b7f30a36af6075ee9557f0c3c5a73e9f9b4dc82", size = 1991357, upload-time = "2026-05-28T07:51:54.968Z" },
+    { url = "https://files.pythonhosted.org/packages/11/7b/9629cec6a13955790598a88b44b28514f557da78a6b0e356866433cb158f/dot_ring-0.1.8-cp312-cp312-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:8decc8424d3ae5793da851c7b835e2c33f793af3bc54f9bf7b62eb48bc9f7eaa", size = 2859914, upload-time = "2026-05-28T07:51:56.883Z" },
+    { url = "https://files.pythonhosted.org/packages/69/b9/81ab7f77bceefe28c1ba23874c467888a395a0769eacda48b8311c731a40/dot_ring-0.1.8-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:cdbe919f0ef9b988e73e9256154c4c0059e68e5974ad9a4d97602f7512083e62", size = 2905722, upload-time = "2026-05-28T07:51:58.828Z" },
 ]
 
 [[package]]
