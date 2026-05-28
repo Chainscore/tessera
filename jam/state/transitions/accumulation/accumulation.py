@@ -37,12 +37,6 @@ from jam.utils.constants import EPOCH_LENGTH, TOTAL_GAS, ACCUMULATION_GAS, CORE_
 if TYPE_CHECKING:
     from jam.state.state import State
 
-
-def _timing(label: str) -> None:
-    # print(label, datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
-    pass
-
-
 class Accumulation:
     @staticmethod
     def filter_wr_fn(work_reports: WorkReports) -> WorkReports:
@@ -691,9 +685,7 @@ class Accumulation:
         gas_limit = max(TOTAL_GAS,((ACCUMULATION_GAS*CORE_COUNT) + service_gas))
 
         deferred_transfers: DeferredTransfers = DeferredTransfers([])
-        _timing(">> Acc start")
         [num_accumulated, commitment_map, gas_accumulations] = Accumulation.seq_accumulation(Gas(gas_limit), deferred_transfers, star_work_reports, state, state.chi.chi_z)
-        _timing(">> Acc end")
 
         accumulation_stats = {}
         for ga in gas_accumulations:

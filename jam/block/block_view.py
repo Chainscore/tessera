@@ -116,11 +116,9 @@ class BlockView:
             self.heads = Heads([ghost_final.header])
 
         else:
-            # print("LATEST HEADS", latest_heads)
             for head in latest_heads:
                 branch_stack = []
                 curr_head = head
-                # print("CURR HEAD", head)
                 while curr_head != self.final.header:
                     block = Block.load(curr_head, kv)
                     branch_stack.append(block)

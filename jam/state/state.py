@@ -66,9 +66,6 @@ from tsrkit_types.sequences import TypedVector
 from dot_ring import RingVRF, Bandersnatch, IETF_VRF
 
 Bytes31 = Bytes[31]
-def _timing(label: str) -> None:
-    # print(label, datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
-    pass
 
 
 def _env_int(name: str, default: int) -> int:
@@ -354,16 +351,12 @@ class State:
         #     f"\n   └─ Current State Root: {state.root.hex()}",
         #     "\n" + "=" * 72,
         # )
-        _timing("Loading Parent State")
         parent_state = State.load_parent(block.header.parent)
         parent_state.store.enable_cache()
         parent_state.store.enable_writes()
-        _timing("Loaded Parent State")
 
-        _timing(">> Starting Parent transition")
         pre_state = State.readonly_from_loaded(parent_state)
         success = parent_state.transition(block, instant_finality, skip_hooks, pre_state)
-        _timing(">> Starting Parent transition")
         # del parent_state
         # state = parent_state
         return success
@@ -438,26 +431,22 @@ class State:
                 return False
 
             # Load pre state
-            _timing(">> Load Pre State")
             if pre_state is None:
                 pre_state = State.load_readonly(block.header.parent)
 
 
             # Disputes
-            _timing(">> Disputes transition start")
             Disputes.transition(pre_state, self, block)
 
 
             # Safrole
             entropy_proof = IETF_VRF[Bandersnatch].from_bytes(block.header.entropy_source)
             vrf_output = OpaqueHash(entropy_proof.proof_to_hash(entropy_proof.output_point)[:32])
-            _timing(">> Safrole transition start")
             Safrole.transition(pre_state, self, block, vrf_output)
 
             # Block Validation
             # TODO: Replace settings with self.settings
             from jam.settings import settings
-            _timing(">> Block validation start")
             block_valid = block.validate(self, pre_state, settings)
 
             # Handle Parent's Block Posterior State Root (β† h)
@@ -469,7 +458,6 @@ class State:
             self.beta = beta
 
             # Assurances
-            _timing(">> Assurances transition start")
             _, newly_avail_wrs = Assurances.transition(pre_state, self, block)
             # if len(newly_avail_wrs) > 0:
             #     logger.info(
@@ -479,17 +467,14 @@ class State:
             #     )
 
             # Reporting
-            _timing(">> Reporting transition start")
             Reporting.transition(pre_state, self, block, [])
 
             # Accumulation
-            _timing(">> Accumulation transition start")
             _, commitment_map = Accumulation.transition(
                 pre_state, self, block, newly_avail_wrs=newly_avail_wrs
             )
 
             # Authorization
-            _timing(">> Auth transition start")
             Authorization.transition(pre_state, self, block)
 
             # Recent History
@@ -500,15 +485,12 @@ class State:
                 [Bytes(comm.service_id.encode() + comm.output.encode()) for comm in self.theta],
                 Hash.keccak256,
             )
-            _timing(">> Beta transition start")
             RecentHistory.transition(pre_state, self, block, accumulate_root, header_hash)
 
             # Preimages
-            _timing(">> Preimages transition start")
             Preimages.transition(pre_state, self, block)
 
             # Statistics
-            _timing(">> Statistics transition start")
             Statistics.transition(pre_state, self, block, newly_avail_wrs)
 
             if block_valid:
