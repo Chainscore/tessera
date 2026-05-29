@@ -113,14 +113,15 @@ class Safrole:
 
             vrf_ids.clear()
             gamma.a.sort(key=lambda x: x.id)
-            gamma.a = GammaA(gamma.a[:EPOCH_LENGTH])
 
-            # Check for duplicates
-            if len(gamma.a) != len(list(set(gamma.a))):
+            # Check duplicates before truncating.
+            if len(gamma.a) != len(set(gamma.a)):
                 raise SafroleError(
                     SafroleErrorCode.DUPLICATE_TICKET,
                     "Duplicate tickets are not allowed",
                 )
+
+            gamma.a = GammaA(gamma.a[:EPOCH_LENGTH])
 
         # We never expect tickets after TICKET_SUBMISSION_END
         if not ticket_submission_active and count > 0:
@@ -160,7 +161,7 @@ class Safrole:
 
             # 4.3. Update seal keys for this coming epoch
             # Check if we are jumping before accumulating ticket.py
-            valid_jump = pre_tau % EPOCH_LENGTH > TICKET_SUBMISSION_END
+            valid_jump = pre_tau % EPOCH_LENGTH >= TICKET_SUBMISSION_END
             # If we have sufficient tickets accumulated,
             # And we are jumping only one epoch,
             # And we are not jumping before TICKET_SUBMISSION_END
