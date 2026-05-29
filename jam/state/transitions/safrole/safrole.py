@@ -30,39 +30,21 @@ from jam.models.protocol.crypto import (
 from jam.models.state.gamma import GammaP, GammaSFallback, GammaA, GammaZ
 from jam.models.protocol.validators import ValidatorData, ValidatorMetadata
 from dot_ring import Bandersnatch, Ring, RingRoot, RingVRF
-from dot_ring.curve.specs.bandersnatch import Bandersnatch as BandersnatchSpec
-from dot_ring.ring_proof.constants import PaddingPoint
-from dot_ring.ring_proof.params import RingProofParams
 
 
 class Safrole:
     @staticmethod
-    def ring_params_for_key_count(key_count: int) -> RingProofParams:
-        params = RingProofParams()
-        scalar_bits = BandersnatchSpec.curve.ORDER.bit_length()
-        min_domain_size = key_count + scalar_bits + params.padding_rows
-        domain_size = 1 << (min_domain_size - 1).bit_length()
-        max_ring_size = domain_size - params.padding_rows - scalar_bits
-        return RingProofParams(domain_size=domain_size, max_ring_size=max_ring_size)
-
-    @staticmethod
     def build_ring(keys: list[bytes]) -> Ring:
-        return Safrole._build_ring(tuple(bytes(key) for key in keys))
+        return Safrole._build_ring(tuple(bytes(k) for k in keys))
 
     @staticmethod
     @lru_cache(maxsize=16)
-    def _build_ring(key_bytes: tuple[bytes, ...]) -> Ring:
-        params = Safrole.ring_params_for_key_count(len(key_bytes))
-        ring = Ring([], params)
-        for i, key in enumerate(key_bytes):
-            point = params.cv.point.string_to_point(key)
-            ring.nm_points[i] = PaddingPoint if isinstance(point, str) else (point.x, point.y)
-        return ring
+    def _build_ring(keys: tuple[bytes, ...]) -> Ring:
+        return Ring(list(keys))
 
     @staticmethod
-    def build_ring_root(keys: list[bytes]) -> tuple[Ring, RingRoot]:
-        ring = Safrole.build_ring(keys)
-        return ring, RingRoot.from_ring(ring, ring.params)
+    def build_ring_root(ring: Ring) -> RingRoot:
+        return RingRoot.from_ring(ring)
 
     @staticmethod
     @lru_cache(maxsize=16)
@@ -71,7 +53,8 @@ class Safrole:
 
     @staticmethod
     def compute_ring_root(keys: list[BandersnatchPublic]) -> GammaZ:
-        _, ring_root = Safrole.build_ring_root(keys)
+        ring = Safrole.build_ring(keys)
+        ring_root = Safrole.build_ring_root(ring)
         return GammaZ(ring_root.to_bytes())
 
     @staticmethod
@@ -195,12 +178,14 @@ class Safrole:
             # 4.4. Update ring root when the epoch transition changes gamma p.
             if gamma.p != pre_state.gamma.p:
                 pubkeys = [bytes(k.bandersnatch) for k in gamma.p]
-                ring, ring_root = Safrole.build_ring_root(pubkeys)
+                ring = Safrole.build_ring(pubkeys)
+                ring_root = Safrole.build_ring_root(ring)
                 gamma.z = GammaZ(ring_root.to_bytes())
 
         # Get ring root for ticket validation (may be from state if no epoch transition)
         if ring is None:
-            ring = Safrole.build_ring([bytes(k.bandersnatch) for k in gamma.p])
+            pubkeys = [bytes(k.bandersnatch) for k in gamma.p]
+            ring = Safrole.build_ring(pubkeys)
         ring_root = Safrole.ring_root_from_bytes(bytes(gamma.z))
 
         parsed_vrfs = parsed_vrfs if ticket_submission_active and count > 0 else []
