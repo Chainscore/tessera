@@ -77,6 +77,67 @@ def _process_rss() -> str:
         return "unknown"
     return _format_bytes(int(parts[1]) * page_size)
 
+
+def _directory_size(path: str) -> int | None:
+    if not path or not os.path.exists(path):
+        return None
+
+    total = 0
+    stack = [path]
+    while stack:
+        current = stack.pop()
+        try:
+            with os.scandir(current) as entries:
+                for entry in entries:
+                    try:
+                        if entry.is_dir(follow_symlinks=False):
+                            stack.append(entry.path)
+                        elif entry.is_file(follow_symlinks=False):
+                            total += entry.stat(follow_symlinks=False).st_size
+                    except OSError:
+                        continue
+        except OSError:
+            continue
+    return total
+
+
+def _storage_paths(settings) -> list[str]:
+    candidates = [
+        getattr(settings, "_data_path", None),
+        os.environ.get("JAM_FUZZ_DATA_PATH"),
+        os.environ.get("JAM_LOG_DIR"),
+    ]
+    paths: list[str] = []
+    for candidate in candidates:
+        if not candidate or not os.path.exists(candidate):
+            continue
+        real = os.path.realpath(candidate)
+        if real not in paths:
+            paths.append(real)
+
+    roots: list[str] = []
+    for path in sorted(paths, key=len):
+        child_of_existing = any(
+            path == root or path.startswith(root.rstrip(os.sep) + os.sep)
+            for root in roots
+        )
+        if not child_of_existing:
+            roots.append(path)
+    return roots
+
+
+def _storage_usage(settings) -> str:
+    total = 0
+    seen_any = False
+    for path in _storage_paths(settings):
+        size = _directory_size(path)
+        if size is None:
+            continue
+        total += size
+        seen_any = True
+    return _format_bytes(total) if seen_any else "unknown"
+
+
 def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optional[str] = None):
     """
     The main server loop that listens for connections and handles messages.
@@ -136,7 +197,7 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                     received_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
                     print(
                         f"{received_at} Received Block #{block_count} "
-                        f"({len(payload)} bytes, rss={_process_rss()})"
+                        f"({len(payload)} bytes, rss={_process_rss()}, storage={_storage_usage(settings)})"
                     )
 
                     block = None

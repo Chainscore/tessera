@@ -107,12 +107,13 @@ docker run --rm \
   -e JAM_FUZZ_DATA_PATH=/data \
   -e JAM_FUZZ_SOCK_PATH=/sock/jam_target.sock \
   -e JAM_FUZZ_LOG_LEVEL=info \
+  -e JAM_PRUNE_BLOCK_HISTORY=0 \
   -v /tmp/tessera-data:/data \
   -v /tmp/tessera-sock:/sock \
   ghcr.io/chainscore/tessera:<version>
 ```
 
-Use `JAM_FUZZ_SPEC=full` for full-spec conformance runs.
+Use `JAM_FUZZ_SPEC=full` for full-spec conformance runs. Block-history pruning is disabled by default for fuzzing so `GetState` can still inspect older imported blocks; set `JAM_PRUNE_BLOCK_HISTORY=1` to enable bounded historical DB pruning.
 
 ## Source Development
 

@@ -189,14 +189,12 @@ class BlockView:
 
     def prune_history(self, kv: RockStore):
         """Delete finalized blocks, metadata and per-block state diffs older than
-        the retention window behind the finalized slot.
-
-        Every protocol-bounded lookback (lookup anchor, recent history, finality,
-        shallow forks) is covered by STATE_HISTORY_RETENTION, so anything older is
-        never read again. This keeps storage bounded over long runs regardless of
-        the number of imported blocks."""
+        the retention window behind the finalized slot when explicitly enabled."""
         from jam.state.storage import StateStorage
-        from jam.utils.constants import STATE_HISTORY_RETENTION
+        from jam.utils.constants import PRUNE_BLOCK_HISTORY, STATE_HISTORY_RETENTION
+
+        if not PRUNE_BLOCK_HISTORY:
+            return
 
         threshold = int(self.final.slot) - STATE_HISTORY_RETENTION
         if threshold <= self._pruned_upto_slot:
