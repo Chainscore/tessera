@@ -30,22 +30,20 @@ from jam.models.protocol.crypto import (
 from jam.models.state.gamma import GammaP, GammaSFallback, GammaA, GammaZ
 from jam.models.protocol.validators import ValidatorData, ValidatorMetadata
 from dot_ring import Bandersnatch, Ring, RingRoot, RingVRF
+from dot_ring.curve.specs.bandersnatch import Bandersnatch as BandersnatchSpec
 from dot_ring.ring_proof.constants import PaddingPoint
 from dot_ring.ring_proof.params import RingProofParams
 
 
 class Safrole:
-    SECRET_T_ROWS = 256
-
     @staticmethod
     def ring_params_for_key_count(key_count: int) -> RingProofParams:
         params = RingProofParams()
-        if key_count <= params.max_ring_size:
-            return params
-
-        min_domain_size = key_count + Safrole.SECRET_T_ROWS + params.padding_rows
+        scalar_bits = BandersnatchSpec.curve.ORDER.bit_length()
+        min_domain_size = key_count + scalar_bits + params.padding_rows
         domain_size = 1 << (min_domain_size - 1).bit_length()
-        return RingProofParams(domain_size=domain_size, max_ring_size=key_count)
+        max_ring_size = domain_size - params.padding_rows - scalar_bits
+        return RingProofParams(domain_size=domain_size, max_ring_size=max_ring_size)
 
     @staticmethod
     def build_ring(keys: list[bytes]) -> Ring:
@@ -194,13 +192,11 @@ class Safrole:
                 # Else fallback: use bandersnatch keys
                 gamma.s = Safrole.arrange_fallback(eta[2], state.kappa)
 
-            # 4. 4. Update ring root using gamma p
-            # Note: Removing the if condition allows this trace 1758621879/00000348 to pass
-            # if pre_state.gamma.p != pre_state.kappa:
-            # if pre_state.gamma.p != state.gamma.p:
-            pubkeys = [bytes(k.bandersnatch) for k in gamma.p]
-            ring, ring_root = Safrole.build_ring_root(pubkeys)
-            gamma.z = GammaZ(ring_root.to_bytes())
+            # 4.4. Update ring root when the epoch transition changes gamma p.
+            if gamma.p != pre_state.gamma.p:
+                pubkeys = [bytes(k.bandersnatch) for k in gamma.p]
+                ring, ring_root = Safrole.build_ring_root(pubkeys)
+                gamma.z = GammaZ(ring_root.to_bytes())
 
         # Get ring root for ticket validation (may be from state if no epoch transition)
         if ring is None:
