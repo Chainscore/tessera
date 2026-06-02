@@ -44,6 +44,14 @@ class JamConfig:
     audit_report_assign: int
     lookup_anchor_max_age: int
 
+    @staticmethod
+    def _scaled_rotation_period(epoch_duration: int) -> int:
+        return max(4, epoch_duration // 60)
+
+    @staticmethod
+    def _scaled_audit_report_assign(num_cores: int) -> int:
+        return max(2, min(10, (num_cores * 10 + 340) // 341))
+
     @classmethod
     def tiny(cls) -> "JamConfig":
         """Create tiny chain configuration."""
@@ -84,7 +92,7 @@ class JamConfig:
             contest_duration=30,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
-            rotation_period=None,  # TODO
+            rotation_period=cls._scaled_rotation_period(36),
             erasure_coding_original_shards=8,
             erasure_coding_recovery_shards=16,
             recovery_threshold=8,
@@ -92,6 +100,7 @@ class JamConfig:
             num_ec_pieces_per_segment=513,
             max_block_gas=20000000,
             max_refine_gas=1000000000,
+            audit_report_assign=cls._scaled_audit_report_assign(8),
             lookup_anchor_max_age=14400
         )
 
@@ -109,7 +118,7 @@ class JamConfig:
             contest_duration=50,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
-            rotation_period=None,  # TODO
+            rotation_period=cls._scaled_rotation_period(60),
             erasure_coding_original_shards=16,
             erasure_coding_recovery_shards=32,
             recovery_threshold=16,
@@ -117,6 +126,7 @@ class JamConfig:
             num_ec_pieces_per_segment=342,
             max_block_gas=20000000,
             max_refine_gas=1000000000,
+            audit_report_assign=cls._scaled_audit_report_assign(16),
             lookup_anchor_max_age=14400
         )
 
@@ -134,7 +144,7 @@ class JamConfig:
             contest_duration=100,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
-            rotation_period=None,  # TODO
+            rotation_period=cls._scaled_rotation_period(120),
             erasure_coding_original_shards=32,
             erasure_coding_recovery_shards=64,
             recovery_threshold=32,
@@ -142,6 +152,7 @@ class JamConfig:
             num_ec_pieces_per_segment=171,
             max_block_gas=20000000,
             max_refine_gas=1000000000,
+            audit_report_assign=cls._scaled_audit_report_assign(32),
             lookup_anchor_max_age=14400
         )
 
@@ -159,7 +170,7 @@ class JamConfig:
             contest_duration=200,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=3,
-            rotation_period=None,  # TODO
+            rotation_period=cls._scaled_rotation_period(240),
             erasure_coding_original_shards=64,
             erasure_coding_recovery_shards=128,
             recovery_threshold=64,
@@ -167,6 +178,7 @@ class JamConfig:
             num_ec_pieces_per_segment=57,
             max_block_gas=20000000,
             max_refine_gas=1000000000,
+            audit_report_assign=cls._scaled_audit_report_assign(64),
             lookup_anchor_max_age=14400
         )
 
@@ -184,7 +196,7 @@ class JamConfig:
             contest_duration=250,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=16,
-            rotation_period=None,  # TODO
+            rotation_period=cls._scaled_rotation_period(300),
             erasure_coding_original_shards=128,
             erasure_coding_recovery_shards=256,
             recovery_threshold=128,
@@ -192,6 +204,7 @@ class JamConfig:
             num_ec_pieces_per_segment=18,
             max_block_gas=20000000,
             max_refine_gas=1000000000,
+            audit_report_assign=cls._scaled_audit_report_assign(128),
             lookup_anchor_max_age=14400
         )
 
@@ -209,7 +222,7 @@ class JamConfig:
             contest_duration=500,
             tickets_per_validator=2,
             max_tickets_per_extrinsic=16,
-            rotation_period=None,  # TODO
+            rotation_period=cls._scaled_rotation_period(600),
             erasure_coding_original_shards=205,
             erasure_coding_recovery_shards=371,
             recovery_threshold=205,
@@ -217,6 +230,7 @@ class JamConfig:
             num_ec_pieces_per_segment=9,
             max_block_gas=20000000,
             max_refine_gas=1000000000,
+            audit_report_assign=cls._scaled_audit_report_assign(192),
             lookup_anchor_max_age=14400
         )
 
@@ -232,7 +246,7 @@ class JamConfig:
             epoch_duration=600,
             ticket_submission_end=500,
             contest_duration=500,
-            tickets_per_validator=16,
+            tickets_per_validator=2,
             max_tickets_per_extrinsic=16,
             rotation_period=10,
             erasure_coding_original_shards=342,

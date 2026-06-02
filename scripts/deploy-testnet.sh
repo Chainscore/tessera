@@ -8,6 +8,11 @@
 #
 set -e
 
+if [ "${DEPLOY_TESTNET_ENABLED:-}" != "true" ]; then
+    echo "Deploy testnet is disabled. Set DEPLOY_TESTNET_ENABLED=true to run this script." >&2
+    exit 1
+fi
+
 # Configuration
 RESOURCE_GROUP="tessera-testnet-rg"
 LOCATION="eastus"
@@ -48,7 +53,7 @@ az container create \
   --ports 19800 \
   --ip-address Public \
   --dns-name-label $DNS_LABEL \
-  --environment-variables TELEMETRY_HOST="$TELEMETRY_HOST" \
+  --environment-variables TELEMETRY_HOST="$TELEMETRY_HOST" TESTNET=1 \
   --restart-policy Always \
   --location $LOCATION
 

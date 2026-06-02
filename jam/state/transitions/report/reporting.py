@@ -57,7 +57,7 @@ class Reporting:
         known_packages = set(known_packages)
         for epoch_queue in pre_omega:
             for queue_el in epoch_queue:
-                known_packages.update(queue_el.report.context.prerequisites)
+                known_packages.add(queue_el.report.package_spec.hash)
         for deps in pre_xi:
             known_packages.update(deps)
 
@@ -94,7 +94,6 @@ class Reporting:
             # Debug Rho
             rho_val = rho[report.core_index].unwrap()
             if rho_val != Null:
-                print(f"DEBUG: Core {report.core_index} ENGAGED! Value: {rho_val}")
                 raise ReportingError(
                     ReportingErrorCode.CORE_ENGAGED,
                     "The core index mentioned in report should be available in rho",
@@ -185,6 +184,7 @@ class Reporting:
             for wp_hash, exports_root in x.reported.items():
                 beta_wp_hashes.add(wp_hash)
                 recent_exports_roots[wp_hash] = exports_root
+        dependency_packages = wp_hash_set | beta_wp_hashes
 
         rho_package_hashes = set()
         for pending_wr in pre_state.rho:
@@ -256,11 +256,7 @@ class Reporting:
                 *context.prerequisites,
             ]
             for prereq in all_prerequisites:
-                if (
-                    prereq not in wp_hash_set
-                    and prereq not in beta_wp_hashes
-                    and prereq not in known_packages
-                ):
+                if prereq not in dependency_packages:
                     raise ReportingError(
                         ReportingErrorCode.DEPENDENCY_MISSING,
                         "prerequisite's hash should match the package_specification's hash of any of the reports",
@@ -379,6 +375,7 @@ class Reporting:
                     )
 
         for x, validator_keys in guarantee_validator_keys:
+            message = X.GUARANTEE.value + bytes(x.report.hash())
             for y in x.signatures:
                 public_key = validator_keys[y.validator_index]
                 signature = y.signature
@@ -386,7 +383,7 @@ class Reporting:
                 try:
                     Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(
                         bytes(signature),
-                        X.GUARANTEE.value + bytes(x.report.hash()),
+                        message,
                     )
                 except InvalidSignature:
                     raise ReportingError(
@@ -440,7 +437,8 @@ class Reporting:
             total_accumulate_gas = 0
             for y in x.report.digests:
                 # --------------- bad_service_id -------------------
-                if y.service_id not in delta:
+                account = delta[y.service_id]
+                if account is None:
                     raise ReportingError(
                         ReportingErrorCode.BAD_SERVICE_ID,
                         f"Service ID {y.service_id} not found in state accounts",
@@ -449,7 +447,7 @@ class Reporting:
                 # --------------- bad_code_hash -------------------
                 # https://graypaper.fluffylabs.dev/#/38c4e62/161300162600?v=0.7.0
                 # Eq 11.42
-                if y.code_hash != delta[y.service_id].service.code_hash:
+                if y.code_hash != account.service.code_hash:
                     raise ReportingError(
                         ReportingErrorCode.BAD_CODE_HASH,
                         "Result code_hash should match with state's delta code_hash",
@@ -458,7 +456,7 @@ class Reporting:
                 # --------------- service_item_gas_too_low -------------------
                 # https://graypaper.fluffylabs.dev/#/38c4e62/158b0215a302?v=0.7.0
                 # Eq 11.30
-                if y.accumulate_gas < delta[y.service_id].service.min_gas:
+                if y.accumulate_gas < account.service.min_gas:
                     raise ReportingError(
                         ReportingErrorCode.SERVICE_ITEM_GAS_TOO_LOW,
                         "For every report its accumulate gas should be greater than the delta's min_gas",

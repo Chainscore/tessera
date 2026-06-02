@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path
 from typing import List, Optional, Dict
 
-from jam.api.rpc.subscription_handlers import subscribe_best_block
+from jam.api.rpc.subscription_handlers import subscribe_best_block, subscriptions_enabled
 from jam.block import Block
 from jam.models.protocol.core import TimeSlot
 from jam.models.protocol.crypto import OpaqueHash, HeaderHash
@@ -46,8 +46,12 @@ class GhostBlock:
     def __init__ (self, block: Optional[Block] = None, parent: Optional["GhostBlock"] = None):
         self.status = BlockStatus("unaudited")
         if block is None:
-            block = Block.genesis()
+            self.header = HeaderHash(32)
+            self.slot = TimeSlot(0)
+            self.children = TypedVector[GhostBlock]([])
+            self.parent = parent
             self.status = BlockStatus("final")
+            return
 
         self.header = block.header.hash()
         self.slot = block.header.slot
@@ -56,8 +60,8 @@ class GhostBlock:
 
         if parent is not None:
             parent.children.append(self)
-            if len(parent.children) > 1:
-                print("FORK DETECTED AT BLOCK", parent.header.hex())
+            # if len(parent.children) > 1:
+            #     print("FORK DETECTED AT BLOCK", parent.header.hex())
 
     def detach_from_parent(self):
         if self.parent:
@@ -83,9 +87,20 @@ class BlockView:
         # map Header Hash -> GhostBlock for quick lookup
         self._index_map = dict[HeaderHash, GhostBlock]({})
 
+        # Highest slot whose finalized history has already been pruned.
+        self._pruned_upto_slot = 0
+
     def initialize(self, kv: RockStore):
         self._index_map = {}
+        self._pruned_upto_slot = 0
         from jam.finality.finality import Finality
+
+        if not kv.get(Finality.FINAL_KEY):
+            self.final = GhostBlock()
+            self.heads = Heads([self.final.header])
+            self.best = self.final
+            self._index_map[self.final.header] = self.final
+            return
 
         latest_heads = Finality.load_heads(kv)
         final_block = Finality.load_final(kv)
@@ -101,11 +116,9 @@ class BlockView:
             self.heads = Heads([ghost_final.header])
 
         else:
-            # print("LATEST HEADS", latest_heads)
             for head in latest_heads:
                 branch_stack = []
                 curr_head = head
-                # print("CURR HEAD", head)
                 while curr_head != self.final.header:
                     block = Block.load(curr_head, kv)
                     branch_stack.append(block)
@@ -160,6 +173,94 @@ class BlockView:
 
         self.revalidate_view()
 
+    def _delete_block_keys(self, ghost: "GhostBlock", kv: RockStore):
+        from jam.state.storage import StateStorage
+
+        hh = ghost.header
+        for key in (
+            Block.get_storage_key_block(hh),
+            Block.get_storage_key_meta(hh),
+            StateStorage.get_storage_key(hh),
+        ):
+            try:
+                kv.delete(key)
+            except Exception:
+                pass
+
+    def prune_history(self, kv: RockStore):
+        """Delete finalized blocks, metadata and per-block state diffs older than
+        the retention window behind the finalized slot when explicitly enabled."""
+        from jam.state.storage import StateStorage
+        from jam.utils.constants import PRUNE_BLOCK_HISTORY, STATE_HISTORY_RETENTION
+
+        if not PRUNE_BLOCK_HISTORY:
+            return
+
+        threshold = int(self.final.slot) - STATE_HISTORY_RETENTION
+        if threshold <= self._pruned_upto_slot:
+            return
+
+        from_slot = self._pruned_upto_slot + 1
+        pruned_blocks = 0
+        for slot in range(from_slot, threshold + 1):
+            slot_key = Block.get_storage_key_slot(TimeSlot(slot))
+            hh = kv.get(slot_key)
+            if hh:
+                for key in (
+                    Block.get_storage_key_block(hh),
+                    Block.get_storage_key_meta(hh),
+                    StateStorage.get_storage_key(hh),
+                ):
+                    try:
+                        kv.delete(key)
+                    except Exception:
+                        pass
+                try:
+                    kv.delete(slot_key)
+                except Exception:
+                    pass
+                pruned_blocks += 1
+
+        self._pruned_upto_slot = threshold
+        print(
+            f"[prune] finalized={int(self.final.slot)} "
+            f"slots={from_slot}..{threshold} pruned_blocks={pruned_blocks} "
+            f"retention={STATE_HISTORY_RETENTION} pruned_upto={self._pruned_upto_slot}",
+            flush=True,
+        )
+
+    def _detach_subtree(self, ghost: "GhostBlock", kv: RockStore):
+        stack = [ghost]
+        while stack:
+            node = stack.pop()
+            for child in list(getattr(node, "children", [])):
+                stack.append(child)
+            self._index_map.pop(node.header, None)
+            if node.header in self.heads:
+                self.heads.remove(node.header)
+            self._delete_block_keys(node, kv)
+
+    def discard(self, block: Block, kv: RockStore):
+        bh = block.header.hash()
+        ghost = self._index_map.get(bh)
+        if ghost is None:
+            return
+
+        parent = ghost.parent
+        if parent is not None:
+            try:
+                parent.children.remove(ghost)
+            except ValueError:
+                pass
+
+        self._detach_subtree(ghost, kv)
+
+        if parent is not None and not getattr(parent, "children", []):
+            if parent.header in self._index_map and parent.header not in self.heads:
+                self.heads.append(parent.header)
+
+        self.revalidate_view()
+
     def load_ghost(self, hh: HeaderHash):
         if hh not in self._index_map:
             return None
@@ -204,29 +305,14 @@ class BlockView:
             # raise ValueError("pre-final must be direct parent of the block being finalized")
 
         self._index_map.pop(pre_final.header, None)
+        if pre_final.header in self.heads:
+            self.heads.remove(pre_final.header)
 
-        # TODO: Handle forked chain properly
-        # def _collect_subtree_nodes(root: GhostBlock):
-        #     stack = [root]
-        #     seen = set()
-        #     while stack:
-        #         node = stack.pop()
-        #         if node.header in seen:
-        #             continue
-        #         seen.add(node.header)
-        #         for c in getattr(node, "children", []):
-        #             stack.append(c)
-        #     return seen
-
-        # removed_heads = set()
-        for child in pre_final.children:
+        for child in list(pre_final.children):
             if child.header != ghost_block.header:
-                child.status = BlockStatus("invalid")
-                # to_remove = _collect_subtree_nodes(child)
-                # removed_heads.update(to_remove)
+                self._detach_subtree(child, kv)
 
-            # child.detach_from_parent()
-
+        ghost_block.detach_from_parent()
         del pre_final
 
         self.final = ghost_block
@@ -235,6 +321,7 @@ class BlockView:
         kv.put(meta_key, meta.encode())
 
         self.revalidate_view()
+        self.prune_history(kv)
 
     def best_block(self):
         curr_head = self.final
@@ -261,7 +348,8 @@ class BlockView:
             self.best = best
 
             # publish updates of the head of the "best" chain.
-            asyncio.create_task(subscribe_best_block(best.header))
+            if subscriptions_enabled():
+                asyncio.create_task(subscribe_best_block(best.header))
 
     def visualize(self, *, show_status: bool = True, show_slot: bool = True, color: bool = True):
         """

@@ -6,21 +6,21 @@ from collections import OrderedDict
 
 def make_state_prop(state_key: int, cl: Type[Codable]):
     CAPACITY = 25
-
-    def _get_cache(self):
-        if self.store is None:
-            raise ValueError("State store is not initialized")
-        if state_key not in self.store._prop_cache:
-            self.store._prop_cache[state_key] = OrderedDict()
-        return self.store._prop_cache[state_key]
+    storage_key_bytes = bytes(construct_state_key(state_key))
+    component_name = cl.__name__
 
     def fget(self):
-        cache = _get_cache(self)
-        storage_key = construct_state_key(state_key)
-        storage_key_bytes = bytes(storage_key)
-        raw = self.store.get(storage_key_bytes)
+        store = self.store
+        if store is None:
+            raise ValueError("State store is not initialized")
+        prop_cache = store._prop_cache
+        cache = prop_cache.get(state_key)
+        if cache is None:
+            cache = OrderedDict()
+            prop_cache[state_key] = cache
+        raw = store.get(storage_key_bytes)
         if raw is None:
-            raise ValueError(f"State component missing from DB: {cl.__name__}")
+            raise ValueError(f"State component missing from DB: {component_name}")
         cache_key = (storage_key_bytes, raw)
         if cache_key in cache:
             cache.move_to_end(cache_key)
@@ -32,13 +32,16 @@ def make_state_prop(state_key: int, cl: Type[Codable]):
         return decoded_v
 
     def fset(self, value):
-        cache = _get_cache(self)
-        k, v = construct_state_key(state_key), value.encode()
-        # print("UPDATING KEY", k.hex(), v.hex())
-        self.store.put(bytes(k), v)
-        storage_key_bytes = bytes(k)
-        to_remove = [key for key in cache if key[0] == storage_key_bytes]
-        for key in to_remove:
-            del cache[key]
+        store = self.store
+        if store is None:
+            raise ValueError("State store is not initialized")
+        prop_cache = store._prop_cache
+        cache = prop_cache.get(state_key)
+        if cache is None:
+            cache = OrderedDict()
+            prop_cache[state_key] = cache
+        v = value.encode()
+        store.put(storage_key_bytes, v)
+        cache.clear()
 
     return property(fget, fset)

@@ -18,6 +18,10 @@ from jam.utils.shuffle import shuffle
 from collections import deque
 
 ValidatorList = TypedVector[ValidatorIndex]
+_VALIDATOR_INDEX_BASE = tuple(U32(i) for i in range(VALIDATOR_COUNT))
+_CORE_ASSIGNMENT_BASE = tuple(
+    U32((CORE_COUNT * i) // VALIDATOR_COUNT) for i in range(VALIDATOR_COUNT)
+)
 
 def guarantor_assignment(
     eta, kappa, lambda_, gamma_p, block_slot, report_slot, tau
@@ -40,15 +44,10 @@ def guarantor_assignment(
 
     """
     # ------- Validator order ---------
-    array_validator = TypedVector[U32]([])
-    for i in range(VALIDATOR_COUNT):
-        array_validator.append(U32(i))
+    array_validator = _VALIDATOR_INDEX_BASE
 
     # ------- Validator assignment to the cores -------
-    validator_assign = TypedVector[U32]([])
-    for i in range(VALIDATOR_COUNT):
-        val_core = floor((CORE_COUNT * i) / VALIDATOR_COUNT)
-        validator_assign.append(U32(val_core))
+    validator_assign = TypedVector[U32](_CORE_ASSIGNMENT_BASE)
 
     epoch_change = (int(tau) // EPOCH_LENGTH) < (int(block_slot) // EPOCH_LENGTH)
     eta2_post = eta[1] if epoch_change else eta[2]
@@ -115,10 +114,7 @@ def rotation_fn(c: TypedVector[U32], rotation_phase: int):
     return rotated_cores
 
 def permute_fn(e: OpaqueHash, t: TimeSlot):
-    assignment = TypedVector[U32]([])
-
-    for i in range(VALIDATOR_COUNT):
-        assignment.append(U32((CORE_COUNT * i) // VALIDATOR_COUNT))
+    assignment = TypedVector[U32](_CORE_ASSIGNMENT_BASE)
 
     shuffled_assignment = shuffle(e, assignment)
 

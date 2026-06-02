@@ -1,5 +1,9 @@
+from datetime import datetime
 import json
 import asyncio
+import os
+import weakref
+from collections import OrderedDict
 from copy import copy, deepcopy
 
 from jam.error import JamError, JamErrorCode
@@ -47,7 +51,7 @@ from jam.state.transitions import (
     Preimages,
     Statistics,
 )
-from jam.api.rpc.subscription_handlers import subscribe_statistics
+from jam.api.rpc.subscription_handlers import subscribe_statistics, subscriptions_enabled
 from jam.telemetry import emit_event
 from jam.telemetry.events import (
     BestBlockChanged,
@@ -61,6 +65,15 @@ from tsrkit_types import U32, U64, Bytes32, String
 from tsrkit_types.sequences import TypedVector
 from dot_ring import RingVRF, Bandersnatch, IETF_VRF
 
+Bytes31 = Bytes[31]
+
+
+def _env_int(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, str(default)))
+    except ValueError:
+        return default
+
 
 class State:
     """
@@ -72,6 +85,14 @@ class State:
     _lock = False
     # DB + Trie + Cache
     store: StateStorage
+    _live_instances = weakref.WeakSet()
+    _created_instances = 0
+    _destroyed_instances = 0
+    _head_hash: HeaderHash | None = None
+    _head_trie: StateTrie | None = None
+    _head_updates: dict[bytes, bytes | None] | None = None
+    _trie_cache: OrderedDict[HeaderHash, tuple[StateTrie, dict[bytes, bytes | None]]] = OrderedDict()
+    _trie_cache_limit = max(0, _env_int("JAM_STATE_TRIE_CACHE_LIMIT", 8))
 
     # State Components
     alpha = make_state_prop(1, Alpha)
@@ -97,6 +118,22 @@ class State:
 
     def __init__(self, _store: StateStorage | None):
         self.store = _store
+        type(self)._created_instances += 1
+        type(self)._live_instances.add(self)
+
+    def __del__(self):
+        try:
+            type(self)._destroyed_instances += 1
+        except Exception:
+            pass
+
+    @classmethod
+    def instance_stats(cls) -> dict[str, int]:
+        return {
+            "live": len(cls._live_instances),
+            "created": cls._created_instances,
+            "destroyed": cls._destroyed_instances,
+        }
 
     @classmethod
     def from_keyvals(cls, key_vals: dict[str, str] | dict[Bytes, Bytes], db: RockStore):
@@ -127,7 +164,7 @@ class State:
                 self._transform(node.right, state_dict)
             return
 
-        key = Bytes[31].from_bits(node.encoded.slice_bits(8, 256))
+        key = Bytes31.from_bits(node.encoded.slice_bits(8, 256))
         key_bytes = bytes(key)
 
         if key_bytes in self.store._updates:
@@ -152,9 +189,8 @@ class State:
 
     @property
     def root(self):
-        # Use cached root if set (for snapshots loaded without trie mutations)
-        # if hasattr(self, '_cached_root') and self._cached_root is not None:
-        #     return self._cached_root
+        if self.store._TRIE is None and hasattr(self, "_cached_root"):
+            return self._cached_root
         return self.store._TRIE.root_hash
 
     def revert(self, header_hash):
@@ -167,6 +203,7 @@ class State:
         """
         updates, _root = self.store.load_cache(header_hash)
         self.store._updates = updates
+        self.store._base_updates = updates.copy()
         self.store.settle_cache()
 
     @classmethod
@@ -188,6 +225,7 @@ class State:
         # Note: If Header Hash is not passed, cache remains empty
         cache, final_root = state_snapshot.store.load_cache(header_hash, apply_trie=True)
         state_snapshot.store._updates = cache
+        state_snapshot.store._base_updates = cache.copy()
 
         # Set the expected root directly from stored records
         # This is tracked separately since we don't mutate the trie
@@ -200,6 +238,87 @@ class State:
         )
 
         return state_snapshot
+
+    @classmethod
+    def load_readonly(cls, header_hash=HeaderHash(Hash.blake2b(b"empty"))) -> "State":
+        store_snapshot = StateStorage(None, state.store._DB)
+        cache, final_root = store_snapshot.load_cache(header_hash, apply_trie=False)
+        store_snapshot._updates = cache
+        store_snapshot._base_updates = cache.copy()
+        snapshot = cls(store_snapshot)
+        snapshot._cached_root = final_root
+        return snapshot
+
+    @classmethod
+    def readonly_from_loaded(cls, loaded_state: "State") -> "State":
+        store_snapshot = StateStorage(
+            None,
+            loaded_state.store._DB,
+            loaded_state.store._updates.copy(),
+        )
+        snapshot = cls(store_snapshot)
+        if hasattr(loaded_state, "_cached_root"):
+            snapshot._cached_root = loaded_state._cached_root
+        else:
+            snapshot._cached_root = loaded_state.root
+        return snapshot
+
+    @classmethod
+    def clear_head_cache(cls):
+        cls._head_hash = None
+        cls._head_trie = None
+        cls._head_updates = None
+        cls._trie_cache.clear()
+
+    @classmethod
+    def remember_trie_cache(
+        cls,
+        header_hash: HeaderHash,
+        trie: StateTrie,
+        updates: dict[bytes, bytes | None],
+    ):
+        cached_hash = HeaderHash(header_hash)
+        cls._trie_cache[cached_hash] = (deepcopy(trie), updates.copy())
+        cls._trie_cache.move_to_end(cached_hash)
+        while len(cls._trie_cache) > cls._trie_cache_limit:
+            cls._trie_cache.popitem(last=False)
+
+    @classmethod
+    def remember_head(
+        cls,
+        header_hash: HeaderHash,
+        source_state: "State",
+        updates: dict[bytes, bytes | None] | None = None,
+    ):
+        if source_state.store is None or source_state.store._TRIE is None:
+            cls.clear_head_cache()
+            return
+        cls._head_hash = HeaderHash(header_hash)
+        cls._head_trie = source_state.store._TRIE
+        cls._head_updates = (
+            updates.copy() if updates is not None else source_state.store._updates.copy()
+        )
+        cls.remember_trie_cache(cls._head_hash, cls._head_trie, cls._head_updates)
+
+    @classmethod
+    def load_parent(cls, header_hash=HeaderHash(Hash.blake2b(b"empty"))) -> "State":
+        if (
+            cls._head_hash == header_hash
+            and cls._head_trie is not None
+            and cls._head_updates is not None
+        ):
+            trie = cls._head_trie
+            updates = cls._head_updates.copy()
+            cls._head_hash = None
+            cls._head_trie = None
+            cls._head_updates = None
+            return cls(StateStorage(trie, state.store._DB, updates))
+        cached = cls._trie_cache.get(HeaderHash(header_hash))
+        if cached is not None:
+            cls._trie_cache.move_to_end(HeaderHash(header_hash))
+            trie, updates = cached
+            return cls(StateStorage(deepcopy(trie), state.store._DB, updates.copy()))
+        return cls.load(header_hash)
 
     def stash(self, header_hash: HeaderHash):
         """Records all the cache updates in database."""
@@ -232,17 +351,23 @@ class State:
         #     f"\n   └─ Current State Root: {state.root.hex()}",
         #     "\n" + "=" * 72,
         # )
-
-        parent_state = state.load(block.header.parent)
+        parent_state = State.load_parent(block.header.parent)
         parent_state.store.enable_cache()
         parent_state.store.enable_writes()
 
-        success = parent_state.transition(block, instant_finality, skip_hooks)
+        pre_state = State.readonly_from_loaded(parent_state)
+        success = parent_state.transition(block, instant_finality, skip_hooks, pre_state)
         # del parent_state
         # state = parent_state
         return success
 
-    def transition(self, block: Block, instant_finality: bool = True, skip_hooks=False) -> bool:
+    def transition(
+        self,
+        block: Block,
+        instant_finality: bool = True,
+        skip_hooks=False,
+        pre_state: "State | None" = None,
+    ) -> bool:
         """
         Main state transition function. Takes in the current state and the incoming block, returns the transitioned state
 
@@ -261,7 +386,7 @@ class State:
         from jam.finality.finality import Finality
 
         try:
-            header_hash = HeaderHash(block.header.hash())
+            header_hash = block.header.hash()
             event_id = id(block) & 0xFFFFFFFFFFFFFFFF
 
             # Emit Importing event
@@ -306,7 +431,8 @@ class State:
                 return False
 
             # Load pre state
-            pre_state = self.load(block.header.parent)
+            if pre_state is None:
+                pre_state = State.load_readonly(block.header.parent)
 
 
             # Disputes
@@ -333,12 +459,12 @@ class State:
 
             # Assurances
             _, newly_avail_wrs = Assurances.transition(pre_state, self, block)
-            if len(newly_avail_wrs) > 0:
-                logger.info(
-                    "Newly available WRs",
-                    count=len(newly_avail_wrs),
-                    wrs=[wr.hash().hex()[:16] + "..." for wr in newly_avail_wrs],
-                )
+            # if len(newly_avail_wrs) > 0:
+            #     logger.info(
+            #         "Newly available WRs",
+            #         count=len(newly_avail_wrs),
+            #         wrs=[wr.hash().hex()[:16] + "..." for wr in newly_avail_wrs],
+            #     )
 
             # Reporting
             Reporting.transition(pre_state, self, block, [])
@@ -356,9 +482,7 @@ class State:
 
             # Calculate Merkle root of Accumulation Outputs
             accumulate_root = bmr_merklizer.wb_merklize(
-                TypedVector[Bytes](
-                    [Bytes(comm.service_id.encode() + comm.output.encode()) for comm in self.theta]
-                ),
+                [Bytes(comm.service_id.encode() + comm.output.encode()) for comm in self.theta],
                 Hash.keccak256,
             )
             RecentHistory.transition(pre_state, self, block, accumulate_root, header_hash)
@@ -417,10 +541,24 @@ class State:
                     # finalize the block and update viewer and whole chain
                     Finality.finalise(block, _set.main_db, True)
                     self.settle(header_hash)
+                    State.remember_head(header_hash, self)
+                else:
+                    try:
+                        Finality.advance_finalized(block, _set.main_db)
+                    except Exception as exc:
+                        logger.warning(
+                            "Failed to advance finalized block",
+                            error=repr(exc),
+                            hh=header_hash.hex(),
+                            slot=int(block.header.slot),
+                        )
+                    head_updates, _ = self.store.load_cache(header_hash, apply_trie=False)
+                    State.remember_head(header_hash, self, head_updates)
 
 
                 # Publishes updates of the statistics stored in chain state
-                asyncio.create_task(subscribe_statistics(state.pi))
+                if subscriptions_enabled():
+                    asyncio.create_task(subscribe_statistics(state.pi))
 
                 block.extrinsic.clear_from_stores()
 
@@ -465,6 +603,7 @@ def set_state(new_state: State):
     logger.info("Global state updated")
 
     state = new_state
+    State.clear_head_cache()
     return state
 
 
@@ -496,5 +635,6 @@ def setup_state(state_db: RockStore, genesis: GhostState | str | dict = "dev-spe
 
     global state
     state = new_state
+    State.clear_head_cache()
 
     return state

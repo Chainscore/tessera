@@ -324,9 +324,16 @@ class AccumulateFunctions(INVF):
             registers[7] = HostStatus.CASH.value
             return CONTINUE, gas, registers, memory, context
         else:
+            # Variable gas, check if it goes oog
+            if gas < l:
+                gas = gas - l
+                return ExecutionStatus.OUT_OF_GAS, gas, registers, memory, context
+
             registers[7] = HostStatus.OK.value
+
             context.x.deferred_transfers.append(t)
             delta[context.x.s_index].service.balance = Balance(new_balance_sender)
+
             gas = gas - l
             return CONTINUE, gas, registers, memory, context
 
@@ -451,6 +458,7 @@ class AccumulateFunctions(INVF):
         lookup_key = LookupTable(hash=preimage_hash, length=BlobLength(preimage_len))
         # storing the initial lookup value
         lookup_val: Timestamps | None = account.lookup[lookup_key]
+        previous_lookup_val = None if lookup_val is None else Timestamps(list(lookup_val))
 
         # FIX: 'if not lookup_val' is truthy for empty list []
         # Should only create new entry if key doesn't exist (lookup_val is None)
@@ -464,6 +472,10 @@ class AccumulateFunctions(INVF):
             return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
         if account.service.balance < account.service.t:
+            if previous_lookup_val is None:
+                del account.lookup[lookup_key]
+            else:
+                account.lookup[lookup_key] = previous_lookup_val
             registers[7] = HostStatus.FULL.value
             return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
@@ -507,7 +519,7 @@ class AccumulateFunctions(INVF):
             del a.preimages[preimage_hash]
         elif (
             len(a.lookup[lookup_key]) == 3
-            and int(block_timeslot) - int(a.lookup[lookup_key][1]) >= PREIMAGE_EVICTION_TIMESLOTS
+            and int(block_timeslot) - int(a.lookup[lookup_key][1]) > PREIMAGE_EVICTION_TIMESLOTS
         ):
             a.lookup[lookup_key] = Timestamps([a.lookup[lookup_key][2], U32(block_timeslot)])
         else:

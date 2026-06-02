@@ -87,6 +87,30 @@ K = MAX_TICKETS_PER_EXTRINSIC
 LOOKUP_ANCHOR_MAX_AGE = chain_config.lookup_anchor_max_age
 L = LOOKUP_ANCHOR_MAX_AGE
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    import os
+
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+# Retention window (in timeslots) for historical blocks, headers and per-block
+# state diffs when block-history pruning is enabled. This is an implementation
+# storage bound, not a protocol requirement. Overridable via env for experiments.
+def _retention_default() -> int:
+    import os
+
+    try:
+        return int(os.environ["JAM_STATE_HISTORY_RETENTION"])
+    except (KeyError, ValueError):
+        return L + RECENT_HISTORY_SIZE + 64
+
+
+STATE_HISTORY_RETENTION = max(0, _retention_default())
+PRUNE_BLOCK_HISTORY = _env_bool("JAM_PRUNE_BLOCK_HISTORY", False)
+
 # N — Ticket entries per validator.
 TICKET_ENTRIES_PER_VALIDATOR = chain_config.tickets_per_validator
 N = TICKET_ENTRIES_PER_VALIDATOR

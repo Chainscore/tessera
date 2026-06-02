@@ -53,7 +53,8 @@ class Conductor(NodeDispatcher):
         try:
             from jam.state.transitions.safrole.safrole import Safrole
 
-            ring, ring_root = Safrole.build_ring_root(vals)
+            ring  =Safrole.build_ring(vals)
+            ring_root = Safrole.build_ring_root(ring)
             # Use dot_ring for proof generation (consistent with validation)
             ring_proof = RingVRF[Bandersnatch].prove(
                 alpha=X.TICKET.value + eta + bytes([attempt]),

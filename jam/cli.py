@@ -76,8 +76,8 @@ def build_parser():
     # Fuzzer-specific options
     p.add_argument("--socket", type=str, default="/tmp/jam_conformance.sock", 
                    help="Unix socket path for fuzzer target (only used with --fuzzer)")
-    p.add_argument("--record", type=str, default="fuzzer_session.json",
-                   help="Path to record fuzzer session data (only used with --fuzzer)")
+    p.add_argument("--record", type=str, default=None,
+                   help="Path to record fuzzer session data (only used with --fuzzer; disabled by default)")
     p.add_argument("--no-record", action="store_true",
                    help="Disable session recording (only used with --fuzzer)")
     p.add_argument("--import", dest="import_path", type=str,

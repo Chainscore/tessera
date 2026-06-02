@@ -77,9 +77,9 @@ uv run poe update-deps
 
 ## Docker Images
 
-### Fuzz image build
+### Docker image build
 
-The publishable conformance image is built from `Dockerfile.fuzz`, not the main `Dockerfile`.
+The publishable Docker image is built from the single top-level `Dockerfile`.
 
 Helper script:
 
@@ -91,10 +91,10 @@ sudo ./build-docker.sh chainscore/tessera local
 Raw build:
 
 ```bash
-sudo docker build -f Dockerfile.fuzz -t chainscore/tessera:local .
+sudo docker build -f Dockerfile -t chainscore/tessera:local .
 ```
 
-### Fuzz image run
+### Fuzz mode run
 
 Helper script:
 
@@ -146,17 +146,33 @@ chmod +x scripts/test-docker-fuzz-image.sh
 ./scripts/test-docker-fuzz-image.sh chainscore/tessera:local tiny tessera-fuzz-test 50
 ```
 
-### Normal mode from the same fuzz image
+### Normal modes from the same image
 
-`Dockerfile.fuzz` is dual-mode:
+`Dockerfile` supports three entrypoint modes:
 
-- default entrypoint behavior: normal multi-node startup
-- `JAM_FUZZ=1`: conformance target mode
+- default entrypoint behavior: normal single-node startup with `envs/40000.env`
+- `TESTNET=1`: normal six-node startup with `envs/40000.env` through `envs/40005.env`
+- `JAM_FUZZ=1`: conformance target mode. `FUZZ_MODE=on` is also accepted as an alias.
 
-Run normal mode:
+For node modes, `/app/.env` is loaded first and the selected `envs/*.env` file is loaded after it. Values in the selected node env override `.env`.
+
+Run default single-node mode:
 
 ```bash
 sudo docker run --rm chainscore/tessera:local
+```
+
+Run a specific bundled single-node env:
+
+```bash
+sudo docker run --rm -e TESSERA_NODE=40002 chainscore/tessera:local
+sudo docker run --rm -e TESSERA_ENV=envs/40002.env chainscore/tessera:local
+```
+
+Run six-node testnet mode:
+
+```bash
+sudo docker run --rm -e TESTNET=1 chainscore/tessera:local
 ```
 
 ### Published image names
@@ -477,9 +493,11 @@ git submodule update --init --recursive
 
 ## Azure Deployment
 
+Disabled by default. Set `DEPLOY_TESTNET_ENABLED=true` before running the local script, or set the GitHub repository variable `DEPLOY_TESTNET_ENABLED` to `true` before using the workflow.
+
 ```bash
-./scripts/deploy-testnet.sh
-./scripts/deploy-testnet.sh telemetry-host:port
+DEPLOY_TESTNET_ENABLED=true ./scripts/deploy-testnet.sh
+DEPLOY_TESTNET_ENABLED=true ./scripts/deploy-testnet.sh telemetry-host:port
 ```
 
 ## Known Mismatches And Stale Bits
