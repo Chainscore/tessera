@@ -1,5 +1,5 @@
 from copy import copy
-from typing import List
+from functools import lru_cache
 
 from jam.models.protocol.ticket import TicketBody
 from .errors import SafroleError, SafroleErrorCode
@@ -22,7 +22,6 @@ from jam.utils.constants import (
 )
 from jam.models.protocol.crypto import (
     BandersnatchPublic,
-    BandersnatchRingVrfSignature,
     BlsPublic,
     Ed25519Public,
     Hash,
@@ -30,15 +29,32 @@ from jam.models.protocol.crypto import (
 )
 from jam.models.state.gamma import GammaP, GammaSFallback, GammaA, GammaZ
 from jam.models.protocol.validators import ValidatorData, ValidatorMetadata
-# dot_ring is used for Ring VRF operations
-from dot_ring import RingVRF, Bandersnatch, IETF_VRF
-from dot_ring.vrf.ring.ring_root import RingRoot
+from dot_ring import Bandersnatch, Ring, RingRoot, RingVRF
 
 
 class Safrole:
     @staticmethod
-    def compute_ring_root(keys: List[BandersnatchPublic]) -> GammaZ:
-        ring_root = RingVRF[Bandersnatch].construct_ring_root(keys)
+    def build_ring(keys: list[bytes]) -> Ring:
+        return Safrole._build_ring(tuple(bytes(k) for k in keys))
+
+    @staticmethod
+    @lru_cache(maxsize=16)
+    def _build_ring(keys: tuple[bytes, ...]) -> Ring:
+        return Ring(list(keys))
+
+    @staticmethod
+    def build_ring_root(ring: Ring) -> RingRoot:
+        return RingRoot.from_ring(ring)
+
+    @staticmethod
+    @lru_cache(maxsize=16)
+    def ring_root_from_bytes(data: bytes) -> RingRoot:
+        return RingRoot.from_bytes(data)
+
+    @staticmethod
+    def compute_ring_root(keys: list[BandersnatchPublic]) -> GammaZ:
+        ring = Safrole.build_ring(keys)
+        ring_root = Safrole.build_ring_root(ring)
         return GammaZ(ring_root.to_bytes())
 
     @staticmethod
@@ -76,6 +92,7 @@ class Safrole:
             Safrole.ensure_valid_tickets_count_before_epoch_end(block)
 
             vrf_ids = []
+            parsed_vrfs = []
             for i, t in enumerate(tickets):
                 Safrole.ensure_valid_attempt(t)
                 try:
@@ -84,9 +101,10 @@ class Safrole:
                 except Exception as e:
                     raise SafroleError(
                         SafroleErrorCode.BAD_TICKET_PROOF,
-                        f"Ticket {t} VRF Proof is invalid",
+                        f"Ticket {t.attempt} VRF Proof is invalid",
                     )
                 vrf_ids.append(vrf_op)
+                parsed_vrfs.append(ring_proof)
                 if i > 0:
                     Safrole.ensure_tickets_order(vrf_ids[i-1], vrf_op)
 
@@ -95,14 +113,15 @@ class Safrole:
 
             vrf_ids.clear()
             gamma.a.sort(key=lambda x: x.id)
-            gamma.a = GammaA(gamma.a[:EPOCH_LENGTH])
 
-            # Check for duplicates
-            if len(gamma.a) != len(list(set(gamma.a))):
+            # Check duplicates before truncating.
+            if len(gamma.a) != len(set(gamma.a)):
                 raise SafroleError(
                     SafroleErrorCode.DUPLICATE_TICKET,
                     "Duplicate tickets are not allowed",
                 )
+
+            gamma.a = GammaA(gamma.a[:EPOCH_LENGTH])
 
         # We never expect tickets after TICKET_SUBMISSION_END
         if not ticket_submission_active and count > 0:
@@ -111,7 +130,7 @@ class Safrole:
                 "Tickets are not allowed after TICKET_SUBMISSION_END",
             )
 
-        ring_root = None
+        ring = None
 
         # 4. Epoch transition
         if new_epoch > old_epoch:
@@ -119,7 +138,6 @@ class Safrole:
             state.lambda_ = Lambda_(pre_state.kappa)
             state.kappa = Kappa(gamma.p)
             filtered_validators = []
-            pubkeys = []
 
             for k in pre_state.iota:
                 if k.ed25519 in state.psi.offenders:
@@ -132,11 +150,9 @@ class Safrole:
                             metadata=ValidatorMetadata.decode(bytes(128)),
                         )
                     )
-                    pubkeys.append(bytes(32))
                 else:
                     # Not an offender, keep the original validator data
                     filtered_validators.append(k)
-                    pubkeys.append(bytes(k.bandersnatch))
 
             gamma.p = GammaP(filtered_validators)
 
@@ -145,7 +161,7 @@ class Safrole:
 
             # 4.3. Update seal keys for this coming epoch
             # Check if we are jumping before accumulating ticket.py
-            valid_jump = pre_tau % EPOCH_LENGTH > TICKET_SUBMISSION_END
+            valid_jump = pre_tau % EPOCH_LENGTH >= TICKET_SUBMISSION_END
             # If we have sufficient tickets accumulated,
             # And we are jumping only one epoch,
             # And we are not jumping before TICKET_SUBMISSION_END
@@ -160,33 +176,38 @@ class Safrole:
                 # Else fallback: use bandersnatch keys
                 gamma.s = Safrole.arrange_fallback(eta[2], state.kappa)
 
-            # 4. 4. Update ring root using gamma p
-            # Note: Removing the if condition allows this trace 1758621879/00000348 to pass
-            # if pre_state.gamma.p != pre_state.kappa:
-            # if pre_state.gamma.p != state.gamma.p:
-            pubkeys = [bytes(k.bandersnatch) for k in gamma.p]
-            ring_root = RingVRF[Bandersnatch].construct_ring_root(pubkeys)
-            gamma.z = GammaZ(ring_root.to_bytes())
+            # 4.4. Update ring root when the epoch transition changes gamma p.
+            if gamma.p != pre_state.gamma.p:
+                pubkeys = [bytes(k.bandersnatch) for k in gamma.p]
+                ring = Safrole.build_ring(pubkeys)
+                ring_root = Safrole.build_ring_root(ring)
+                gamma.z = GammaZ(ring_root.to_bytes())
 
         # Get ring root for ticket validation (may be from state if no epoch transition)
-        ring_root = RingRoot.from_bytes(gamma.z)
+        if ring is None:
+            pubkeys = [bytes(k.bandersnatch) for k in gamma.p]
+            ring = Safrole.build_ring(pubkeys)
+        ring_root = Safrole.ring_root_from_bytes(bytes(gamma.z))
 
-        for ticket in tickets:
+        parsed_vrfs = parsed_vrfs if ticket_submission_active and count > 0 else []
+
+        for i, ticket in enumerate(tickets):
             try:
-                vrf = RingVRF[Bandersnatch].from_bytes(ticket.signature)
+                vrf = parsed_vrfs[i] if parsed_vrfs else RingVRF[Bandersnatch].from_bytes(ticket.signature)
                 if not vrf.verify(
                     X.TICKET.value + eta[2] + bytes([ticket.attempt]),
                     b"",
+                    ring,
                     ring_root,
                 ):
                     raise SafroleError(
                         SafroleErrorCode.BAD_TICKET_PROOF,
-                        f"Ticket {ticket} VRF Proof is invalid",
+                        f"Ticket {ticket.attempt} VRF Proof is invalid",
                     )
             except Exception:
                 raise SafroleError(
                     SafroleErrorCode.BAD_TICKET_PROOF,
-                    f"Ticket {ticket} VRF Proof is invalid",
+                    f"Ticket {ticket.attempt} VRF Proof is invalid",
                 )
 
         # 2. Accumulate entropy
@@ -249,10 +270,11 @@ class Safrole:
         """
         # Loop through epoch size
         fallback = []
+        entropy_bytes = bytes(entropy)
         for i in range(EPOCH_LENGTH):
             # Add entropy to encoded4(i)
-            hashed = Hash.blake2b(bytes(entropy) + U32(i).encode())
-            index, _ = U32.decode_from(bytes(Bytes(hashed[:4])))
+            hashed = Hash.blake2b(entropy_bytes + U32(i).encode())
+            index, _ = U32.decode_from(hashed[:4])
             val_key = validators[int(index) % len(validators)].bandersnatch
             fallback.append(val_key)
         return GammaS(GammaSFallback(fallback))

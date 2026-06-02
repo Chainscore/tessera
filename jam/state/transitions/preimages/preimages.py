@@ -1,6 +1,5 @@
 from jam.models.state.pi import ServiceStat
 from copy import deepcopy
-from tsrkit_types import Bytes
 from jam.state.transitions.preimages.errors import PreimageError, PreimageErrorEnum
 from jam.models.state.delta import LookupTable, Timestamps
 from jam.models.state.sigma import Sigma
@@ -25,31 +24,29 @@ class Preimages:
         """
         Preimages.ensure_sorted_unique(block.extrinsic.preimages)
 
-        # Go through each preimage in the block
+        prepared_preimages = []
         for preimage in block.extrinsic.preimages:
-            # Find the account
-            account = state.delta[preimage.requester]
-            # If the preimage to add does not have lookup metadata, throw unneeded error
+            account = pre_state.delta[preimage.requester]
             hashed_blob = Hash.blake2b(preimage.blob)
             lookup_key = LookupTable(hash=hashed_blob, length=BlobLength(len(preimage.blob)))
+            metadata = None if not account else account.lookup.get(lookup_key)
 
-            if not account or account.lookup.get(lookup_key) is None or len(account.lookup.get(lookup_key)) != 0:
+            if not account or metadata is None or len(metadata) != 0:
                 raise PreimageError(
                     PreimageErrorEnum.PREIMAGE_UNNEEDED,
                     "Preimage metadata does not exist",
                 )
+            prepared_preimages.append((preimage, hashed_blob, lookup_key))
 
         pi = state.pi
-        for preimage in block.extrinsic.preimages:
-            # Add the preimage to the account
+        for preimage, hashed_blob, lookup_key in prepared_preimages:
             account = state.delta[preimage.requester]
-            hashed_blob = Hash.blake2b(preimage.blob)
-            lookup_key = LookupTable(Bytes[32](hashed_blob), BlobLength(len(preimage.blob)))
 
-            account.preimages[hashed_blob] = preimage.blob
-            metadata = account.lookup[lookup_key]
-            metadata.append(block.header.slot)
-            account.lookup[lookup_key] = metadata
+            metadata = account.lookup.get(lookup_key)
+            if metadata is not None:
+                account.preimages[hashed_blob] = preimage.blob
+                metadata.append(block.header.slot)
+                account.lookup[lookup_key] = metadata
             if preimage.requester not in pi.services:
                 pi.services[preimage.requester] = ServiceStat.empty()
             curr_service_stat = pi.services[preimage.requester]

@@ -5,7 +5,7 @@ from jam.models.protocol.ticket import TicketAttempt
 from jam.block.extrinsics.tickets import TicketEnvelope
 from jam.models.protocol.crypto import BandersnatchRingVrfSignature
 from jam.models.protocol.core import TimeSlot
-from dot_ring import RingVRF, Bandersnatch
+from dot_ring import Bandersnatch, RingVRF
 from jam.log_setup import node_logger as logger
 from jam.utils.constants import EPOCH_LENGTH, X, TICKET_ENTRIES_PER_VALIDATOR
 from jam.network.protocols.ce_131 import SafroleTicketProxyDistribution, CE131Data, EpochTicket
@@ -51,13 +51,18 @@ class Conductor(NodeDispatcher):
         vals = [bytes(k.bandersnatch) for k in state.gamma.p]
 
         try:
+            from jam.state.transitions.safrole.safrole import Safrole
+
+            ring  =Safrole.build_ring(vals)
+            ring_root = Safrole.build_ring_root(ring)
             # Use dot_ring for proof generation (consistent with validation)
             ring_proof = RingVRF[Bandersnatch].prove(
                 alpha=X.TICKET.value + eta + bytes([attempt]),
                 ad=b"",
                 secret_key=settings.bandersnatch_private,
                 producer_key=settings.bandersnatch_public,
-                keys=vals,
+                ring=ring,
+                ring_root=ring_root,
             )
             return TicketEnvelope(
                 attempt=TicketAttempt(attempt),

@@ -65,7 +65,9 @@ class BlockProducer(NodeDispatcher):
 
         ticket: TicketBody | None = None
         if state.tau // EPOCH_LENGTH != time_slot // EPOCH_LENGTH:
-            if time_slot // EPOCH_LENGTH == (state.tau // EPOCH_LENGTH) + 1 and len(state.gamma.a) == EPOCH_LENGTH and slot_index == 0:
+            epoch_jump = (time_slot // EPOCH_LENGTH) - (state.tau // EPOCH_LENGTH)
+            valid_jump = (state.tau % EPOCH_LENGTH) >= TICKET_SUBMISSION_END
+            if epoch_jump == 1 and len(state.gamma.a) == EPOCH_LENGTH and valid_jump:
                 entry = outside_in(state.gamma.a)[slot_index]
             else:
                 entry = Safrole.arrange_fallback(state.eta[1], state.gamma.p).unwrap()[slot_index]

@@ -49,6 +49,7 @@ class Assurances:
 
         # 4. Check if we have supermajority, remove pending report if we do
         core_assurances = [0] * len(rho)
+        rho_unwrapped = [item.unwrap() for item in rho]
 
         for assurance in assurances:
             # 1. Ensure the assurance anchor matches the block parent
@@ -69,7 +70,7 @@ class Assurances:
             # Update core assurances
             for i in range(len(assurance.bitfield)):
                 if assurance.bitfield[i]:
-                    if rho[i].unwrap() == Null:
+                    if rho_unwrapped[i] == Null:
                         raise AssurancesError(
                             AssurancesErrorCode.CORE_NOT_ENGAGED,
                             f"Pending work report {i} not found",
@@ -86,7 +87,7 @@ class Assurances:
         # Clear them
         super_majority = math.floor(2 * VALIDATOR_COUNT / 3)
         for i in range(len(rho)):
-            rep = rho[i].unwrap()
+            rep = rho_unwrapped[i]
             if rep == Null:
                 continue
             else:

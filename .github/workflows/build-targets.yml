@@ -328,7 +328,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile.fuzz
+          file: ./Dockerfile
           load: true
           push: false
           tags: chainscore/tessera:ci
@@ -373,7 +373,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile.fuzz
+          file: ./Dockerfile
           load: true
           push: false
           tags: |

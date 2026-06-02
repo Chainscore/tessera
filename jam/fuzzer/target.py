@@ -10,10 +10,11 @@ import socket
 import os
 import sys
 import shutil
+from datetime import datetime
 from typing import Optional
 
 from jam.block.block import Block
-from tsrkit_types import Bytes, U8, U32, TypedVector, String
+from tsrkit_types import Bytes, TypedVector, String
 
 from .constants import (
     TAG_PEER_INFO,
@@ -26,7 +27,7 @@ from .constants import (
     FEATURE_ANCESTRY,
     FEATURE_FORK,
 )
-from .types import PeerInfo, Version, Initialize, State, KeyValue, ErrorMessage
+from .types import Initialize, KeyValue, ErrorMessage
 
 from .handlers import read_message, send_message, handle_handshake
 from ..block.extrinsics.extrinsic import Extrinsic
@@ -41,6 +42,100 @@ def clear_directory_contents(path: str) -> None:
             shutil.rmtree(entry_path)
         else:
             os.unlink(entry_path)
+
+
+def _read_text(path: str) -> str | None:
+    try:
+        with open(path) as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+
+def _format_bytes(value: int | None) -> str:
+    if value is None:
+        return "unknown"
+    units = ["B", "KiB", "MiB", "GiB", "TiB"]
+    size = float(value)
+    for unit in units:
+        if abs(size) < 1024 or unit == units[-1]:
+            return f"{size:.1f}{unit}" if unit != "B" else f"{int(size)}B"
+        size /= 1024
+    return f"{value}B"
+
+
+def _process_rss() -> str:
+    raw = _read_text("/proc/self/statm")
+    if not raw:
+        return "unknown"
+    parts = raw.split()
+    if len(parts) < 2 or not parts[1].isdigit():
+        return "unknown"
+    try:
+        page_size = os.sysconf("SC_PAGE_SIZE")
+    except (OSError, ValueError):
+        return "unknown"
+    return _format_bytes(int(parts[1]) * page_size)
+
+
+def _directory_size(path: str) -> int | None:
+    if not path or not os.path.exists(path):
+        return None
+
+    total = 0
+    stack = [path]
+    while stack:
+        current = stack.pop()
+        try:
+            with os.scandir(current) as entries:
+                for entry in entries:
+                    try:
+                        if entry.is_dir(follow_symlinks=False):
+                            stack.append(entry.path)
+                        elif entry.is_file(follow_symlinks=False):
+                            total += entry.stat(follow_symlinks=False).st_size
+                    except OSError:
+                        continue
+        except OSError:
+            continue
+    return total
+
+
+def _storage_paths(settings) -> list[str]:
+    candidates = [
+        getattr(settings, "_data_path", None),
+        os.environ.get("JAM_FUZZ_DATA_PATH"),
+        os.environ.get("JAM_LOG_DIR"),
+    ]
+    paths: list[str] = []
+    for candidate in candidates:
+        if not candidate or not os.path.exists(candidate):
+            continue
+        real = os.path.realpath(candidate)
+        if real not in paths:
+            paths.append(real)
+
+    roots: list[str] = []
+    for path in sorted(paths, key=len):
+        child_of_existing = any(
+            path == root or path.startswith(root.rstrip(os.sep) + os.sep)
+            for root in roots
+        )
+        if not child_of_existing:
+            roots.append(path)
+    return roots
+
+
+def _storage_usage(settings) -> str:
+    total = 0
+    seen_any = False
+    for path in _storage_paths(settings):
+        size = _directory_size(path)
+        if size is None:
+            continue
+        total += size
+        seen_any = True
+    return _format_bytes(total) if seen_any else "unknown"
 
 
 def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optional[str] = None):
@@ -72,18 +167,19 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                 print(">> Connected to", peer.to_json())
                 try:
                     db_ = db_path + str(SESSION_ID)
-                    settings = setup_setting(db_, 1, "fuzzer", 40001)
+                    settings = setup_setting(db_, 1, "fuzzer", 40001, rpc_flag=False)
                 except Exception as e:
                     SESSION_ID += 1
                     db_ = db_path + str(SESSION_ID)
-                    settings = setup_setting(db_, 1, "fuzzer", 40001)
+                    settings = setup_setting(db_, 1, "fuzzer", 40001, rpc_flag=False)
 
 
             block_count = 0
 
             # Initialize state
-            from jam.state.state import state as _state, State
-            state = _state
+            from jam.state.state import state, State
+            from jam.state.storage import StateRecord, StateStorage
+            from jam.block.block_view import viewer
 
             while True:
                 tag, payload = read_message(conn)
@@ -98,29 +194,48 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
 
                 if tag == TAG_IMPORT_BLOCK:
                     block_count += 1
-                    print(f"📦 Received Block #{block_count} ({len(payload)} bytes)")
+                    received_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+                    print(
+                        f"{received_at} Received Block #{block_count} "
+                        f"({len(payload)} bytes, rss={_process_rss()}, storage={_storage_usage(settings)})"
+                    )
 
+                    block = None
+                    accepted_block = False
                     try:
                         block = Block.decode(payload)
 
-                        from jam.block.block_view import viewer
                         viewer.record_block(block, settings.main_db)
 
                         if record_enabled and json_data:
                             json_data["blocks"].append(block.to_json())
+
                         valid_block = State._force_transition(block, False, True)
+
                         if valid_block:
-                            post_state = State.load(block.header.hash())
-                            send_message(conn, TAG_STATE_ROOT, post_state.root)
+                            accepted_block = True
+                            hh = block.header.hash()
+                            record_data = settings.main_db.get(StateStorage.get_storage_key(hh))
+                            if record_data is None:
+                                state_root = State.load(hh).root
+                            else:
+                                state_root = StateRecord.decode(record_data).roots.curr
+                            send_message(conn, TAG_STATE_ROOT, state_root)
 
                             record_index += 1
                         else:
+                            viewer.discard(block, settings.main_db)
                             send_message(conn, TAG_ERROR, String("Invalid block. Error message unavailable").encode())
                     except Exception as e:
+                        if block is not None and not accepted_block:
+                            viewer.discard(block, settings.main_db)
                         print(f"❌ Block processing failed: {e}", file=sys.stderr)
                         # Send Error message for protocol-defined failures
                         error_msg = ErrorMessage(message=String(f"Block import failed: {str(e)}"))
                         send_message(conn, TAG_ERROR, error_msg.encode())
+                    finally:
+                        if os.environ.get("JAM_FUZZ_VISUALIZE") == "1":
+                            viewer.visualize()
 
                 elif tag == TAG_INITIALIZE:
                     print(f"🔧 Received Initialize command ({len(payload)} bytes)")
@@ -186,7 +301,6 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
                                     key_31 = key[:31].ljust(31, b'\x00') if len(key) < 31 else key[:31]
                                     keyvals.append(KeyValue(key=Bytes[31](key_31), value=Bytes(val)))
 
-                        # state_response = State(keyvals=keyvals)
                         state_response = keyvals
                         if record_enabled and json_data:
                             json_data["post_state"] = state_response.to_json()
@@ -206,7 +320,7 @@ def run_fuzzer_target_loop(sock: socket.socket, db_path: str, record_path: Optio
 async def run_fuzzer_target(
     db_path: str,
     socket_path: str = "/tmp/jam_conformance.sock",
-    record_path: Optional[str] = "fuzzer_session.json"
+    record_path: Optional[str] = None
 ) -> None:
     """
     Run the JAM fuzzer target server.
@@ -217,9 +331,8 @@ async def run_fuzzer_target(
         record_path: Optional path to record session data
     """
     
-    # Clean up and setup database contents without removing the mounted root.
-    clear_directory_contents(db_path)
-    
+    os.makedirs(db_path, exist_ok=True)
+
     from jam.log_setup import setup_logging
     setup_logging("default", "fuzzer-target")
 
@@ -248,6 +361,4 @@ async def run_fuzzer_target(
         sock.close()
         if os.path.exists(socket_path):
             os.remove(socket_path)
-        if os.path.exists(db_path):
-            clear_directory_contents(db_path)
         print("🧹 Cleanup complete.")

@@ -10,7 +10,19 @@ from jam.models.protocol.crypto import HeaderHash, OpaqueHash
 from jam.models.state.pi import Pi
 
 
+def subscriptions_enabled() -> bool:
+    try:
+        from jam.settings import settings
+
+        return bool(getattr(settings, "rpc_flag", False))
+    except Exception:
+        return False
+
+
 def initial_subscription(method, params: list):
+    if not subscriptions_enabled():
+        return
+
     match method:
         case "subscribeServiceRequest":
             try:

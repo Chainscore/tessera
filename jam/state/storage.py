@@ -2,7 +2,7 @@ from typing import Self
 from collections import OrderedDict
 
 from rockstore import RockStore
-from tsrkit_types import Bytes, structure, Dictionary
+from tsrkit_types import Bytes, structure, Dictionary, Null, Option
 
 from jam.block.block import Block
 from jam.error import JamError
@@ -11,11 +11,16 @@ from jam.log_setup import logger
 from jam.models.protocol.crypto import StateRoot, HeaderHash, Hash
 from jam.utils.trie.merkle import StateTrie
 
+Bytes31 = Bytes[31]
+Bytes32 = Bytes[32]
+StateUpdateValue = Option[Bytes]
+_MISSING = object()
+
 
 @structure
 class Updates:
-    prev: Bytes
-    curr: Bytes
+    prev: StateUpdateValue
+    curr: StateUpdateValue
 
 
 @structure
@@ -24,13 +29,24 @@ class Roots:
     curr: StateRoot
 
 
-class StateUpdates(Dictionary[Bytes[31], Updates]): ...
+class StateUpdates(Dictionary[Bytes31, Updates]): ...
 
 
 @structure
 class StateRecord:
     updates: StateUpdates
     roots: Roots
+
+
+def _encode_update_value(value: bytes | None) -> StateUpdateValue:
+    return StateUpdateValue(Null if value is None else Bytes(value))
+
+
+def _decode_update_value(value: StateUpdateValue) -> bytes | None:
+    unwrapped = value.unwrap()
+    if unwrapped == Null:
+        return None
+    return bytes(unwrapped)
 
 
 class StateStorage:
@@ -58,6 +74,7 @@ class StateStorage:
         self._TRIE = trie
         self._DB = db
         self._updates = _cache_updates if _cache_updates is not None else {}
+        self._base_updates = self._updates.copy()
         self._cache_mode = cache_mode
         self._prop_cache = {}
         # Keys that existed before this store was created (inherited from parent clone)
@@ -118,13 +135,13 @@ class StateStorage:
         _updates = {}
 
         # Exit if block does not exist in our history
-        target_block = Block.load(hh, kv)
-        if target_block is None:
+        target_header = Block.load_header(hh, kv)
+        if target_header is None:
             return _updates, None
 
         # Fetch sync direction.
         # 1 for Ahead of finality. 0 for Behind of finality.
-        ahead = target_block.header.slot >= finalized_block.header.slot
+        ahead = target_header.slot >= finalized_block.header.slot
 
         if ahead:
             head_from = hh
@@ -148,15 +165,15 @@ class StateStorage:
 
             records.append(StateRecord.decode(data))
 
-            block = Block.load(curr_head, kv)
-            if block is None:
+            parent_hash = Block.load_parent_hash(curr_head, kv)
+            if parent_hash is None:
                 raise JamError("Block missing for header hash:", curr_head.hex())
 
             # Stop if we've reached genesis (parent is zero hash)
-            if block.header.parent == HeaderHash(32):
+            if parent_hash == HeaderHash(32):
                 break
 
-            curr_head = block.header.parent
+            curr_head = parent_hash
 
         if ahead:
             records.reverse()
@@ -174,14 +191,14 @@ class StateStorage:
             # Collect updates
             for k, u in items:
                 v = getattr(u, use_attr)
-                normalized_v = None if v == Bytes(0) else bytes(v)
+                normalized_v = _decode_update_value(v)
 
                 _updates[k] = normalized_v
                 if apply_trie:
                     if normalized_v is None:
                         trie_deletes.append(Bytes(k))
                     else:
-                        trie_updates[Bytes[32](k)] = Bytes(normalized_v)
+                        trie_updates[Bytes32(k)] = Bytes(normalized_v)
 
             # Apply the cache and verify state root
             if apply_trie and self._TRIE is not None:
@@ -199,6 +216,9 @@ class StateStorage:
                         expected_root=final_root.hex(),
                         actual_root=self._TRIE.root_hash.hex(),
                     )
+
+        if apply_trie and self._TRIE is not None:
+            self._TRIE.prune_unreachable()
 
         return _updates, final_root
 
@@ -220,8 +240,10 @@ class StateStorage:
         trie_deletes = []
 
         if hh:
-            block = Block.load(hh, kv)
-            previous_updates, _ = self.load_cache(block.header.parent, False)
+            parent_hash = Block.load_parent_hash(hh, kv)
+            if parent_hash is None:
+                raise JamError("Block missing for header hash:", hh.hex())
+            previous_updates = self._base_updates
         else:
             previous_updates = {}
 
@@ -232,19 +254,19 @@ class StateStorage:
             if k in previous_updates and previous_updates[k] == v:
                 continue
 
-            stored_key = Bytes[31](k)
+            stored_key = Bytes31(k)
 
             if kv and hh:
                 updates = Updates(
-                    prev=Bytes(prev_val) if prev_val else Bytes(0),
-                    curr=Bytes(v) if v else Bytes(0),
+                    prev=_encode_update_value(prev_val),
+                    curr=_encode_update_value(v),
                 )
                 _state_cache[stored_key] = updates
 
             if v is None:
                 trie_deletes.append(Bytes(k))
             else:
-                trie_updates[Bytes[32](k)] = Bytes(v)
+                trie_updates[Bytes32(k)] = Bytes(v)
 
         # Batch process trie updates for better performance
         if trie_updates:
@@ -253,6 +275,8 @@ class StateStorage:
         # Process deletes individually (could be optimized further if needed)
         for key in trie_deletes:
             self._TRIE.delete(key)
+
+        self._TRIE.prune_unreachable()
 
         posterior_root = StateRoot(self._TRIE.root_hash)
         roots = Roots(prev=prior_root, curr=posterior_root)
@@ -288,6 +312,7 @@ class StateStorage:
 
     def clear(self):
         self._updates = {}
+        self._base_updates = {}
         self._prop_cache = {}
 
     def put(self, key_bytes: bytes, value_bytes: bytes, sync: bool = False):
@@ -300,8 +325,10 @@ class StateStorage:
             self._TRIE.update(Bytes(key_bytes), Bytes(value_bytes))
 
     def get(self, key_bytes: bytes, fill_cache: bool = True, skip_cache=False) -> bytes | None:
-        if key_bytes in self._updates.keys() and not skip_cache:
-            return self._updates[key_bytes]
+        if not skip_cache:
+            cached = self._updates.get(key_bytes, _MISSING)
+            if cached is not _MISSING:
+                return cached
         return self._DB.get(key_bytes, fill_cache)
 
     def delete(self, key_bytes: bytes, sync=False):

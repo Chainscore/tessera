@@ -24,6 +24,7 @@ from jam.utils.constants import (
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.integers import U32
 from jam.api.rpc.subscription_handlers import (
+    subscriptions_enabled,
     subscribe_service_value,
     subscribe_service_request,
     subscribe_service_data,
@@ -50,7 +51,8 @@ def make_account_prop(field):
 
         self.store.put(k, v)
         # Publishes updates of the service data.
-        asyncio.create_task(subscribe_service_data(self.id, meta))
+        if subscriptions_enabled():
+            asyncio.create_task(subscribe_service_data(self.id, meta))
 
     return property(getter, setter)
 
@@ -113,7 +115,8 @@ class Account:
         )
         self.store.put(storage_key, encoded_val)
         # Publishes updates of the service data.
-        asyncio.create_task(subscribe_service_data(self.id, value))
+        if subscriptions_enabled():
+            asyncio.create_task(subscribe_service_data(self.id, value))
 
     @property
     def storage(self):
@@ -182,16 +185,19 @@ class DeltaView:
     def __init__(self, store: StateStorage):
         self.store = store
 
+    @staticmethod
+    def _account_key(key: ServiceId) -> bytes:
+        return bytes(construct_state_key((255, key)))
+
     def __getitem__(self, key: ServiceId):
-        data = self.store.get(bytes(construct_state_key((255, key))))
+        data = self.store.get(self._account_key(key))
         if data is None:
             return None
         return Account(id=key, store=self.store)
 
     def get(self, key: ServiceId, default=None):
-        if key in self:
-            return self[key]
-        return default
+        account = self[key]
+        return default if account is None else account
 
     def __setitem__(self, key: ServiceId, value: AccountData):
         account = Account(id=key, store=self.store)
@@ -204,11 +210,10 @@ class DeltaView:
             account.lookup[k] = v
 
     def __contains__(self, key: ServiceId):
-        return self.store.get(bytes(construct_state_key((255, key)))) is not None
+        return self.store.get(self._account_key(key)) is not None
 
     def __delitem__(self, key: ServiceId):
-        account_s_key = bytes(construct_state_key((255, key)))
-        self.store.delete(account_s_key)
+        self.store.delete(self._account_key(key))
 
 
 class StorageView:
@@ -237,7 +242,8 @@ class StorageView:
         else:
             meta_view.num_o = meta_view.num_o + len(value) - len(curr_data)
         # Publishes updates for service value
-        asyncio.create_task(subscribe_service_value(self.id, key, list(value)))
+        if subscriptions_enabled():
+            asyncio.create_task(subscribe_service_value(self.id, key, list(value)))
         self.store.put(storage_key, value)
 
     def __delitem__(self, key: Bytes):
@@ -248,7 +254,8 @@ class StorageView:
             meta_view.num_i = meta_view.num_i - 1
             meta_view.num_o = meta_view.num_o - len(curr_value) - 34 - len(key)
         # Publishes updates for service value
-        asyncio.create_task(subscribe_service_value(self.id, key, None))
+        if subscriptions_enabled():
+            asyncio.create_task(subscribe_service_value(self.id, key, None))
 
         self.store.delete(storage_key)
 
@@ -272,12 +279,14 @@ class PreImageView:
         k = self.get_key(key)
         self.store.put(k, value)
         # Publishes updates for service preimage
-        asyncio.create_task(subscribe_service_preimage(self.id, key, value))
+        if subscriptions_enabled():
+            asyncio.create_task(subscribe_service_preimage(self.id, key, value))
 
     def __delitem__(self, key: Bytes[32]):
         storage_key = self.get_key(key)
         # Publishes updates for service preimage
-        asyncio.create_task(subscribe_service_preimage(self.id, key, None))
+        if subscriptions_enabled():
+            asyncio.create_task(subscribe_service_preimage(self.id, key, None))
 
         self.store.delete(storage_key)
 
@@ -308,7 +317,8 @@ class TimestampsView:
             meta_view.num_i = meta_view.num_i + 2
             meta_view.num_o = meta_view.num_o + key.length + 81
         # Publishes updates for service request
-        asyncio.create_task(subscribe_service_request(self.id, key.hash, key.length, value))
+        if subscriptions_enabled():
+            asyncio.create_task(subscribe_service_request(self.id, key.hash, key.length, value))
 
         self.store.put(storage_key, v)
 
@@ -320,6 +330,7 @@ class TimestampsView:
             meta_view.num_i = meta_view.num_i - 2
             meta_view.num_o = meta_view.num_o - key.length - 81
         # Publishes updates for service request
-        asyncio.create_task(subscribe_service_request(self.id, key.hash, key.length, None))
+        if subscriptions_enabled():
+            asyncio.create_task(subscribe_service_request(self.id, key.hash, key.length, None))
 
         self.store.delete(storage_key)
