@@ -94,6 +94,10 @@ class AccumulateFunctions(INVF):
             g = U64.decode(chunk[4:12], offset=0)  # next   8 bytes
             z_dict[s] = g
 
+        if context.x.s_index != context.x.partial_state.privileges.chi_m:
+            registers[7] = HostStatus.HUH.value
+            return CONTINUE, gas, registers, memory, context
+
         # FIX: Off-by-one - serviceid is N_{2^32}, so valid range is 0 <= x < 2**32
         if not all(0 <= x < 2**32 for x in (m, v, r)):
             logger.warning(f"Invalid values for m or v in bless function: m={m}, v={v}")
