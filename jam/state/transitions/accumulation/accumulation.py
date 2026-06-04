@@ -162,7 +162,7 @@ class Accumulation:
         work_reports: WorkReports,
         state: Sigma,
         privileged_services: ChiZ
-    ) -> Tuple[int, BeefyMap, GasConsumed]:
+    ) -> Tuple[int, BeefyMap, GasConsumed, DeferredTransfers]:
         """
         Outer accumulation function ∆+ defined in Eq 12.18
         Sequential Execution Pattern
@@ -177,11 +177,11 @@ class Accumulation:
             privileged_services (ChiZ): Set of services enjoying free accumulation.
 
         Returns:
-            A tuple (int, BeefyMap, GasConsumed) where:
+            A tuple (int, BeefyMap, GasConsumed, Deferred Transfers) where:
             Integer: Number of work digests successfully accumulated.
             BeefyMap: A mapping of service indices to their corresponding accumulation outputs.
             GasConsumed: Gas consumed by accumulation of each service along with their service id
-
+            DeferredTransfers: Processed Transfers Count
         Note:
             PartialState is not returned as all the changes are available in global state itself.
         """
@@ -198,7 +198,7 @@ class Accumulation:
         n = len(deferred_transfers) + index + len(privileged_services)
 
         if n == 0:
-            return 0, set(), []
+            return 0, set(), [], DeferredTransfers([])
 
         work_reports_start = work_reports[: index]
         # Parallely accumulate ChiZ services (always accumulate services)
@@ -218,7 +218,7 @@ class Accumulation:
 
         gas_diff = gas_star - utilized_gas
 
-        j, r_outputs, r_gas_consumed = (
+        j, r_outputs, r_gas_consumed, transfers_tail = (
             Accumulation.seq_accumulation(
                 gas_diff, transfers, work_reports_end, state, ChiZ({})
             )
@@ -226,8 +226,10 @@ class Accumulation:
 
         gas_consumed.extend(r_gas_consumed)
         outputs.update(r_outputs)
+        processed_transfers = DeferredTransfers(list(deferred_transfers))
+        processed_transfers.extend(transfers_tail)
 
-        return index + j, outputs, gas_consumed
+        return index + j, outputs, gas_consumed, processed_transfers
 
     @staticmethod
     def parallel_accumulation(
@@ -685,31 +687,39 @@ class Accumulation:
         gas_limit = max(TOTAL_GAS,((ACCUMULATION_GAS*CORE_COUNT) + service_gas))
 
         deferred_transfers: DeferredTransfers = DeferredTransfers([])
-        [num_accumulated, commitment_map, gas_accumulations] = Accumulation.seq_accumulation(Gas(gas_limit), deferred_transfers, star_work_reports, state, state.chi.chi_z)
+        [num_accumulated, commitment_map, gas_accumulations, processed_transfers] = Accumulation.seq_accumulation(Gas(gas_limit), deferred_transfers, star_work_reports, state, state.chi.chi_z)
 
+        # S: service_id -> [acc_count, transfers_count, gas_used]
+        # S(s) = (N(s), T(s), G(s)):
         accumulation_stats = {}
-        for ga in gas_accumulations:
-            if accumulation_stats.get(ga[0]):
-                prev_gas = accumulation_stats.get(ga[0])[0]
-                accumulation_stats[ga[0]] = [prev_gas + ga[1], 0]
-            else:
-                accumulation_stats[ga[0]] = [ga[1], 0]
         for i in range(num_accumulated):
             for d in star_work_reports[i].digests:
-                accumulation_stats[d.service_id][1] += 1
+                if d.service_id not in accumulation_stats:
+                    accumulation_stats[d.service_id] = [0, 0, 0]
+                accumulation_stats[d.service_id][0] += 1
+
+        for transfer in processed_transfers:
+            if transfer.receiver not in accumulation_stats:
+                accumulation_stats[transfer.receiver] = [0, 0, 0]
+            accumulation_stats[transfer.receiver][1] += 1
+
+        for service_id, gas in gas_accumulations:
+            if service_id not in accumulation_stats:
+                accumulation_stats[service_id] = [0, 0, 0]
+            accumulation_stats[service_id][2] += gas
 
         # Update Statistics
         pi = state.pi
         pi_service = pi.services
-        for service_id in accumulation_stats.keys():
-            # Sanity Check
-            if accumulation_stats[service_id][0] + accumulation_stats[service_id][1] == 0:
+        for service_id, stats in accumulation_stats.items():
+            if stats == [0, 0, 0]:
                 continue
 
             if service_id not in pi_service:
                 pi_service[service_id] = ServiceStat.empty()
-            pi_service[service_id].accumulate_gas_used = Uint(accumulation_stats[service_id][0])
-            pi_service[service_id].accumulate_count = Uint(accumulation_stats[service_id][1])
+            pi_service[service_id].accumulate_count = Uint(stats[0])
+            pi_service[service_id].transfers_count = Uint(stats[1])
+            pi_service[service_id].accumulate_gas_used = Uint(stats[2])
 
             account = state.delta[service_id]
             if account is not None:

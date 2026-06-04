@@ -65,7 +65,8 @@ class ServiceStat:
     extrinsic_size: Uint  # z
     extrinsic_count: Uint  # x
     accumulate_count: Uint  # a[0]
-    accumulate_gas_used: Uint  # a[1]
+    transfers_count: Uint # a[1]
+    accumulate_gas_used: Uint  # a[2]
 
     @staticmethod
     def empty() -> "ServiceStat":
@@ -80,6 +81,7 @@ class ServiceStat:
                 "extrinsic_size": 0,
                 "extrinsic_count": 0,
                 "accumulate_count": 0,
+                "transfers_count": 0,
                 "accumulate_gas_used": 0,
             }
         )
