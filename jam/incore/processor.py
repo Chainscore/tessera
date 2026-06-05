@@ -246,9 +246,9 @@ class Processor:
             # ------------------------------------------ IS AUTH INVOCATION ------------------------------------------
             # Auth Output o & Gas g
             logger.debug(f"Checking authorization..")
-            o, g = PsiI(p, c).execute()
+            t, g = PsiI(p, c).execute()
             # ------------------------------------------ -- ---- ---------- ------------------------------------------
-            o = o.unwrap().encode() if isinstance(o, WorkExecResult) else o
+            t = t.unwrap().encode() if isinstance(t, WorkExecResult) else t
             s_result = 0
 
             def utils_i(j: int) -> Tuple[WorkExecResult, Gas, Segments]:
@@ -269,14 +269,14 @@ class Processor:
 
                 # ------------------------------------------ REFINE INVOCATION ----------------------------------------
                 logger.debug(f"Refining Work Item {j}..", payload=p.items[j].payload.hex())
-                r, e, u = PsiR(c, j, p, o, b.import_segments, l).execute()
+                r, e, u = PsiR(c, j, p, t, b.import_segments, l).execute()
                 logger.debug(f"REFINE RESULT: {r}", item=j, payload=list(p.items[j].payload))
                 # ------------------------------------------ ----------------- ----------------------------------------
 
                 segment = Segment([U8(0)] * SEGMENT_SIZE)
                 segment_count = w.export_count
                 zero_segments = Segments([segment for _ in range(segment_count)])
-                z = len(o) + s_result
+                z = len(t) + s_result
 
                 if r.get_key() != "ok":
                     return r, u, zero_segments
@@ -320,7 +320,7 @@ class Processor:
                 context=p.context,
                 core_index=Uint(c),
                 authorizer_hash=p.a,
-                auth_output=Bytes(o),
+                auth_output=Bytes(t),
                 segment_root_lookup=sr_lookup,
                 digests=r_list,
                 auth_gas_used=Uint(g),
