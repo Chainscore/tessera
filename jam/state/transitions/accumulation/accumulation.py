@@ -186,14 +186,12 @@ class Accumulation:
             PartialState is not returned as all the changes are available in global state itself.
         """
 
-        index = 0
-        report_gas = 0
-        for i in work_reports:
-            for j in i.digests:
-                report_gas += j.accumulate_gas
-            if report_gas > gas_limit:
-                break
-            index = index + 1
+        index = Accumulation.accumulatable_reports(
+            gas_limit,
+            deferred_transfers,
+            work_reports,
+            privileged_services,
+        )
 
         n = len(deferred_transfers) + index + len(privileged_services)
 
@@ -207,7 +205,7 @@ class Accumulation:
         )
 
         gas_star = gas_limit
-        for t in deferred_transfers:
+        for t in transfers:
             gas_star += t.gas
 
         work_reports_end = work_reports[index:]
@@ -230,6 +228,43 @@ class Accumulation:
         processed_transfers.extend(transfers_tail)
 
         return index + j, outputs, gas_consumed, processed_transfers
+
+    @staticmethod
+    def reserved_accumulation_gas(
+        deferred_transfers: DeferredTransfers,
+        privileged_services: ChiZ,
+    ) -> Gas:
+        gas = Gas(0)
+        for t in deferred_transfers:
+            gas += t.gas
+        for service_gas in privileged_services.values():
+            gas += service_gas
+        return gas
+
+    @staticmethod
+    def accumulatable_reports(
+        gas_limit: Gas,
+        deferred_transfers: DeferredTransfers,
+        work_reports: WorkReports,
+        privileged_services: ChiZ,
+    ) -> int:
+        reserved_gas = Accumulation.reserved_accumulation_gas(
+            deferred_transfers,
+            privileged_services,
+        )
+
+        index = 0
+        report_gas = Gas(0)
+        for report in work_reports:
+            report_gas_for_next = report_gas
+            for digest in report.digests:
+                report_gas_for_next += digest.accumulate_gas
+            if report_gas_for_next + reserved_gas > gas_limit:
+                break
+            report_gas = report_gas_for_next
+            index += 1
+
+        return index
 
     @staticmethod
     def parallel_accumulation(
