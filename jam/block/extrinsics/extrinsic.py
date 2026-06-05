@@ -51,10 +51,18 @@ class Extrinsic:
         )
         return Hash.blake2b(
             bytes(Hash.blake2b(self.tickets.encode()))
-            + bytes(Hash.blake2b(self.preimages.encode()))
+            + bytes(Hash.blake2b(self.preimages_hash_input()))
             + bytes(Hash.blake2b(gr))
             + bytes(Hash.blake2b(self.assurances.encode()))
             + bytes(Hash.blake2b(self.disputes.encode()))
+        )
+
+    def preimages_hash_input(self) -> bytes:
+        return Uint(len(self.preimages)).encode() + b"".join(
+            [
+                preimage.requester.encode() + Hash.blake2b(preimage.blob)
+                for preimage in self.preimages
+            ]
         )
 
     @classmethod
