@@ -18,6 +18,7 @@ class ReportingErrorCode(Enum):
     OUT_OF_ORDER_GUARANTEE = "out_of_order_guarantee"
     TOO_MANY_DEPENDENCIES = "too_many_dependencies"
     ANCHOR_NOT_RECENT = "anchor_not_recent"
+    BAD_ANCHOR_SLOT = "anchor_slot_mismatch"
     BAD_CODE_HASH = "bad_code_hash"
     BAD_STATE_ROOT = "bad_state_root"
     BAD_BEEFY_MMR_ROOT = "bad_beefy_mmr_root"

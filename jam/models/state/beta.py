@@ -4,6 +4,7 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.dictionary import Dictionary
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
+from jam.models.protocol.core import TimeSlot
 from jam.models.protocol.crypto import HeaderHash, StateRoot, BeefyRoot
 from jam.models.protocol.merkle import MMR
 
@@ -14,9 +15,15 @@ class ReportedDictionary(Dictionary[Bytes[32], Bytes[32], "hash", "exports_root"
 class BlockHistory:
     """Block history item"""
 
+    # h
     header_hash: HeaderHash
+    # b
     beefy_root: BeefyRoot
+    # s
     state_root: StateRoot
+    # t
+    timeslot: TimeSlot
+    # p
     reported: ReportedDictionary
 
 BetaHistory = TypedVector[BlockHistory]

@@ -211,7 +211,16 @@ class Reporting:
         Reporting.ensure_valid_report_result(state, block)
         Reporting.ensure_correct_assignments(state, block)
 
+        from jam.block.block_view import viewer
+        from jam.settings import settings
+
+        try:
+            block_db = settings.main_db
+        except ValueError:
+            block_db = None
+
         # Context anchor block must be present in Beta
+        # v0.8.0 : Eq 11.36
         for report in all_reports:
             context = report.context
 
@@ -222,6 +231,9 @@ class Reporting:
                         raise ReportingError(ReportingErrorCode.BAD_BEEFY_MMR_ROOT)
                     if recent_block.state_root != context.state_root:
                         raise ReportingError(ReportingErrorCode.BAD_STATE_ROOT, f"")
+                    # TODO: Check this error message once 0.8.0 vectors release.
+                    if recent_block.timeslot != context.anchor_slot:
+                        raise ReportingError(ReportingErrorCode.BAD_ANCHOR_SLOT, f"")
                     found_anchor = True
 
             if not found_anchor:
@@ -233,6 +245,12 @@ class Reporting:
                 raise ReportingError(
                     ReportingErrorCode.ANCHOR_NOT_RECENT,
                     "Lookup anchor older than max age",
+                )
+            # TODO: Revisit this once 0.8.0 vectors release
+            if not viewer.lookup_anchor_context_valid(block.header, context, block_db):
+                raise ReportingError(
+                    ReportingErrorCode.ANCHOR_NOT_RECENT,
+                    "Lookup anchor not found in ancestor set",
                 )
 
             # --------------- segment_root_lookup_invalid -------------------

@@ -6,7 +6,6 @@ from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.struct import structure
 from tsrkit_types.null import NullType
-from dataclasses import field
 from jam.models.protocol.core import Gas, ServiceId, TimeSlot
 from jam.models.protocol.crypto import OpaqueHash, HeaderHash, StateRoot, BeefyRoot
 
@@ -63,6 +62,8 @@ class RefineContext:
 
     # a
     anchor: HeaderHash
+    # n
+    anchor_slot: TimeSlot
     # s
     state_root: StateRoot
     # b
@@ -71,6 +72,8 @@ class RefineContext:
     lookup_anchor: HeaderHash
     # t
     lookup_anchor_slot: TimeSlot
+    # r
+    lookup_anchor_state_root: StateRoot
     # p
     prerequisites: TypedVector[OpaqueHash]
 
@@ -78,10 +81,12 @@ class RefineContext:
     def empty() -> "RefineContext":
         return RefineContext(
             anchor=HeaderHash([0] * 32),
+            anchor_slot=TimeSlot(0),
             state_root=StateRoot([0] * 32),
             beefy_root=BeefyRoot([0] * 32),
             lookup_anchor=HeaderHash([0] * 32),
             lookup_anchor_slot=TimeSlot(0),
+            lookup_anchor_state_root=StateRoot([0] * 32),
             prerequisites=TypedVector[OpaqueHash]([]),
         )
 

@@ -63,6 +63,7 @@ class RecentHistory:
         # Build and append block history in beta
         n = BlockHistory(
             header_hash=header_hash,
+            timeslot=block.header.slot,
             state_root=Bytes[32]([0] * 32),
             beefy_root=beefy_root,
             reported=package(block.extrinsic.guarantees),

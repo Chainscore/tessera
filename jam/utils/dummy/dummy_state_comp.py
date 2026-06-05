@@ -98,6 +98,7 @@ def create_dummy_state_components() -> Dict[str, object]:
     )
     block = BlockHistory(
         header_hash=HeaderHash(create_dummy_bytes32()),
+        timeslot=TimeSlot(0),
         state_root=StateRoot(create_dummy_bytes32()),
         beefy_root=BeefyRoot(create_dummy_bytes32()),
         reported=package_dict,

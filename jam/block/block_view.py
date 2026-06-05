@@ -1,11 +1,12 @@
 import asyncio
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Dict
 
 from jam.api.rpc.subscription_handlers import subscribe_best_block, subscriptions_enabled
 from jam.block import Block
 from jam.models.protocol.core import TimeSlot
-from jam.models.protocol.crypto import OpaqueHash, HeaderHash
+from jam.models.protocol.crypto import OpaqueHash, HeaderHash, StateRoot
 
 from tsrkit_types import Dictionary, Enum, structure, Option, TypedVector
 
@@ -18,13 +19,23 @@ class BlockStatus(Enum):
     final = "final"
     invalid = "invalid"
 
+
 @structure
 class BlockMeta:
     slot: TimeSlot
     header: HeaderHash
     status: BlockStatus
 
+
 Heads = TypedVector[OpaqueHash]
+
+
+@dataclass
+class HeaderMeta:
+    slot: TimeSlot
+    parent: HeaderHash
+    parent_state_root: StateRoot
+
 
 class GhostBlock:
     slot: TimeSlot = TimeSlot(0)
@@ -77,6 +88,7 @@ class BlockView:
     best: Optional[GhostBlock]
 
     _index_map: Dict[HeaderHash, GhostBlock]
+    _ancestor_meta: Dict[HeaderHash, HeaderMeta]
 
     def __init__(self):
         self.final = GhostBlock()
@@ -86,12 +98,14 @@ class BlockView:
 
         # map Header Hash -> GhostBlock for quick lookup
         self._index_map = dict[HeaderHash, GhostBlock]({})
+        self._ancestor_meta = dict[HeaderHash, HeaderMeta]({})
 
         # Highest slot whose finalized history has already been pruned.
         self._pruned_upto_slot = 0
 
     def initialize(self, kv: RockStore):
         self._index_map = {}
+        self._ancestor_meta = {}
         self._pruned_upto_slot = 0
         from jam.finality.finality import Finality
 
@@ -107,7 +121,10 @@ class BlockView:
 
         ghost_final = GhostBlock(final_block)
         self.final = ghost_final
-        self._index_map[final_block.header.hash()] = ghost_final
+        final_hash = final_block.header.hash()
+        self._index_map[final_hash] = ghost_final
+        self._record_header_meta(final_hash, final_block.header)
+        self._load_finalized_ancestor_meta(final_block.header, kv)
         ghost_final.status = BlockStatus("final")
 
         if (isinstance(latest_heads, Block) or
@@ -121,6 +138,7 @@ class BlockView:
                 curr_head = head
                 while curr_head != self.final.header:
                     block = Block.load(curr_head, kv)
+                    self._record_header_meta(curr_head, block.header)
                     branch_stack.append(block)
                     curr_head = block.header.parent
 
@@ -141,15 +159,94 @@ class BlockView:
                     ghost_block = GhostBlock(block, ghost_parent)
                     ghost_block.status = meta.status
                     self._index_map[bh] = ghost_block
+                    self._record_header_meta(bh, block.header)
 
                 if ghost_head not in self.heads:
                     self.heads.append(ghost_head)
 
         self.revalidate_view()
 
+    def _record_header_meta(self, header_hash: HeaderHash, header):
+        self._ancestor_meta[HeaderHash(header_hash)] = HeaderMeta(
+            slot=header.slot,
+            parent=header.parent,
+            parent_state_root=header.parent_state_root,
+        )
+
+    def _load_header_meta(self, header_hash: HeaderHash, kv: RockStore | None):
+        meta = self._ancestor_meta.get(header_hash)
+        if meta is not None or kv is None:
+            return meta
+
+        header = Block.load_header(header_hash, kv)
+        if header is None:
+            return None
+
+        self._record_header_meta(header_hash, header)
+        return self._ancestor_meta[header_hash]
+
+    def _load_finalized_ancestor_meta(self, header, kv: RockStore):
+        from jam.utils.constants import LOOKUP_ANCHOR_MAX_AGE
+
+        min_slot = int(header.slot) - LOOKUP_ANCHOR_MAX_AGE
+        parent_hash = header.parent
+
+        while parent_hash != HeaderHash(32):
+            parent_header = Block.load_header(parent_hash, kv)
+            if parent_header is None:
+                return
+
+            self._record_header_meta(parent_hash, parent_header)
+            if int(parent_header.slot) < min_slot:
+                return
+
+            parent_hash = parent_header.parent
+
+    def _prune_ancestor_meta(self):
+        from jam.utils.constants import LOOKUP_ANCHOR_MAX_AGE
+
+        min_slot = int(self.final.slot) - LOOKUP_ANCHOR_MAX_AGE
+        for header_hash, meta in list(self._ancestor_meta.items()):
+            if header_hash in self._index_map:
+                continue
+            if int(meta.slot) < min_slot:
+                self._ancestor_meta.pop(header_hash, None)
+
+    def lookup_anchor_context_valid(self, head_header, context, kv: RockStore | None = None) -> bool:
+        from jam.utils.constants import LOOKUP_ANCHOR_MAX_AGE
+
+        min_slot = int(head_header.slot) - LOOKUP_ANCHOR_MAX_AGE
+        child_meta = HeaderMeta(
+            slot=head_header.slot,
+            parent=head_header.parent,
+            parent_state_root=head_header.parent_state_root,
+        )
+        seen = set()
+
+        while child_meta.parent != HeaderHash(32) and child_meta.parent not in seen:
+            parent_hash = child_meta.parent
+            seen.add(parent_hash)
+            parent_meta = self._load_header_meta(parent_hash, kv)
+            if parent_meta is None:
+                return False
+
+            if int(parent_meta.slot) < min_slot:
+                return False
+
+            if parent_hash == context.lookup_anchor:
+                return (
+                    parent_meta.slot == context.lookup_anchor_slot
+                    and child_meta.parent_state_root == context.lookup_anchor_state_root
+                )
+
+            child_meta = parent_meta
+
+        return False
+
     def record_block(self, block: Block, kv: RockStore):
         parent = block.header.parent
         bh = block.header.hash()
+        self._record_header_meta(bh, block.header)
 
         if bh in self._index_map:
             ghost_block = self._index_map[bh]
@@ -172,6 +269,7 @@ class BlockView:
         kv.put(meta_key, meta.encode())
 
         self.revalidate_view()
+        self._prune_ancestor_meta()
 
     def _delete_block_keys(self, ghost: "GhostBlock", kv: RockStore):
         from jam.state.storage import StateStorage
@@ -236,6 +334,7 @@ class BlockView:
             for child in list(getattr(node, "children", [])):
                 stack.append(child)
             self._index_map.pop(node.header, None)
+            self._ancestor_meta.pop(node.header, None)
             if node.header in self.heads:
                 self.heads.remove(node.header)
             self._delete_block_keys(node, kv)
@@ -321,6 +420,7 @@ class BlockView:
         kv.put(meta_key, meta.encode())
 
         self.revalidate_view()
+        self._prune_ancestor_meta()
         self.prune_history(kv)
 
     def best_block(self):
