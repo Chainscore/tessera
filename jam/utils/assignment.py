@@ -10,8 +10,6 @@ from jam.models.protocol.core import TimeSlot
 
 from jam.utils.shuffle import shuffle
 from jam.utils.constants import (
-    VALIDATOR_COUNT,
-    CORE_COUNT,
     EPOCH_LENGTH,
     ROTATION_PERIOD,
 )
@@ -28,8 +26,6 @@ def assign_guarantors(slot: TimeSlot = None, epoch=0):
         Mapping of core index to its assigned guarantor
     """
 
-    vc = VALIDATOR_COUNT
-
     # ------ Fetch State --------
     if slot:
         from jam.settings import settings
@@ -45,19 +41,6 @@ def assign_guarantors(slot: TimeSlot = None, epoch=0):
 
         slot = state.tau
 
-    # ------- Validators ---------
-    if len(state.kappa) < VALIDATOR_COUNT:
-        print(f"FOUND {len(state.kappa)} VALIDATORS : LESS THAN {VALIDATOR_COUNT}")
-        vc = len(state.kappa)
-
-    validators: TypedVector[U32] = TypedVector[U32]([U32(i) for i in range(vc)])
-
-    # ------- Unassigned Cores -------
-    validator_assign: TypedVector[U32] = TypedVector[U32]([])
-    for i in range(vc):
-        val_core = floor((CORE_COUNT * i) / vc)
-        validator_assign.append(U32(val_core))
-
     # ------- Epoch Entropy -------
     if epoch == 0:
         epoch_entropy = state.eta[2]
@@ -70,6 +53,15 @@ def assign_guarantors(slot: TimeSlot = None, epoch=0):
         validator_set = state.gamma.p
     else:
         raise ValueError("Epoch value can be 0, 1 or -1.")
+
+    # ------- Validators ---------
+    vc = len(validator_set)
+    validators: TypedVector[U32] = TypedVector[U32]([U32(i) for i in range(vc)])
+
+    # ------- Unassigned Cores -------
+    validator_assign: TypedVector[U32] = TypedVector[U32]([])
+    for i in range(vc):
+        validator_assign.append(U32(i // 3))
 
     # ------- Shuffle Validators -------
     core_assign = shuffle(epoch_entropy.encode().hex(), validator_assign)

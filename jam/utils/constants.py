@@ -3,6 +3,7 @@
 from tsrkit_types import Enum, U16, U32, U64
 
 from datetime import datetime, timezone
+from math import ceil
 from jam.utils.chainspec import chain_config
 
 # ───────────────────────────────────────
@@ -86,6 +87,14 @@ K = MAX_TICKETS_PER_EXTRINSIC
 # L — Max age (in timeslots) of the lookup anchor.
 LOOKUP_ANCHOR_MAX_AGE = chain_config.lookup_anchor_max_age
 L = LOOKUP_ANCHOR_MAX_AGE
+
+# M_V - Max number of verdicts in a single disputes extrinsic.
+MAX_DISPUTE_EXTRINSIC_VERDICTS = 16
+M_V = MAX_DISPUTE_EXTRINSIC_VERDICTS
+
+# M_O - Max number each of culprits or faults in a single disputes extrinsic.
+MAX_DISPUTE_EXTRINSIC_OFFENSES = 16
+M_O = MAX_DISPUTE_EXTRINSIC_OFFENSES
 
 def _env_bool(name: str, default: bool = False) -> bool:
     import os
@@ -192,6 +201,60 @@ MAX_EXPORT_ITEM = 3072
 W_X = MAX_EXPORT_ITEM
 
 
+def is_valid_validator_count(count: int) -> bool:
+    """Return whether count belongs to the v0.8 validator-count set."""
+    return count % 3 == 0 and 6 <= count <= 3 * CORE_COUNT
+
+
+def active_core_count(validators_or_count) -> int:
+    """Number of active cores for a validator set or validator-set size."""
+    count = (
+        validators_or_count
+        if isinstance(validators_or_count, int)
+        else len(validators_or_count)
+    )
+    return count // 3
+
+
+def validator_super_majority(count: int) -> int:
+    """Strict two-thirds threshold as a count of required votes."""
+    return (2 * count // 3) + 1
+
+
+def validator_wonky_threshold(count: int) -> int:
+    return count // 3
+
+
+def ticket_entries_for_validator_count(count: int) -> int:
+    return ceil((2 * EPOCH_LENGTH) / count)
+
+
+def ec_original_shards(total_shards: int) -> int:
+    """Original erasure shards D(v), from v0.8 erasure-coding rules."""
+    candidates = [
+        d
+        for d in range(1, (total_shards // 3) + 2)
+        if SEGMENT_SIZE % (2 * d) == 0
+    ]
+    if not candidates:
+        raise ValueError(
+            f"Unsupported validator count for erasure coding: {total_shards}"
+        )
+    return max(candidates)
+
+
+def ec_recovery_shards(total_shards: int) -> int:
+    return total_shards - ec_original_shards(total_shards)
+
+
+def ec_piece_size(total_shards: int) -> int:
+    return 2 * ec_original_shards(total_shards)
+
+
+def ec_pieces_per_segment(total_shards: int) -> int:
+    return SEGMENT_SIZE // ec_piece_size(total_shards)
+
+
 # X — Context strings for signing.
 class X(Enum):
     AVAILABLE = b"jam_available"  # Ed25519 Availability assurances
@@ -227,8 +290,8 @@ REGISTER_COUNT = 13
 
 
 # ======= #
-VALIDATORS_SUPER_MAJORITY = 1 + 2 * VALIDATOR_COUNT // 3
-VALIDATORS_WONKY = VALIDATOR_COUNT // 3
+VALIDATORS_SUPER_MAJORITY = validator_super_majority(VALIDATOR_COUNT)
+VALIDATORS_WONKY = validator_wonky_threshold(VALIDATOR_COUNT)
 GENESIS_TS = 1735732800  # January 1, 2025 12:00 UTC
 
 

@@ -15,7 +15,7 @@ from rockstore import RockStore
 import random
 
 from jam.models.work.shard import ShardIndex
-from jam.utils.constants import EPOCH_LENGTH, VALIDATOR_COUNT
+from jam.utils.constants import EPOCH_LENGTH, ec_original_shards
 
 if TYPE_CHECKING:
     from jam.state.state import State
@@ -187,12 +187,18 @@ class Settings:
             raise ValueError("Validator index is not set, check if the node is registered in the state.")
         return ValidatorIndex(self._validator_index)
 
-    def get_shard_index(self, core_index: CoreIndex):
+    def get_shard_index(
+        self,
+        core_index: CoreIndex,
+        erasure_shards: int | None = None,
+    ):
         from jam.utils.chainspec import chain_config
 
         vi = self.validator_index
+        total_shards = int(erasure_shards or chain_config.num_validators)
+        original_shards = ec_original_shards(total_shards)
         shard_index = ShardIndex(
-            (core_index * chain_config.recovery_threshold + vi) % VALIDATOR_COUNT
+            (core_index * original_shards + vi) % total_shards
         )
 
         return shard_index
@@ -212,4 +218,3 @@ def setup_setting(*args, **kwargs) -> Settings:
     viewer.initialize(settings.main_db)
 
     return settings
-

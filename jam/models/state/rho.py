@@ -3,15 +3,21 @@ from tsrkit_types.struct import structure
 from tsrkit_types.option import Option
 from jam.models.protocol.core import TimeSlot
 from jam.models.work import WorkReport, WorkReports
+from jam.models.work.guarantee import ReportGuarantee
 from jam.utils.constants import CORE_COUNT
 
 
 @structure
 class WorkReportState:
-    """Work report state"""
+    """Availability assignment for a core."""
 
-    report: WorkReport
+    # WorkReportState -> Availability Assignment v0.8.0
+    guarantee: ReportGuarantee
     timeout: TimeSlot
+
+    @property
+    def report(self) -> WorkReport:
+        return self.guarantee.report
 
 
 OptionalWorkReportState = Option[WorkReportState]

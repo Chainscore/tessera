@@ -7,7 +7,7 @@ from jam.models.protocol.crypto import BandersnatchRingVrfSignature
 from jam.models.protocol.core import TimeSlot
 from dot_ring import Bandersnatch, RingVRF
 from jam.log_setup import node_logger as logger
-from jam.utils.constants import EPOCH_LENGTH, X, TICKET_ENTRIES_PER_VALIDATOR
+from jam.utils.constants import EPOCH_LENGTH, X, ticket_entries_for_validator_count
 from jam.network.protocols.ce_131 import SafroleTicketProxyDistribution, CE131Data, EpochTicket
 
 
@@ -21,9 +21,9 @@ class Conductor(NodeDispatcher):
             CE131 = SafroleTicketProxyDistribution()
             tasks = []
             # generating & transmitting all the tickets allowed per validator
-            for i in range(TICKET_ENTRIES_PER_VALIDATOR):
-                if not state:
-                    from jam.state.state import state
+            if not state:
+                from jam.state.state import state
+            for i in range(ticket_entries_for_validator_count(len(state.gamma.p))):
                 ticket_envelope = cls.generate_ticket(state, i)
                 epoch_index = U32(finality_time_slot // EPOCH_LENGTH)
 

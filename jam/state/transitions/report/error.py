@@ -37,3 +37,4 @@ class ReportingErrorCode(Enum):
     WRONG_ASSIGNMENT = "wrong_assignment"
     BAD_SIGNATURE = "bad_signature"
     BANNED_VALIDATOR = "banned_validator"
+    BAD_ERASURE_SHARD_COUNT = "bad_erasure_shard_count"

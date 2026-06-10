@@ -49,7 +49,7 @@ class Statistics:
         author_index = block.header.author_index
 
         # Handle genesis block
-        if author_index != 2**16 - 1:
+        if author_index != 2**16 - 1 and author_index < len(pi_curr):
             pi_curr[author_index].blocks += 1
             pi_curr[author_index].tickets += len(block.extrinsic.tickets)
             pi_curr[author_index].pre_images += len(block.extrinsic.preimages)
@@ -89,14 +89,16 @@ class Statistics:
                         if pubkey in kappa_lookup:
                             reporter_set.add(kappa_lookup[pubkey])
                     else:
-                        reporter_set.add(sig.validator_index)
+                        if sig.validator_index < len(pi_curr):
+                            reporter_set.add(sig.validator_index)
 
         for validator_index in reporter_set:
             pi_curr[validator_index].guarantees += 1
 
         for assurance in block.extrinsic.assurances:
             validator_index = assurance.validator_index
-            pi_curr[validator_index].assurances += 1
+            if validator_index < len(pi_curr):
+                pi_curr[validator_index].assurances += 1
 
         pi.vals_current = pi_curr
         pi.vals_last = pi_last

@@ -39,7 +39,6 @@ from jam.models.work.manifest import (
 
 from jam.models.protocol.core import SegmentRoot
 
-from jam.utils.chainspec import chain_config
 from jam.utils.gather import gather_with_exceptions
 from jam.utils.merkle.binary_merkle import BMRFunctions, OpaqueHashes
 from jam.utils.erasure_coding.erasure_code import ErasureCode
@@ -172,8 +171,6 @@ class Bundler:
         er_ar_da = ErasureAssurerMap(d3l)
         wr_da = ReportsDA(d3l)
 
-        erasure_code = ErasureCode()
-
         subtree_depth = 6
         subtree_page_size = 2**subtree_depth
 
@@ -205,6 +202,7 @@ class Bundler:
             wr = metadata[1]
             e_root = wr.package_spec.erasure_root
             seg_indices = metadata[0]
+            erasure_code = ErasureCode(int(wr.package_spec.erasure_shards))
 
             logger.debug(
                 f"Fetching segments..",
@@ -308,7 +306,7 @@ class Bundler:
                                 f"Total segments known for this er-root are {total_segments}, must be {total_count}"
                             )
 
-                        if len(ss_dict) < chain_config.recovery_threshold:
+                        if len(ss_dict) < erasure_code.original_shards:
                             logger.debug(
                                 "Shards in database are less than recovery threshold",
                                 er_root=e_root.hex()[:16],
@@ -321,7 +319,7 @@ class Bundler:
                         for i in ind_to_req:
                             shards = ss_dict.get_shard_tuple(i)
 
-                            if len(shards) >= chain_config.recovery_threshold:
+                            if len(shards) >= erasure_code.original_shards:
                                 segment = Segment(erasure_code.decode(Vector(shards)))
                                 segs_dict[i] = segment
                             else:
@@ -350,8 +348,8 @@ class Bundler:
                         from jam.network.protocols import SegmentShardRequest
 
                         ce_139 = SegmentShardRequest()
-                        for i in range(chain_config.num_validators):
-                            vi = get_vi(i, wr.core_index)
+                        for i in range(erasure_code.total_shards):
+                            vi = get_vi(i, wr.core_index, erasure_code.total_shards)
 
                             query = Query(e_root, ShardIndex(i), ind_to_req)
                             queries = Queries([query])
@@ -380,7 +378,7 @@ class Bundler:
                         for i in ind_to_req:
                             shards = shards_dict[i]
 
-                            if len(shards) > chain_config.recovery_threshold:
+                            if len(shards) >= erasure_code.original_shards:
                                 segment = Segment(erasure_code.decode(Vector(shards)))
                                 segs_dict[i] = segment
                             else:
@@ -457,7 +455,6 @@ class Bundler:
         er_ar_da = ErasureAssurerMap(d3l)
         wr_da = ReportsDA(d3l)
 
-        erasure_code = ErasureCode()
         utils = Utils()
 
         subtree_depth = 6
@@ -506,6 +503,7 @@ class Bundler:
             wr = metadata[1]
             e_root = wr.package_spec.erasure_root
             proof_indices = metadata[0]
+            erasure_code = ErasureCode(int(wr.package_spec.erasure_shards))
 
             logger.debug(
                 f"Fetching justifications..",
@@ -617,7 +615,7 @@ class Bundler:
                                 f"Total segments known for this er-root are {total_segments}, must be {total_count}"
                             )
 
-                        if len(ss_dict) < chain_config.recovery_threshold:
+                        if len(ss_dict) < erasure_code.original_shards:
                             logger.debug(
                                 "Shards in database are less than recovery threshold",
                                 er_root=e_root.hex()[:16],
@@ -630,7 +628,7 @@ class Bundler:
                         for i in ind_to_req:
                             shards = ss_dict.get_shard_tuple(i)
 
-                            if len(shards) >= chain_config.recovery_threshold:
+                            if len(shards) >= erasure_code.original_shards:
                                 proof = Segment(erasure_code.decode(Vector(shards)))
                                 proofs_dict[i - exports_count] = proof
                             else:
@@ -661,8 +659,8 @@ class Bundler:
                         from jam.network.protocols import SegmentShardRequest
 
                         ce_139 = SegmentShardRequest()
-                        for i in range(chain_config.num_validators):
-                            vi = get_vi(i, wr.core_index)
+                        for i in range(erasure_code.total_shards):
+                            vi = get_vi(i, wr.core_index, erasure_code.total_shards)
 
                             query = Query(e_root, ShardIndex(i), ind_to_req)
                             queries = Queries([query])
@@ -691,7 +689,7 @@ class Bundler:
                         for i in ind_to_req:
                             shards = shards_dict[i]
 
-                            if len(shards) > chain_config.recovery_threshold:
+                            if len(shards) >= erasure_code.original_shards:
                                 proof = Segment(erasure_code.decode(Vector(shards)))
                                 proofs_dict[i - exports_count] = proof
                             else:

@@ -17,8 +17,8 @@ from jam.utils.constants import (
     EPOCH_LENGTH,
     X,
     TICKET_SUBMISSION_END,
-    TICKET_ENTRIES_PER_VALIDATOR,
     MAX_TICKETS_PER_EXTRINSIC,
+    ticket_entries_for_validator_count,
 )
 from jam.models.protocol.crypto import (
     BandersnatchPublic,
@@ -94,7 +94,7 @@ class Safrole:
             vrf_ids = []
             parsed_vrfs = []
             for i, t in enumerate(tickets):
-                Safrole.ensure_valid_attempt(t)
+                Safrole.ensure_valid_attempt(t, len(gamma.p))
                 try:
                     ring_proof = RingVRF[Bandersnatch].from_bytes(bytes(t.signature), skip_pedersen=False)
                     vrf_op = OpaqueHash(ring_proof.proof_to_hash(ring_proof.pedersen_proof.output_point)[:32])
@@ -245,12 +245,12 @@ class Safrole:
             )
 
     @staticmethod
-    def ensure_valid_attempt(ticket: TicketEnvelope):
+    def ensure_valid_attempt(ticket: TicketEnvelope, validator_count: int):
         """
         Entry index should be a natural number less than N
         https://graypaper.fluffylabs.dev/#/5b732de/0f22000f2400
         """
-        if ticket.attempt < 0 or ticket.attempt >= TICKET_ENTRIES_PER_VALIDATOR:
+        if ticket.attempt < 0 or ticket.attempt >= ticket_entries_for_validator_count(validator_count):
             raise SafroleError(
                 SafroleErrorCode.BAD_TICKET_ATTEMPT,
                 f"Ticket attempt {ticket.attempt} is invalid",

@@ -24,7 +24,7 @@ from jam.models.audit.audit_tranche import (
     CoreReport,
 )
 from jam.models.work.report import WorkReport
-from jam.utils.constants import VALIDATOR_COUNT, AUDIT_BIAS_FACTOR, AUDIT_REPORT_ASSIGNED
+from jam.utils.constants import AUDIT_BIAS_FACTOR, AUDIT_REPORT_ASSIGNED
 from jam.log_setup import logger
 
 
@@ -49,8 +49,11 @@ class Audit:
 
         for r in prior_state:
             report_state: (WorkReportState | Null) = r.unwrap()
-            if isinstance(report_state, WorkReportState) and report_state.report in newly_rep:
-                auditable_reports.append(OptionalReport(report_state.report))
+            if (
+                isinstance(report_state, WorkReportState)
+                and report_state.guarantee.report in newly_rep
+            ):
+                auditable_reports.append(OptionalReport(report_state.guarantee.report))
             else:
                 auditable_reports.append(OptionalReport(Null))
 
@@ -273,7 +276,8 @@ class Audit:
                 # HERE WE CHECK VRF CONDITION - extract VRF output using dot_ring
                 rand_proof = IETF_VRF[Bandersnatch].from_bytes(random_quantity)
                 vrf_out = rand_proof.proof_to_hash(rand_proof.output_point)[:32]
-                vrf_check = (VALIDATOR_COUNT / (256 * AUDIT_BIAS_FACTOR)) * vrf_out[1:]
+                validator_count = int(rep.package_spec.erasure_shards)
+                vrf_check = (validator_count / (256 * AUDIT_BIAS_FACTOR)) * vrf_out[1:]
 
                 # NO-JUDGMENT FOR THAT WORK REPORT
                 prev_tranche_index = tranche_index - TrancheIndex(1)
@@ -325,7 +329,11 @@ class Audit:
 
             logger.debug("Reprocessing bundle...", wr_hash=wr_hash.hex())
             new_wr, new_wr_hash = processor.process_bundle(
-                wr.core_index, bundle, wr.segment_root_lookup, False
+                wr.core_index,
+                bundle,
+                wr.segment_root_lookup,
+                False,
+                int(wr.package_spec.erasure_shards),
             )
 
             logger.info(

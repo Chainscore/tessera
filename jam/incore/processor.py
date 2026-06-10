@@ -28,6 +28,7 @@ from jam.models.protocol.core import (
     TimeSlot,
     ExportsRoot,
     ValidatorIndex,
+    SegmentRoot,
 )
 from jam.models.protocol.crypto import OpaqueHash, Hash, Ed25519Signature, WorkReportHash
 from jam.models.work.execution import WorkDigest, WorkExecResult, RefineLoad, WorkDigests
@@ -71,12 +72,11 @@ from jam.storage.da.segments import SegmentsDA, SegmentShardsDA
 from jam.utils.merkle import BMRFunctions
 from jam.utils.chainspec import chain_config
 from jam.utils.constants import (
-    BASIC_ERASURE_SIZE,
     GENESIS_TS,
     SEGMENT_SIZE,
     MAX_WORK_REPORT_SIZE,
     SLOT_PERIOD,
-    X, VALIDATOR_COUNT
+    X,
 )
 
 from tests.unit.incore.types import FullVector
@@ -222,7 +222,12 @@ class Processor:
         return digest
 
     def build_report(
-        self, b: WorkPackageBundle, c: CoreIndex, sr_lookup: SegmentRootLookup, store: bool = True
+        self,
+        b: WorkPackageBundle,
+        c: CoreIndex,
+        sr_lookup: SegmentRootLookup,
+        store: bool = True,
+        erasure_shards: int | None = None,
     ):
         """
         Work Report Computation function Ξ defined in Eqn 14.12
@@ -242,6 +247,16 @@ class Processor:
         try:
             # Work Package, p
             p = b.package
+            erasure_shards = int(erasure_shards or chain_config.num_validators)
+
+            expected_lookup_keys = {
+                spec.tree_root
+                for item in p.items
+                for spec in item.import_segments
+                if not isinstance(spec.tree_root, SegmentRoot)
+            }
+            if set(sr_lookup.keys()) != expected_lookup_keys:
+                raise ValueError("Segment-root lookup keys do not match package imports")
 
             # ------------------------------------------ IS AUTH INVOCATION ------------------------------------------
             # Auth Output o & Gas g
@@ -312,7 +327,12 @@ class Processor:
 
             # Availability Specification, s
             logger.debug(f"Building availability specification..")
-            specs = self.availability_specifier(h, b.encode(), e_bar_cap)
+            specs = self.availability_specifier(
+                h,
+                self.make_bundle(b, sr_lookup),
+                e_bar_cap,
+                erasure_shards,
+            )
 
             logger.debug(f"Compiling Report..")
             report = WorkReport(
@@ -332,11 +352,21 @@ class Processor:
             logger.error(f"Failed to build report", error=e.with_traceback(e.__traceback__))
             raise
 
+    @staticmethod
+    def make_bundle(bundle: WorkPackageBundle, sr_lookup: SegmentRootLookup) -> bytes:
+        """
+        Bundle assembly B(p, l). The bundle object is already assembled from
+        extrinsics, imports and justifications resolved with the segment-root
+        lookup; keep this helper as the single availability-spec encoding point.
+        """
+        return bundle.encode()
+
     def availability_specifier(
         self,
         package_hash: OpaqueHash,
         wp_bundle: bytes,
         export_segments: Segments,
+        erasure_shards: int | None = None,
         store: bool = True,
     ) -> WorkPackageSpec:
         """
@@ -375,12 +405,12 @@ class Processor:
             n = len(export_segments)
             logger.debug("Segments formed", count=n)
 
-            erasure_codec = ErasureCode()
+            erasure_codec = ErasureCode(erasure_shards)
 
             # Build Bundle Shards
             logger.debug(f"Building bundle shards..")
             padded_wp_bundle = utils.zero_padding(
-                ByteArray(wp_bundle), BASIC_ERASURE_SIZE
+                ByteArray(wp_bundle), erasure_codec.piece_size
             )
 
             bundle_shards = erasure_codec.encode(bytes(padded_wp_bundle))
@@ -430,7 +460,7 @@ class Processor:
                 segments_shards = SegmentsShards(
                     [
                         SegmentsShard([])
-                        for _ in range(VALIDATOR_COUNT)
+                        for _ in range(erasure_codec.total_shards)
                     ]
                 )
 
@@ -451,15 +481,15 @@ class Processor:
 
             # Build Complete Shard Key
             if (
-                len(ss_roots) != chain_config.num_validators
-                or len(bs_hashes) != chain_config.num_validators
+                len(ss_roots) != erasure_codec.total_shards
+                or len(bs_hashes) != erasure_codec.total_shards
             ):
                 raise ValueError(
-                    f"Length of both type of shards should be {chain_config.num_validators}"
+                    f"Length of both type of shards should be {erasure_codec.total_shards}"
                 )
 
             shards_keys = TypedVector[Bytes]([])
-            for i in range(chain_config.num_validators):
+            for i in range(erasure_codec.total_shards):
                 shards_key = ShardKey(bs_hashes[i], ss_roots[i])
                 shards_keys.append(Bytes(shards_key.encode()))
 
@@ -492,6 +522,7 @@ class Processor:
                 hash=package_hash,
                 length=Uint[32](l),
                 erasure_root=u,
+                erasure_shards=Uint[16](erasure_codec.total_shards),
                 exports_root=e,
                 exports_count=Uint[16](n),
             )
@@ -520,6 +551,7 @@ class Processor:
         bundle: WorkPackageBundle,
         sr_lookup: SegmentRootLookup,
         store: bool = True,
+        erasure_shards: int | None = None,
     ) -> Tuple[WorkReport, WorkReportHash]:
         from jam.settings import settings
 
@@ -527,7 +559,13 @@ class Processor:
         try:
             # Generate Report
             logger.debug("Building Work Report..")
-            report = self.build_report(bundle, core, sr_lookup, store)
+            report = self.build_report(
+                bundle,
+                core,
+                sr_lookup,
+                store,
+                erasure_shards=erasure_shards,
+            )
 
             wr_hash = WorkReportHash(Hash.blake2b(report.encode()))
             logger.debug(

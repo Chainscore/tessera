@@ -45,8 +45,8 @@ from jam.utils.constants import (
     MAX_AUTH_QUEUE_ITEMS,
     PREIMAGE_EVICTION_TIMESLOTS,
     TRANSFER_MEMO_SIZE,
-    VALIDATOR_COUNT,
     MINIMUM_SERVICE_INDEX,
+    is_valid_validator_count,
 )
 
 
@@ -160,17 +160,21 @@ class AccumulateFunctions(INVF):
     @INVF.register(16, gas_cost=10)
     def designate(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         o = registers[7]
-        if not memory.is_accessible(o, VALIDATOR_COUNT * 336):
+        z = int(registers[8])
+        if not memory.is_accessible(o, z * 336):
             raise PvmError(PANIC)
 
-        if context.x.s_index != context.x.partial_state.privileges.chi_v:
+        if (
+            not is_valid_validator_count(z)
+            or context.x.s_index != context.x.partial_state.privileges.chi_v
+        ):
             registers[7] = HostStatus.HUH.value
             return CONTINUE, gas, registers, memory, context
 
-        buf: bytes = memory.read(o, 336 * VALIDATOR_COUNT)
+        buf: bytes = memory.read(o, 336 * z)
 
         context.x.partial_state.validator_keys = Iota(
-            [ValidatorData.decode(buf[336 * i : 336 * i + 336]) for i in range(VALIDATOR_COUNT)]
+            [ValidatorData.decode(buf[336 * i : 336 * i + 336]) for i in range(z)]
         )
         registers[7] = HostStatus.OK.value
         return CONTINUE, gas, registers, memory, context

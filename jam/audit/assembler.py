@@ -22,8 +22,6 @@ from jam.models.work.package import WorkPackageBundle
 from jam.models.work.report import WorkReport
 from jam.models.work.shard import ShardKey, ShardIndex, SegmentsShardRoot
 
-from jam.utils.chainspec import chain_config
-from jam.utils.constants import VALIDATOR_COUNT
 from jam.utils.merkle import BMRFunctions
 from jam.utils.erasure_coding.erasure_code import ErasureCode
 from jam.utils.merkle.binary_merkle import OpaqueHashes
@@ -54,14 +52,16 @@ class Assembler:
 
         # Fetch shard info of current node
         v_i = self.settings.validator_index
-        s_i = get_si(validator_index=v_i, core_index=wr.core_index)
-
-        # Fetch shards from other nodes
-        total_shards = VALIDATOR_COUNT
+        codec = ErasureCode(int(wr.package_spec.erasure_shards))
+        s_i = get_si(
+            validator_index=v_i,
+            core_index=wr.core_index,
+            erasure_shards=codec.total_shards,
+        )
 
         shards = Vector([])
-        for i in range(total_shards):
-            if len(shards) > chain_config.recovery_threshold:
+        for i in range(codec.total_shards):
+            if len(shards) >= codec.original_shards:
                 logger.info("Collected all shards", cnt=len(shards))
                 break
 
@@ -74,7 +74,11 @@ class Assembler:
                         shards.append((bs_dict[s_i], s_i))
 
                 else:
-                    assurer_vi = get_vi(shard_index=i, core_index=wr.core_index)
+                    assurer_vi = get_vi(
+                        shard_index=i,
+                        core_index=wr.core_index,
+                        erasure_shards=codec.total_shards,
+                    )
                     query = Query(er_root, ShardIndex(i))
                     data = CE138Data(U32(len(query.encode())), query)
 
@@ -124,7 +128,7 @@ class Assembler:
                     index=i,
                 )
 
-        if len(shards) < chain_config.recovery_threshold:
+        if len(shards) < codec.original_shards:
             logger.error(
                 "Couldn't fetch minimum required audit shards",
                 er_root=er_root.hex()[:16] + "...",
@@ -134,7 +138,7 @@ class Assembler:
 
             raise AssemblerError(Code.SHARDS_UNAVAILABLE)
 
-        bundle = self.codec.decode(shards)
+        bundle = codec.decode(shards)
         bundle = WorkPackageBundle.decode(bundle)
 
         return bundle
@@ -200,7 +204,7 @@ class Assembler:
 
         for i, item in enumerate(wp.items):
             imp_specs: ImportSpecs = item.import_segments
-            imp_i: Segments = ext[i]
+            imp_i: Segments = segs[i]
             jfn_i: Justifications = jfns[i]
 
             if len(imp_specs) != len(imp_i):

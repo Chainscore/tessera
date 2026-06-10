@@ -3,25 +3,28 @@ from typing import Dict, List
 from tsrkit_types.sequences import TypedVector
 from tsrkit_types.integers import U32
 
-from jam.models import OpaqueHash, ValidatorIndex, Sigma
 from jam.models import OpaqueHash, ValidatorIndex, Sigma, ValidatorData
 from jam.models.protocol.core import CoreIndex, TimeSlot
 
 from jam.utils.constants import (
-    VALIDATOR_COUNT,
-    CORE_COUNT,
     EPOCH_LENGTH,
     ROTATION_PERIOD,
+    active_core_count,
 )
 from math import floor
 from jam.utils.shuffle import shuffle
 from collections import deque
 
 ValidatorList = TypedVector[ValidatorIndex]
-_VALIDATOR_INDEX_BASE = tuple(U32(i) for i in range(VALIDATOR_COUNT))
-_CORE_ASSIGNMENT_BASE = tuple(
-    U32((CORE_COUNT * i) // VALIDATOR_COUNT) for i in range(VALIDATOR_COUNT)
-)
+
+
+def _validator_index_base(validator_count: int):
+    return tuple(U32(i) for i in range(validator_count))
+
+
+def _core_assignment_base(validator_count: int):
+    return tuple(U32(i // 3) for i in range(validator_count))
+
 
 def guarantor_assignment(
     eta, kappa, lambda_, gamma_p, block_slot, report_slot, tau
@@ -43,12 +46,6 @@ def guarantor_assignment(
         It's return the dict that is mapping between core and validator
 
     """
-    # ------- Validator order ---------
-    array_validator = _VALIDATOR_INDEX_BASE
-
-    # ------- Validator assignment to the cores -------
-    validator_assign = TypedVector[U32](_CORE_ASSIGNMENT_BASE)
-
     epoch_change = (int(tau) // EPOCH_LENGTH) < (int(block_slot) // EPOCH_LENGTH)
     eta2_post = eta[1] if epoch_change else eta[2]
     eta3_post = eta[2] if epoch_change else eta[3]
@@ -80,6 +77,10 @@ def guarantor_assignment(
         for i in lambda_post:
             validator_keys.append(i.ed25519)
 
+    validator_count = len(validator_keys)
+    array_validator = _validator_index_base(validator_count)
+    validator_assign = TypedVector[U32](_core_assignment_base(validator_count))
+
     # ------- Shuffle validator with respect to the given entropy -------
     core_assign = shuffle(epoch_entropy.encode().hex(), validator_assign)
 
@@ -105,29 +106,32 @@ def guarantor_assignment(
 
     return mapping
 
-def rotation_fn(c: TypedVector[U32], rotation_phase: int):
+
+def rotation_fn(c: TypedVector[U32], rotation_phase: int, validator_count: int):
     rotated_cores = TypedVector[CoreIndex]([])
+    active_cores = active_core_count(validator_count)
 
     for x in c:
-        rotated_cores.append(CoreIndex((x + rotation_phase) % CORE_COUNT))
+        rotated_cores.append(CoreIndex((x + rotation_phase) % active_cores))
 
     return rotated_cores
 
-def permute_fn(e: OpaqueHash, t: TimeSlot):
-    assignment = TypedVector[U32](_CORE_ASSIGNMENT_BASE)
+
+def permute_fn(e: OpaqueHash, t: TimeSlot, validator_count: int):
+    assignment = TypedVector[U32](_core_assignment_base(validator_count))
 
     shuffled_assignment = shuffle(e, assignment)
 
     rotation_phase = (t % EPOCH_LENGTH) // ROTATION_PERIOD
 
-    assigned_cores = rotation_fn(shuffled_assignment, rotation_phase)
+    assigned_cores = rotation_fn(shuffled_assignment, rotation_phase, validator_count)
 
     return assigned_cores
 
 
 def assign_fn(state: Sigma):
-    assigned_cores = permute_fn(state.eta[2], state.tau)
     vals = state.kappa
+    assigned_cores = permute_fn(state.eta[2], state.tau, len(vals))
 
     curr_mapping: Dict[CoreIndex, ValidatorList] = {}
     curr_vals: Dict[CoreIndex, TypedVector[ValidatorData]] = {}
@@ -149,11 +153,11 @@ def assign_fn(state: Sigma):
     curr_rot_epoch = state.tau // EPOCH_LENGTH
 
     if prev_rot_epoch == curr_rot_epoch:
-        assigned_cores = permute_fn(state.eta[2], prev_rot_slot)
         vals = state.kappa
+        assigned_cores = permute_fn(state.eta[2], prev_rot_slot, len(vals))
     else:
-        assigned_cores = permute_fn(state.eta[3], prev_rot_slot)
         vals = state.lambda_
+        assigned_cores = permute_fn(state.eta[3], prev_rot_slot, len(vals))
 
     prev_mapping: Dict[CoreIndex, ValidatorList] = {}
     prev_vals: Dict[CoreIndex, TypedVector[ValidatorData]] = {}

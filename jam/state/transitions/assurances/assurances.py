@@ -18,7 +18,7 @@ from jam.models.work import WorkReports
 from jam.utils.constants import (
     X,
     UNAVAILABLE_WORK_EXPIRY,
-    VALIDATOR_COUNT,
+    active_core_count,
 )
 
 
@@ -45,7 +45,7 @@ class Assurances:
         assurances = block.extrinsic.assurances
 
         # Ensure the validator indexes are valid
-        Assurances.ensure_validators_valid(assurances)
+        Assurances.ensure_validators_valid(assurances, len(kappa))
 
         # 4. Check if we have supermajority, remove pending report if we do
         core_assurances = [0] * len(rho)
@@ -85,9 +85,14 @@ class Assurances:
         newly_avail_reports = WorkReports([])
         # Or if we have any stale pending WRs
         # Clear them
-        super_majority = math.floor(2 * VALIDATOR_COUNT / 3)
+        super_majority = math.floor(2 * len(kappa) / 3)
+        validator_set_size_changed = len(pre_state.kappa) != len(state.kappa)
+        active_cores = active_core_count(state.kappa)
         for i in range(len(rho)):
             rep = rho_unwrapped[i]
+            if i >= active_cores:
+                rho[i] = OptionalWorkReportState(Null)
+                continue
             if rep == Null:
                 continue
             else:
@@ -98,6 +103,7 @@ class Assurances:
                     core_assurances[i] > super_majority
                     or block.header.slot
                     >= rep.timeout + UNAVAILABLE_WORK_EXPIRY
+                    or validator_set_size_changed
                 ):
                     rho[i] = OptionalWorkReportState(Null)
 
@@ -125,10 +131,10 @@ class Assurances:
             )
 
     @staticmethod
-    def ensure_validators_valid(assurances: List[AvailAssurance]) -> None:
+    def ensure_validators_valid(assurances: List[AvailAssurance], validator_count: int) -> None:
         """Ensure the validator index is valid"""
         for assurance in assurances:
-            if assurance.validator_index >= VALIDATOR_COUNT:
+            if assurance.validator_index >= validator_count:
                 raise AssurancesError(
                     AssurancesErrorCode.BAD_VALIDATOR_INDEX,
                     f"Validator index {assurance.validator_index} is invalid",

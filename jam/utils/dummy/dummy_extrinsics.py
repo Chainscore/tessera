@@ -30,7 +30,7 @@ from jam.utils.dummy.utils import (
 from jam.models.work import RefineContext
 from jam.models.protocol.crypto import Ed25519Signature, BandersnatchRingVrfSignature
 from tsrkit_types.bytes import Bytes
-from jam.utils.constants import VALIDATORS_SUPER_MAJORITY
+from jam.utils.constants import VALIDATOR_COUNT, VALIDATORS_SUPER_MAJORITY
 
 
 def create_dummy_package_spec() -> WorkPackageSpec:
@@ -39,6 +39,7 @@ def create_dummy_package_spec() -> WorkPackageSpec:
         hash=create_dummy_bytes32(),
         length=U32(42),
         erasure_root=create_dummy_bytes32(),
+        erasure_shards=U16(VALIDATOR_COUNT),
         exports_root=create_dummy_bytes32(),
         exports_count=U16(69),
     )

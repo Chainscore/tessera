@@ -1,13 +1,15 @@
 from tsrkit_types.bytes import Bytes
 from tsrkit_types.sequences import Vector
 from jam.utils.chainspec import chain_config
+from jam.utils.constants import ec_original_shards, ec_recovery_shards, ec_piece_size
 import tsrkit_rs
 
 class ErasureCode:
-    def __init__(self):
-        self.total_shards = chain_config.num_validators
-        self.original_shards = chain_config.erasure_coding_original_shards
-        self.recovery_shards = chain_config.erasure_coding_recovery_shards
+    def __init__(self, total_shards: int | None = None):
+        self.total_shards = int(total_shards or chain_config.num_validators)
+        self.original_shards = ec_original_shards(self.total_shards)
+        self.recovery_shards = ec_recovery_shards(self.total_shards)
+        self.piece_size = ec_piece_size(self.total_shards)
 
     # TODO: Sync EC
     # Prior: https://graypaper.fluffylabs.dev/#/7e6ff6a/3f19003f1900?v=0.6.7

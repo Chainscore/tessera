@@ -23,7 +23,7 @@ from jam.network.base.protocol import PrefixType
 from jam.models.protocol.core import CoreIndex, ValidatorIndex
 from jam.models.protocol.crypto import Ed25519Public
 from jam.models.work.shard import ShardIndex
-from jam.utils.constants import VALIDATOR_COUNT, NODE_ALPN
+from jam.utils.constants import NODE_ALPN, ec_original_shards
 
 genesis_hash = "476243ad"
 protocol_version = "0"
@@ -313,13 +313,18 @@ class NodeConnection(QuicConnectionProtocol):
         validator_index = self.validator_index
         return state.kappa[validator_index]
 
-    def get_shard_index(self, core_index: CoreIndex):
+    def get_shard_index(
+        self,
+        core_index: CoreIndex,
+        erasure_shards: int | None = None,
+    ):
         from jam.utils.chainspec import chain_config
 
         vi = self.validator_index
+        total_shards = int(erasure_shards or chain_config.num_validators)
+        original_shards = ec_original_shards(total_shards)
         shard_index = ShardIndex(
-            (core_index * chain_config.recovery_threshold + vi)
-            % VALIDATOR_COUNT
+            (core_index * original_shards + vi) % total_shards
         )
 
         return shard_index

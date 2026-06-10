@@ -26,6 +26,13 @@ from jam.models.work.report import (
     WorkReports,
 )
 
+from jam.models.work.guarantee import (
+    ValidatorSignature,
+    ValidatorSignatures,
+    ReportGuarantee,
+    GuaranteesExtrinsic,
+)
+
 # Package types
 from jam.models.work.package import (
     WorkPackageSpec,
@@ -66,6 +73,10 @@ __all__ = [
     "RefineContext",
     "WorkReport",
     "WorkDependencies",
+    "ValidatorSignature",
+    "ValidatorSignatures",
+    "ReportGuarantee",
+    "GuaranteesExtrinsic",
     # Package types
     "WorkPackageSpec",
     "Authorizer",

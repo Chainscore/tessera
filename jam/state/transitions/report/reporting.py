@@ -19,13 +19,13 @@ from jam.models.protocol.crypto import OpaqueHash
 from jam.models.work import WorkReport
 from jam.utils.constants import ACCUMULATION_GAS, MAX_DEPENDENCIES, LOOKUP_ANCHOR_MAX_AGE, X
 from jam.utils.constants import (
-    VALIDATOR_COUNT,
     CORE_COUNT,
     EPOCH_LENGTH,
     ROTATION_PERIOD,
     MAX_WORK_REPORT_SIZE,
     MAX_AUTH_QUEUE_ITEMS,
     O,
+    active_core_count,
 )
 
 
@@ -82,10 +82,18 @@ class Reporting:
             Reporting.verify_report_output(report)
 
             #  ------- Valid Core Index -----------------
-            if report.core_index >= CORE_COUNT:
+            if report.core_index >= CORE_COUNT or report.core_index >= active_core_count(
+                state.kappa
+            ):
                 raise ReportingError(
                     ReportingErrorCode.BAD_CORE_INDEX,
-                    "Core index value is more then core range(CORE_COUNT)",
+                    "Core index is outside the active core range",
+                )
+
+            if int(report.package_spec.erasure_shards) != len(state.kappa):
+                raise ReportingError(
+                    ReportingErrorCode.BAD_ERASURE_SHARD_COUNT,
+                    "Work report erasure shard count must match active validator count",
                 )
 
             # -------- Check if the core already has pending report -------------
@@ -109,8 +117,17 @@ class Reporting:
                 )
 
             # -------- If the validator index is valid ------------
+            if guarantee.slot > block.header.slot:
+                raise ReportingError(
+                    ReportingErrorCode.FUTURE_REPORT_SLOT,
+                    "Report's slot more then block's slot",
+                )
+
+            validator_set = Reporting.validator_set_for_report_slot(
+                state, block.header.slot, guarantee.slot
+            )
             for y in guarantee.signatures:
-                if y.validator_index >= VALIDATOR_COUNT:
+                if y.validator_index >= len(validator_set):
                     raise ReportingError(
                         ReportingErrorCode.BAD_VALIDATOR_INDEX,
                         "Validator index(signature) is out of range",
@@ -136,13 +153,6 @@ class Reporting:
                 raise ReportingError(
                     ReportingErrorCode.CORE_UNAUTHORIZED,
                     "Work Report's authorizer_hash not exist in AuthorizationPool",
-                )
-
-            # ---------- future_report_slot -----------------
-            if guarantee.slot > block.header.slot:
-                raise ReportingError(
-                    ReportingErrorCode.FUTURE_REPORT_SLOT,
-                    "Report's slot more then block's slot",
                 )
 
             # -------- report_epoch_before_last ------------
@@ -305,9 +315,10 @@ class Reporting:
         pi_core = AllCoreStats.empty()
         pi_service = AllServiceStats({})
 
-        for report in all_reports:
+        for guarantee in block.extrinsic.guarantees:
+            report = guarantee.report
             rho[report.core_index] = OptionalWorkReportState(
-                WorkReportState(report=report, timeout=block.header.slot)
+                WorkReportState(guarantee=guarantee, timeout=block.header.slot)
             )
             core_index = report.core_index
             for digest in report.digests:
@@ -343,43 +354,49 @@ class Reporting:
         return state
 
     @staticmethod
+    def validator_set_for_report_slot(state: Sigma, block_slot, report_slot):
+        curr_rotation = int(block_slot) // ROTATION_PERIOD
+        prev_rotation = curr_rotation - 1
+        curr_epoch = int(block_slot) // EPOCH_LENGTH
+        has_prev_rotation = int(block_slot) >= ROTATION_PERIOD
+        prev_rotation_epoch = (
+            (int(block_slot) - ROTATION_PERIOD) // EPOCH_LENGTH
+            if has_prev_rotation
+            else None
+        )
+        report_rotation = int(report_slot) // ROTATION_PERIOD
+
+        if report_rotation == curr_rotation:
+            return state.kappa
+        if has_prev_rotation and report_rotation == prev_rotation:
+            return state.kappa if prev_rotation_epoch == curr_epoch else state.lambda_
+        raise ReportingError(
+            ReportingErrorCode.REPORT_EPOCH_BEFORE_LAST,
+            "Report must be in current or prior rotation only",
+        )
+
+    @staticmethod
     def ensure_signature(state: Sigma, block: Block):
         """
         Description : This function make sure that signature for the work_report is valid (ensure that report are signed by correct validators which are assigned, to that particular core, through guarantor assignment).
 
         Sources :  https://graypaper.fluffylabs.dev/#/38c4e62/158501154502?v=0.7.0
         """
-        curr_rotation = int(state.tau) // ROTATION_PERIOD
-        prev_rotation = curr_rotation - 1
-        curr_epoch = int(state.tau) // EPOCH_LENGTH
-        has_prev_rotation = int(state.tau) >= ROTATION_PERIOD
-        prev_rotation_epoch = (
-            (int(state.tau) - ROTATION_PERIOD) // EPOCH_LENGTH
-            if has_prev_rotation
-            else None
-        )
-
         guarantee_validator_keys = []
 
         for x in block.extrinsic.guarantees:
-            report_rotation = int(x.slot) // ROTATION_PERIOD
+            validator_set = Reporting.validator_set_for_report_slot(
+                state, block.header.slot, x.slot
+            )
 
-            if report_rotation == curr_rotation:
-                validator_set = state.kappa
-            elif has_prev_rotation and report_rotation == prev_rotation:
-                validator_set = (
-                    state.kappa if prev_rotation_epoch == curr_epoch else state.lambda_
-                )
-            else:
-                raise ReportingError(
-                    ReportingErrorCode.REPORT_EPOCH_BEFORE_LAST,
-                    "Report must be in current or prior rotation only",
-                )
-
-            validator_keys = {
-                y.validator_index: validator_set[y.validator_index].ed25519
-                for y in x.signatures
-            }
+            validator_keys = {}
+            for y in x.signatures:
+                if y.validator_index >= len(validator_set):
+                    raise ReportingError(
+                        ReportingErrorCode.BAD_VALIDATOR_INDEX,
+                        "Validator index(signature) is out of range",
+                    )
+                validator_keys[y.validator_index] = validator_set[y.validator_index].ed25519
             guarantee_validator_keys.append((x, validator_keys))
 
             for y in x.signatures:
@@ -513,7 +530,12 @@ class Reporting:
             else:
                 guarantors_assigned = mappings[2]
 
-            core_assignment = guarantors_assigned[x.report.core_index]
+            core_assignment = guarantors_assigned.get(x.report.core_index)
+            if core_assignment is None:
+                raise ReportingError(
+                    ReportingErrorCode.BAD_CORE_INDEX,
+                    "Core index is outside the active core range",
+                )
             val_assignment: Set[ValidatorIndex] = set()
             for y in x.signatures:
                 val_assignment.add(y.validator_index)

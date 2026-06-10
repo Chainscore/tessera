@@ -9,14 +9,29 @@ from jam.models.state.rho import OptionalWorkReportState
 from jam.models.state.sigma import Sigma
 from jam.block import Block, OffendersMark, DisputesExtrinsic
 from jam.models.protocol.crypto import Hash
-from jam.utils.constants import EPOCH_LENGTH, VALIDATORS_SUPER_MAJORITY, VALIDATORS_WONKY, X
+from jam.utils.constants import (
+    EPOCH_LENGTH,
+    MAX_DISPUTE_EXTRINSIC_OFFENSES,
+    MAX_DISPUTE_EXTRINSIC_VERDICTS,
+    X,
+)
 
 # Define minimum requirements
 MINIMUM_FAULTS_FOR_GOOD = 1  # At least 1 fault for solely valid verdicts
-MINIMUM_CULPRITS_FOR_BAD = 2  # At least 2 culprits for solely invalid verdicts
 
 
 class Disputes:
+    @staticmethod
+    def _validator_set_for_age(age, current_epoch, pre_kappa, pre_lambda):
+        if int(age) == int(current_epoch):
+            return pre_kappa
+        if int(current_epoch) > 0 and int(age) == int(current_epoch) - 1:
+            return pre_lambda
+        raise DisputesError(DisputesErrorCode.BAD_JUDGEMENT_AGE)
+
+    @staticmethod
+    def _super_majority(validator_count: int) -> int:
+        return (2 * validator_count // 3) + 1
 
     @staticmethod
     def transition(pre_state: Sigma, state: Sigma, block: Block) -> Sigma:
@@ -24,19 +39,13 @@ class Disputes:
 
         # Get Disputes Extrinsic format
         disputes = block.extrinsic.disputes
+        Disputes.ensure_extrinsic_size(disputes)
 
         # epoch Index
         current_epoch = pre_state.tau // EPOCH_LENGTH
         pre_psi = pre_state.psi
         pre_lambda = pre_state.lambda_
         pre_kappa = pre_state.kappa
-
-        # 2. Valid age
-        valid_ages = (
-            [current_epoch, current_epoch]
-            if current_epoch == 0
-            else [current_epoch, current_epoch - 1]
-        )
 
         # 3. Pre States
         good_set = set(pre_psi.good)
@@ -89,16 +98,15 @@ class Disputes:
 
         # Verifying verdicts are sorted by target
         for verdict in disputes.verdicts:
-            if verdict.age not in valid_ages:
-                raise DisputesError(DisputesErrorCode.BAD_JUDGEMENT_AGE)
+            validator_set = Disputes._validator_set_for_age(
+                verdict.age, current_epoch, pre_kappa, pre_lambda
+            )
+            if len(verdict.votes) != Disputes._super_majority(len(validator_set)):
+                raise DisputesError(DisputesErrorCode.BAD_VOTE_SPLIT)
             for vote in verdict.votes:
-                # Get the public key from the validator key-set
-                if verdict.age == valid_ages[0]:
-                    validator = pre_kappa[vote.index]
-                    public_key = validator.ed25519
-                else:
-                    validator = pre_lambda[vote.index]
-                    public_key = validator.ed25519
+                if int(vote.index) >= len(validator_set):
+                    raise DisputesError(DisputesErrorCode.BAD_VOTE_SPLIT)
+                public_key = validator_set[int(vote.index)].ed25519
 
                 # Get the vote value and message
                 try:
@@ -167,10 +175,16 @@ class Disputes:
                     raise DisputesError(DisputesErrorCode.JUDGEMENTS_NOT_SORTED_UNIQUE)
 
             positive_votes = sum(1 for judgment in verdict.votes if judgment.vote)
-            total_votes = len(verdict.votes)
+            validator_count = len(
+                Disputes._validator_set_for_age(
+                    verdict.age, current_epoch, pre_kappa, pre_lambda
+                )
+            )
+            super_majority = Disputes._super_majority(validator_count)
+            wonky_threshold = validator_count // 3
 
             # Solely valid verdict (all positive votes)
-            if positive_votes == total_votes and total_votes >= VALIDATORS_SUPER_MAJORITY:
+            if positive_votes == super_majority:
                 # Check for at least one fault (constraint: solely valid implies ≥1 fault)
                 if fault_counts.get(verdict.target, 0) < MINIMUM_FAULTS_FOR_GOOD:
                     raise DisputesError(DisputesErrorCode.NOT_ENOUGH_FAULTS)
@@ -183,9 +197,6 @@ class Disputes:
 
             # Solely invalid verdict (all negative votes)
             elif positive_votes == 0:
-                # Check for at least two culprits (constraint: solely invalid implies ≥2 culprits)
-                if culprit_counts.get(verdict.target, 0) < MINIMUM_CULPRITS_FOR_BAD:
-                    raise DisputesError(DisputesErrorCode.NOT_ENOUGH_CULPRITS)
                 # Check fault_verdict_wrong (faults must not contradict a bad verdict)
                 for fault in disputes.faults:
                     if fault.target == verdict.target and not fault.vote:
@@ -194,7 +205,7 @@ class Disputes:
                     bad_set.add(verdict.target)
 
             # Wonky verdict (mixed votes meeting wonky threshold)
-            elif positive_votes == VALIDATORS_WONKY:  # Condition for wonky verdict EXACTLY
+            elif positive_votes == wonky_threshold:
                 if verdict.target not in pre_state.psi.wonky:
                     wonky_set.add(verdict.target)
             else:
@@ -204,7 +215,7 @@ class Disputes:
             rep = pre_state.rho[i].unwrap()
             if rep != Null:
                 try:
-                    target = rep.report.hash()
+                    target = rep.guarantee.report.hash()
                     if target in bad_set:
                         rho_dagger[i] = OptionalWorkReportState(Null)
                     if target in wonky_set:
@@ -220,3 +231,12 @@ class Disputes:
         state.rho = rho_dagger
 
         return state
+
+    @staticmethod
+    def ensure_extrinsic_size(disputes: DisputesExtrinsic):
+        if len(disputes.verdicts) > MAX_DISPUTE_EXTRINSIC_VERDICTS:
+            raise DisputesError(DisputesErrorCode.TOO_MANY_VERDICTS)
+        if len(disputes.culprits) > MAX_DISPUTE_EXTRINSIC_OFFENSES:
+            raise DisputesError(DisputesErrorCode.TOO_MANY_CULPRITS)
+        if len(disputes.faults) > MAX_DISPUTE_EXTRINSIC_OFFENSES:
+            raise DisputesError(DisputesErrorCode.TOO_MANY_FAULTS)

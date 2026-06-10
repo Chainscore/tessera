@@ -18,7 +18,6 @@ from jam.storage.da.segments import SegmentShardsDA
 
 from jam.models.protocol.crypto import Hash
 from jam.utils.merkle import BMRFunctions
-from jam.utils.chainspec import chain_config
 from jam.utils.gather import gather_with_exceptions
 
 
@@ -180,17 +179,19 @@ class ShardDistributionProtocol(NetworkProtocol):
             bundle_shard_indices = bs_dict.keys()
             segment_shard_indices = ss_dict.keys()
 
+            total_shards = len(bs_dict)
+            expected_shards = {ShardIndex(i) for i in range(total_shards)}
             if (
-                len(bundle_shard_indices) != chain_config.num_validators
-                or len(segment_shard_indices) != chain_config.num_validators
+                set(bundle_shard_indices) != expected_shards
+                or set(segment_shard_indices) != expected_shards
             ):
                 raise ValueError(
-                    f"Length of both type of shards should be {chain_config.num_validators}"
+                    f"Both shard sets should contain indices 0..{total_shards - 1}"
                 )
 
             merklizer = BMRFunctions()
             s = TypedVector[Bytes]([])
-            for i in range(chain_config.num_validators):
+            for i in range(total_shards):
                 i_idx = ShardIndex(i)  # Convert to ShardIndex for dict access
                 bundle_shard_hash = Hash.blake2b(bs_dict[i_idx].encode())
                 segment_shard = SegmentsShard(ss_dict[i_idx].shard)

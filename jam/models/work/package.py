@@ -1,5 +1,6 @@
 """Work package types for the JAM protocol."""
 
+from dataclasses import field
 from typing import Tuple, TYPE_CHECKING, Union
 
 from tsrkit_types.integers import Uint
@@ -40,6 +41,8 @@ class WorkPackageSpec:
     length: Uint[32]
     # u
     erasure_root: ErasureRoot
+    # s, erasure shard count
+    erasure_shards: Uint[16]
     # e
     exports_root: ExportsRoot
     # n
@@ -51,6 +54,7 @@ class WorkPackageSpec:
             hash=WorkPackageHash([0] * 32),
             length=Uint[32](0),
             erasure_root=ErasureRoot([0] * 32),
+            erasure_shards=Uint[16](0),
             exports_root=ExportsRoot([0] * 32),
             exports_count=Uint[16](0),
         )
