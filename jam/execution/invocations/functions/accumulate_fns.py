@@ -404,6 +404,10 @@ class AccumulateFunctions(INVF):
     @INVF.register(22, gas_cost=10)
     def query(gas: Gas, registers: list, memory: Memory, context: AccumulationContext):
         preimage_hash_addr, preimage_len = registers[7], registers[8]
+        if preimage_len >= 2**32:
+            registers[7] = HostStatus.HUH.value
+            return CONTINUE, gas, registers, memory, context
+
         if not memory.is_accessible(preimage_hash_addr, 32):
             raise PvmError(PANIC)
 
@@ -450,12 +454,12 @@ class AccumulateFunctions(INVF):
     ):
         preimage_hash_addr, preimage_len = registers[7], registers[8]
 
+        if preimage_len >= 2**32:
+            registers[7] = HostStatus.HUH.value
+            return ExecutionStatus.CONTINUE, gas, registers, memory, context
+
         if not memory.is_accessible(preimage_hash_addr, 32):
             raise PvmError(PANIC)
-
-        if preimage_len >= 2**32:
-            registers[7] = HostStatus.FULL.value
-            return ExecutionStatus.CONTINUE, gas, registers, memory, context
 
         preimage_hash = Bytes[32](memory.read(preimage_hash_addr, 32))
 
@@ -557,11 +561,15 @@ class AccumulateFunctions(INVF):
         context: AccumulationContext,
     ):
         [s, o, z] = registers[7:10]
-        d = context.x.partial_state.service_accounts
 
-        s = registers[7]
-        if registers[7] == 2**64 - 1:
+        if z >= 2**32:
+            registers[7] = HostStatus.HUH.value
+            return CONTINUE, gas, registers, memory, context
+
+        d = context.x.partial_state.service_accounts
+        if s == 2**64 - 1:
             s = context.x.s_index
+
         if not memory.is_accessible(o, z):
             raise PvmError(PANIC)
         i = Bytes(memory.read(o, z))
