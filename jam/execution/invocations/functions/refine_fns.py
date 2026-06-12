@@ -134,6 +134,12 @@ class RefineFunctions(INVF):
     @INVF.register(8, gas_cost=10)
     def machine(gas: Gas, registers: list, memory: Memory, context: RefineContext):
         [p_o, p_z, i] = registers[7:10]
+
+        # MAX_INNER_PVMS constrained to 63
+        if len(context.m) >= 63:
+            registers[7] = HostStatus.FULL.value
+            return CONTINUE, gas, registers, memory, context
+
         if memory.is_accessible(p_o, p_z):
             p = memory.read(p_o, p_z)
         else:
